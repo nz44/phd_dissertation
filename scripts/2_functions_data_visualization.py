@@ -3,6 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import seaborn as sns
 import pandas as pd
 import datetime
 import os.path
@@ -388,14 +389,17 @@ def graph_line_plots(C, initial_date, panels, variable, **kwargs):
         ax1.plot(C['x'], C[column], marker='', color='powderblue', linewidth=1, alpha=0.9, label=column)
 
     # if top performers are specified, highlight those lines
-    annotate_pos = variable + '_202009'
+    last_panel = panels[-1]
+    annotate_pos = variable + '_' + last_panel
+    string_initial_date = datetime.datetime.strptime(initial_date, '%Y%m').strftime('%Y %b')
+    string_end_date = datetime.datetime.strptime(panels[-1], '%Y%m').strftime('%Y %b')
     if 'top_performers' in kwargs:
         x_coord_frac = 0.95
         y_coord_frac = 0.95
         for app_id, app_title in kwargs['top_performers'].items():
             ax1.plot(C['x'], C[app_id], marker='', color='deepskyblue', linewidth=2, alpha=0.7)
             ax1.annotate(app_title,
-                        xy=('2020 Sep', C.at[annotate_pos, app_id]),
+                        xy=(string_end_date, C.at[annotate_pos, app_id]),
                         xycoords='data',
                         xytext=(x_coord_frac, y_coord_frac),
                         textcoords='axes fraction',
@@ -407,8 +411,6 @@ def graph_line_plots(C, initial_date, panels, variable, **kwargs):
 
     #ax1.grid(True)
     ax1.set_xlabel('time')
-    string_initial_date = datetime.datetime.strptime(initial_date, '%Y%m').strftime('%Y %b')
-    string_end_date = datetime.datetime.strptime(panels[-1], '%Y%m').strftime('%Y %b')
     if variable == 'minInstalls':
         ax1.set_ylabel('cumulative minimum installs')
         title = 'The Number of Minimum Installs of Apps from ' + string_initial_date + ' to ' + string_end_date
@@ -424,7 +426,8 @@ def graph_line_plots(C, initial_date, panels, variable, **kwargs):
 
 
 ###############################################################################################
-## scatter plots (different color represents different category, and x-axis is the time)
+## SCATTER PLOTS
+# (different color represents different category, and x-axis is the time)
 ###############################################################################################
 def dataframe_for_scatter_plot_by_group(initial_date, panels, variable, group, **kwargs):
     # open the merged panel dataframe
@@ -460,42 +463,122 @@ def dataframe_for_scatter_plot_by_group(initial_date, panels, variable, group, *
 
     C['app_id'] = C.index
     C.reset_index(drop=True, inplace=True)
-    D = pd.wide_to_long(C, stubnames='minInstalls', i='app_id', j='panel', sep='_')
+    D = pd.wide_to_long(C, stubnames=variable, i='app_id', j='panel', sep='_')
     D.reset_index(inplace=True)
+
+    # convert to datetime format for panel column
+    D['panel'] = pd.to_datetime(D['panel'], format='%Y%m') # when you convert object to datetime, the format has to match the original format
+    D['panel'] = D['panel'].dt.strftime('%Y %b') # then you can change the format to the desired datetime format
 
     return(D)
 
 
 
-# Plot
-# fig, ax = plt.subplots()
-# ax.margins(0.05) # Optional, just adds 5% padding to the autoscaling
-# for name, group in groups:
-#     ax.plot(group.x, group.y, marker='o', linestyle='', ms=12, label=name)
-# ax.legend()
-
-
 ###############################################################################################
-# def test_create_dataframe_for_plotting(initial_date, panels, variable, **kwargs):
-#
-#     # open the merged panel dataframe
-#     folder = initial_date + '_PANEL_DF'
-#     df_name = initial_date + '_MERGED.pickle'
-#     q = input_path / "__PANELS__" / folder / df_name
-#     with open(q, 'rb') as filename:
-#         B = pickle.load(filename)
-#
-#     # either randomly choose a subset or take the whole sample
-#     if 'sample' in kwargs:
-#         C = B.sample(kwargs['sample'])
-#     else:
-#         C = B
-#
-#     # select only the columns related to the variable
-#     panels.insert(0, initial_date)
-#     var_names = variable + '_'
-#     col_names = list(map(lambda x: var_names + str(x), panels))
-#     C = C[col_names]
-#     for i in col_names:
-#         C[i] = C[i].astype(float)
-#     return(C)
+## VIOLIN PLOTS
+# create new dataframe which each column holds the series of one app's data across panels
+###############################################################################################
+def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, panel_for_group_and_binary):
+    folder_1 = initial_date + '_PANEL_DF'
+    merged_df = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_1 / merged_df
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
+
+    # subset dataframe with the same variable in all the panels
+    panels.insert(0, initial_date)
+    var_cols = list(map(lambda x: variable + '_' + str(x), panels))
+    for i in var_cols:
+        D[i] = D[i].astype(float)
+
+    if group == 'category':
+        group_names = ['GAME', 'UTILITIES', 'SOCIAL_MEDIA_LEISURE']
+        group_cols = []
+        for i in group_names:
+            group_cols.extend(list(map(lambda x: i + '_' + str(x), panels)))
+
+        # since group definition for the same app may change over time, for the purpose of graph, we only select one panel of group definition
+        group_panel_col = list(map(lambda x: str(x) + '_' + panel_for_group_and_binary, group_names))
+
+    if binary in ['free_True', 'offersIAP_True', 'containsAds_True']:
+        binary_cols = list(map(lambda x: binary + '_' + str(x), panels))
+        binary_panel_col = [binary + '_' + panel_for_group_and_binary]
+
+    selected_cols = var_cols + group_panel_col + binary_panel_col
+    D = D[selected_cols]
+
+    # reshape the dataframe from wide to long (stack all panels into a single column)
+    D['app_id'] = D.index
+    D.reset_index(drop=True, inplace=True)
+    E = pd.wide_to_long(D, stubnames=variable, i='app_id', j='panels', sep='_')
+    ## drop the last panel from group and binary column names
+    A = group_panel_col + binary_panel_col
+    for i in A:
+        need_to_be_removed = "_" + panel_for_group_and_binary
+        new_name = i.replace(need_to_be_removed, "")
+        E.rename(columns={i: new_name}, inplace=True)
+
+    # rename binary variable
+    new_name = binary.replace('_True', "")
+    E.rename(columns={binary: new_name}, inplace=True)
+
+    # convert to datetime format for panel column
+    E.reset_index(inplace=True) # because app_id and panel are automatically turned into indices after wide_to_long, this step turns them back into columns
+    E['panels'] = pd.to_datetime(E['panels'], format='%Y%m') # when you convert object to datetime, the format has to match the original format
+    E['panels'] = E['panels'].dt.strftime('%Y %b') # then you can change the format to the desired datetime format
+
+    # replace the 1 0 with appropriate content for showing in the legend of graphs
+    if group == 'category':
+        E['SOCIAL_MEDIA_LEISURE'].replace(1, 'social_media_leisure', inplace=True)
+        E['SOCIAL_MEDIA_LEISURE'].replace(0, '', inplace=True)
+        E['UTILITIES'].replace(1, 'utilities', inplace=True)
+        E['UTILITIES'].replace(0, '', inplace=True)
+        E['GAME'].replace(1, 'game', inplace=True)
+        E['GAME'].replace(0, '', inplace=True)
+        E[group] = E['SOCIAL_MEDIA_LEISURE'] + E['UTILITIES'] + E['GAME']
+        # delete the rows with '' in category, I have checked the original data, the reason being in some panels genreId is nan
+        E = E[E[group]!='']
+    if binary == 'free_True':
+        E['free'].replace(1, 'free', inplace=True)
+        E['free'].replace(0, 'paid', inplace=True)
+
+    return(E)
+
+##################################################################################################
+def graph_violin_plots(E, x, y, hue, col):
+    # set background theme
+    sns.set_theme(style="whitegrid")
+    # plot
+    plot = sns.catplot(x=x, y=y,
+                    hue=hue, col=col,
+                    data=E, kind="violin",
+                    scale="count",
+                    scale_hue = True,
+                    inner="quartile",
+                    split=True,
+                    bw=.1,
+                    height=4, aspect=.7)
+
+    initial_date = E['panels'].unique()[0]
+    end_date = E['panels'].unique()[-1]
+    # add plot title
+    plt.subplots_adjust(top=0.8)
+    title_text = 'Violin Plots of ' + y + ' by ' + hue + ' and ' + col + ' from ' + initial_date + ' to ' + end_date
+    plot.fig.suptitle(title_text)
+    # rotate plot x-axis so that the texts do not overlap
+    plot.set_xticklabels(rotation=60)
+    # save plot
+    f_name = initial_date + '_' + y + '_by_' + hue + '_and_' + col + '_panel_violin.png'
+    plot.savefig(os.path.join(graph_output, y, f_name),
+                facecolor='white', edgecolor='none', dpi=500)
+
+##################################################################################################
+##################################################################################################
+## BIG THING (DEVIDE APPS ACCORDING TO MIN-INSTALLS)
+# I suspect different groups of apps may exhibit entirely different characteristics (such as the distribution of score, reviews, text sentiment and so on)
+# the most obvious way of grouping is by the range of minInstalls, apps with super large number of installs may be quite different from niche products which only have a few installs
+# I think this is more important than looking at categories, the thing with categories is that some of them have blurry lines (social, media, leisure shopping all combined together in one app)
+# the other thing is the category is only important when one analyze gaming and non-gaming apps.
+# The function below will transform data into different minimum install groups, and then feed the transformed data back to the graphing functions above, to see violin plots for different install groups
+##################################################################################################
+##################################################################################################

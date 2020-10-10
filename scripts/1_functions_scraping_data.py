@@ -22,7 +22,10 @@ def convert_list_data_to_dict_with_appid_keys(C):
 def get_id_from_data_beofre_202009(C):
     id_list = []
     for i in C:
-        id_list.append(i['appId'])
+        if 'appId' in i.keys():
+            id_list.append(i['appId'])
+        else:
+            id_list.append(i['app_id'])
     return(id_list)
 
 
