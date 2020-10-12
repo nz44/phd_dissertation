@@ -11,6 +11,7 @@ import ast
 import pickle
 
 graph_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/graphs'
+table_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/tables'
 input_path = Path("/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____")
 
 #*****************************************************************************************************
@@ -582,3 +583,98 @@ def graph_violin_plots(E, x, y, hue, col):
 # The function below will transform data into different minimum install groups, and then feed the transformed data back to the graphing functions above, to see violin plots for different install groups
 ##################################################################################################
 ##################################################################################################
+
+def export_and_save_qauntile_tables(initial_dates):
+    # open dataframe
+    for i in initial_dates:
+        folder_name = i + '_PANEL_DF'
+        f_name = i + '_MERGED.pickle'
+        q = input_path / '__PANELS__' / folder_name / f_name
+        with open(q, 'rb') as f:
+            DF = pickle.load(f)
+        E = DF.quantile([.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+        f_name = i + '_quantile_table.html'
+        E.to_html(os.path.join(table_output, f_name))
+
+
+
+
+# the function below split the dataframe according to quantile cutoff points in any particular panel
+def divide_dataframe_by_variable_level(initial_date, the_panel, variable):
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        DF = pickle.load(f)
+
+    if variable == 'minInstalls':
+        # from export_and_save_quantile_tables, it looks like the most meaningful cutoff point for analyzing apps are
+        # below 500000.0 (0.3 quantile), 5000000.0 - 5000000.0 (0.3 - 0.7 quantile) and above 5000000.0 (0.7 - 1.0 quantile)
+        break_points = [500000, 5000000]
+
+    DF_dict = {}
+    col_name = variable + '_' + the_panel
+    for i in range(len(break_points) + 1):
+        if i == 0:
+            name = 'below ' + str(break_points[i])
+            E = DF[DF[col_name] <= break_points[i]]
+            DF_dict[name] = E
+        if 0 < i < len(break_points):
+            name = 'between ' + str(break_points[i - 1]) + ' and ' + str(break_points[i])
+            E = DF[(DF[col_name] > break_points[i - 1]) & (DF[col_name] <= break_points[i])]
+            DF_dict[name] = E
+        if i == len(break_points):
+            name = 'above ' + str(break_points[i - 1])
+            E = DF[DF[col_name] > break_points[i - 1]]
+            DF_dict[name] = E
+
+    f_name = 'amount_level_according_to_' + variable + '_in_' + the_panel + '.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    pickle.dump(DF_dict, open(q, 'wb'))
+
+    return(DF_dict)
+
+# the function below split the dataframe according to whether the variable has changed during the time period
+# because I believe the apps that increased in the variable may exhibit different characteristics than apps that do not have increase in the variable
+def divide_dataframe_by_variable_change(initial_date, end_date, variable):
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        DF = pickle.load(f)
+
+    col_name_1 = variable + '_' + initial_date
+    col_name_2 = variable + '_' + end_date
+    new_col_name = 'change_in_' + variable
+
+    DF[new_col_name] = DF[col_name_2] - DF[col_name_1]
+    E = DF.quantile([.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    print(E[new_col_name])
+
+    if variable == 'minInstalls':
+        # it looks like majority of apps have no change in minInstalls between initial date and end date
+        # so the analysis will simply break dataframe into two parts, apps with positive and zero increase in minInstalls.
+        change_points = [0]
+
+    DF_dict = {}
+    for i in range(len(change_points) + 1):
+        if i == 0:
+            name = '0 increase in ' + variable
+            F = DF[DF[new_col_name] == 0]
+            DF_dict[name] = F
+
+        if 0 < i < len(change_points):
+            name = 'increased between ' + str(change_points[i - 1]) + ' and ' + str(change_points[i])
+            F = DF[(DF[new_col_name] > change_points[i - 1]) & (DF[new_col_name] <= change_points[i])]
+            DF_dict[name] = F
+
+        if i == len(change_points):
+            name = 'increase more than ' + str(change_points[i - 1])
+            F = DF[DF[new_col_name] > change_points[i - 1]]
+            DF_dict[name] = F
+
+    f_name = 'amount_increased_in_' + variable + '_between_' + initial_date + '_and_' + end_date + '.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    pickle.dump(DF_dict, open(q, 'wb'))
+
+    return(DF_dict)
