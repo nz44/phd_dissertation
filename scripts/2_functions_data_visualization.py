@@ -10,6 +10,7 @@ import os.path
 import glob
 import ast
 import pickle
+from pathlib import Path
 
 graph_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/graphs'
 table_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/tables'
@@ -476,179 +477,17 @@ def dataframe_for_scatter_plot_by_group(initial_date, panels, variable, group, *
 
 
 
-
-##################################################################################################
-##################################################################################################
-## BIG THING (DEVIDE APPS ACCORDING TO MIN-INSTALLS)
-# I suspect different groups of apps may exhibit entirely different characteristics (such as the distribution of score, reviews, text sentiment and so on)
-# the most obvious way of grouping is by the range of minInstalls, apps with super large number of installs may be quite different from niche products which only have a few installs
-# I think this is more important than looking at categories, the thing with categories is that some of them have blurry lines (social, media, leisure shopping all combined together in one app)
-# the other thing is the category is only important when one analyze gaming and non-gaming apps.
-# The function below will transform data into different minimum install groups, and then feed the transformed data back to the graphing functions above, to see violin plots for different install groups
-##################################################################################################
-##################################################################################################
-
-def export_and_save_qauntile_tables(initial_dates):
-    # open dataframe
-    for i in initial_dates:
-        folder_name = i + '_PANEL_DF'
-        f_name = i + '_MERGED.pickle'
-        q = input_path / '__PANELS__' / folder_name / f_name
-        with open(q, 'rb') as f:
-            DF = pickle.load(f)
-        E = DF.quantile([.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
-        f_name = i + '_quantile_table.html'
-        E.to_html(os.path.join(table_output, f_name))
-
-
-
-
-# the function below split the dataframe according to quantile cutoff points in any particular panel
-def divide_dataframe_by_variable_level(initial_date, the_panel, variable, in_place):
-    # open original dataframe
-    folder_name = initial_date + '_PANEL_DF'
-    f_name = initial_date + '_MERGED.pickle'
-    q = input_path / '__PANELS__' / folder_name / f_name
-    with open(q, 'rb') as f:
-        DF = pickle.load(f)
-
-    # set break points
-    if variable == 'minInstalls':
-        # from export_and_save_quantile_tables, it looks like the most meaningful cutoff point for analyzing apps are
-        # below 500000.0 (0.3 quantile), 5000000.0 - 5000000.0 (0.3 - 0.7 quantile) and above 5000000.0 (0.7 - 1.0 quantile)
-        break_points = [500000, 5000000]
-
-    # create a new dictionary containing all the subsetted dataframes according to break points
-    if in_place == False:
-        DF_dict = {}
-        col_name = variable + '_' + the_panel
-        for i in range(len(break_points) + 1):
-            if i == 0:
-                name = 'below ' + str(break_points[i])
-                E = DF[DF[col_name] <= break_points[i]]
-                DF_dict[name] = E
-            if 0 < i < len(break_points):
-                name = 'between ' + str(break_points[i - 1]) + ' and ' + str(break_points[i])
-                E = DF[(DF[col_name] > break_points[i - 1]) & (DF[col_name] <= break_points[i])]
-                DF_dict[name] = E
-            if i == len(break_points):
-                name = 'above ' + str(break_points[i - 1])
-                E = DF[DF[col_name] > break_points[i - 1]]
-                DF_dict[name] = E
-        f_name = 'amount_level_according_to_' + variable + '_in_' + the_panel + '.pickle'
-        q = input_path / '__PANELS__' / folder_name / f_name
-        pickle.dump(DF_dict, open(q, 'wb'))
-        return DF_dict
-
-    elif in_place == True:
-        col_name = variable + '_' + the_panel
-        conditions = []
-        choices = []
-        for i in range(len(break_points) + 1):
-            if i == 0:
-                name = 'below ' + str(break_points[i])
-                conditions.insert(i, (DF[col_name] <= break_points[i]))
-                choices.insert(i, name)
-            if 0 < i < len(break_points):
-                name = 'between ' + str(break_points[i - 1]) + ' and ' + str(break_points[i])
-                conditions.insert(i, (DF[col_name] > break_points[i-1]) & (DF[col_name] <= break_points[i]))
-                choices.insert(i, name)
-            if i == len(break_points):
-                name = 'above ' + str(break_points[i - 1])
-                conditions.insert(i, (DF[col_name] > break_points[i-1]))
-                choices.insert(i, name)
-        # map the conditions with choices in the new column
-        new_col_name = 'subset_df_according_to_level_' + variable + '_' + the_panel
-        DF[new_col_name] = np.select(conditions, choices, default=None)
-        print(initial_date)
-        print(DF[new_col_name].value_counts())
-        # save in place
-        f_name = initial_date + '_MERGED.pickle'
-        q = input_path / '__PANELS__' / folder_name / f_name
-        pickle.dump(DF, open(q, 'wb'))
-        return DF
-
-
-
-
-# the function below split the dataframe according to whether the variable has changed during the time period
-# because I believe the apps that increased in the variable may exhibit different characteristics than apps that do not have increase in the variable
-def divide_dataframe_by_variable_change(initial_date, end_date, variable, in_place):
-    # open original dataframe
-    folder_name = initial_date + '_PANEL_DF'
-    f_name = initial_date + '_MERGED.pickle'
-    q = input_path / '__PANELS__' / folder_name / f_name
-    with open(q, 'rb') as f:
-        DF = pickle.load(f)
-
-    # set break points
-    if variable == 'minInstalls':
-        # it looks like majority of apps have no change in minInstalls between initial date and end date
-        # so the analysis will simply break dataframe into two parts, apps with positive and zero increase in minInstalls.
-        change_points = [0]
-
-    # create the column containing change in the variable and take a look at the quantile distribuiton of the new column
-    new_col_name = 'change_in_' + variable
-    col_name_1 = variable + '_' + initial_date
-    col_name_2 = variable + '_' + end_date
-    DF[new_col_name] = DF[col_name_2] - DF[col_name_1]
-    E = DF.quantile([.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
-    print(E[new_col_name])
-
-    # create a new dictionary containing all the subsetted dataframes according to break points
-    if in_place == False:
-        DF_dict = {}
-        for i in range(len(change_points) + 1):
-            if i == 0:
-                name = '0 increase in ' + variable
-                F = DF[DF[new_col_name] == 0]
-                DF_dict[name] = F
-            if 0 < i < len(change_points):
-                name = 'increased between ' + str(change_points[i - 1]) + ' and ' + str(change_points[i])
-                F = DF[(DF[new_col_name] > change_points[i - 1]) & (DF[new_col_name] <= change_points[i])]
-                DF_dict[name] = F
-            if i == len(change_points):
-                name = 'increase more than ' + str(change_points[i - 1])
-                F = DF[DF[new_col_name] > change_points[i - 1]]
-                DF_dict[name] = F
-        f_name = 'amount_increased_in_' + variable + '_between_' + initial_date + '_and_' + end_date + '.pickle'
-        q = input_path / '__PANELS__' / folder_name / f_name
-        pickle.dump(DF_dict, open(q, 'wb'))
-        return DF_dict
-
-    elif in_place == True:
-        conditions = []
-        choices = []
-        for i in range(len(change_points) + 1):
-            if i == 0:
-                name = '0 increase in ' + variable
-                conditions.insert(i, (DF[new_col_name] == 0))
-                choices.insert(i, name)
-            if 0 < i < len(change_points):
-                name = 'increased between ' + str(change_points[i - 1]) + ' and ' + str(change_points[i])
-                conditions.insert(i, (DF[new_col_name] > change_points[i-1]) & (DF[new_col_name] <= change_points[i]))
-                choices.insert(i, name)
-            if i == len(change_points):
-                name = 'increase more than ' + str(change_points[i - 1])
-                conditions.insert(i, (DF[new_col_name] > change_points[i-1]))
-                choices.insert(i, name)
-        # map the conditions with choices in the new column
-        col2_name = 'subset_df_according_to_change_in_' + variable + '_between_' + initial_date + '_and_' + end_date
-        DF[col2_name] = np.select(conditions, choices, default=None)
-        print(initial_date)
-        print(DF[col2_name].value_counts())
-        # save in place
-        f_name = initial_date + '_MERGED.pickle'
-        q = input_path / '__PANELS__' / folder_name / f_name
-        pickle.dump(DF, open(q, 'wb'))
-        return DF
-
 ###############################################################################################
 ## VIOLIN PLOTS
 # create new dataframe which each column holds the series of one app's data across panels
 ###############################################################################################
 def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, panel_for_group_and_binary):
-    # subset dataframe with the same variable in all the panels
+    # open file and make the variable colume float
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
     panels.insert(0, initial_date)
     var_cols = list(map(lambda x: variable + '_' + str(x), panels))
     for i in var_cols:
@@ -659,9 +498,12 @@ def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, pa
         group_cols = []
         for i in group_names:
             group_cols.extend(list(map(lambda x: i + '_' + str(x), panels)))
-
         # since group definition for the same app may change over time, for the purpose of graph, we only select one panel of group definition
         group_panel_col = list(map(lambda x: str(x) + '_' + panel_for_group_and_binary, group_names))
+        # replace the 1 0 with appropriate content for showing in the legend of graphs
+
+    elif 'subset_df_according' in group:
+        group_panel_col = [group]
 
     if binary in ['free_True', 'offersIAP_True', 'containsAds_True']:
         binary_cols = list(map(lambda x: binary + '_' + str(x), panels))
@@ -690,7 +532,6 @@ def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, pa
     E['panels'] = pd.to_datetime(E['panels'], format='%Y%m') # when you convert object to datetime, the format has to match the original format
     E['panels'] = E['panels'].dt.strftime('%Y %b') # then you can change the format to the desired datetime format
 
-    # replace the 1 0 with appropriate content for showing in the legend of graphs
     if group == 'category':
         E['SOCIAL_MEDIA_LEISURE'].replace(1, 'social_media_leisure', inplace=True)
         E['SOCIAL_MEDIA_LEISURE'].replace(0, '', inplace=True)
@@ -700,7 +541,8 @@ def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, pa
         E['GAME'].replace(0, '', inplace=True)
         E[group] = E['SOCIAL_MEDIA_LEISURE'] + E['UTILITIES'] + E['GAME']
         # delete the rows with '' in category, I have checked the original data, the reason being in some panels genreId is nan
-        E = E[E[group]!='']
+        E = E[E[group] != '']
+
     if binary == 'free_True':
         E['free'].replace(1, 'free', inplace=True)
         E['free'].replace(0, 'paid', inplace=True)
@@ -709,60 +551,87 @@ def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, pa
 
 
 ##################################################################################################
-def graph_violin_plots(E, x, y, hue, col):
+def graph_violin_plots(dataframe, x_axis_group, y_axis_var, split_binary, subplot_var):
     # set background theme
     sns.set_theme(style="whitegrid")
+    # change column name so that title won't be too long
+    initial_date = dataframe['panels'].unique()[0]
+    end_date = dataframe['panels'].unique()[-1]
+    if 'subset_df_according_to_level_' in subplot_var:
+        save_subplot_var_name = subplot_var.replace('subset_df_according_to_', '')
+        var_text = subplot_var.replace('subset_df_according_to_level_', "")
+        dataframe.rename(columns={subplot_var: var_text}, inplace = True)
+        subplot_var = var_text
+        if 'minInstalls' in var_text:
+            var_text = 'minimum installs'
+            col_order_list = ['below 500000', 'between 500000 and 5000000', 'above 5000000']
+        title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and ' + var_text
+    elif 'subset_df_according_to_change_in_' in subplot_var:
+        need_to_remove = '_between_' + initial_date + '_and_'
+        save_subplot_var_name = subplot_var.replace('subset_df_according_to_', '').replace(need_to_remove, '')
+        var_text = subplot_var.replace('subset_df_according_to_change_in_', '').replace(need_to_remove, '')
+        dataframe.rename(columns={subplot_var: var_text}, inplace = True)
+        subplot_var = var_text
+        if 'minInstalls' in var_text:
+            var_text = 'minimum installs'
+            col_order_list = ['no change', 'increased more than 0']
+        title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and change in ' + var_text
+    else:
+        save_subplot_var_name = subplot_var
+        title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and ' + subplot_var + ' in ' + end_date
     # plot
-    plot = sns.catplot(x=x, y=y,
-                    hue=hue, col=col,
-                    data=E, kind="violin",
-                    scale="count",
+    plot = sns.catplot(x = x_axis_group, y = y_axis_var,
+                    hue = split_binary,
+                    col = subplot_var,
+                    col_order = col_order_list,
+                    data = dataframe, kind = "violin",
+                    scale = "count",
                     scale_hue = True,
-                    inner="quartile",
-                    split=True,
-                    bw=.1,
-                    height=4, aspect=.7)
+                    inner = "quartile",
+                    split = True,
+                    bw =.1,
+                    height = 4, aspect = .7)
 
-    initial_date = E['panels'].unique()[0]
-    end_date = E['panels'].unique()[-1]
+    plot.set_titles("{col_name}")
+    if y_axis_var == 'score':
+        plot.set(ylim=(0, 5))
     # add plot title
     plt.subplots_adjust(top=0.8)
-    title_text = 'Violin Plots of ' + y + ' by ' + hue + ' and ' + col + ' from ' + initial_date + ' to ' + end_date
     plot.fig.suptitle(title_text)
     # rotate plot x-axis so that the texts do not overlap
     plot.set_xticklabels(rotation=60)
     # save plot
-    f_name = initial_date + '_' + y + '_by_' + hue + '_and_' + col + '_panel_violin.png'
-    plot.savefig(os.path.join(graph_output, y, f_name),
+    f_name = initial_date + '_' + y_axis_var + '_by_' + split_binary + '_and_' + save_subplot_var_name + '_panel_violin.png'
+    plot.savefig(os.path.join(graph_output, y_axis_var, f_name),
                 facecolor='white', edgecolor='none', dpi=500)
 
 
 ##################################################################################################
-def graph_violin_plots_diff_data_section(initial_date, end_date, section_var, level, x, y, hue, col):
-    # open the sectioned data, wether the level or the change depend on input parameter
-
-    # set background theme
-    sns.set_theme(style="whitegrid")
-    # plot
-    plot = sns.catplot(x=x, y=y,
-                    hue=hue, col=col,
-                    data=E, kind="violin",
-                    scale="count",
-                    scale_hue = True,
-                    inner="quartile",
-                    split=True,
-                    bw=.1,
-                    height=4, aspect=.7)
-
-    initial_date = E['panels'].unique()[0]
-    end_date = E['panels'].unique()[-1]
-    # add plot title
-    plt.subplots_adjust(top=0.8)
-    title_text = 'Violin Plots of ' + y + ' by ' + hue + ' and ' + col + ' from ' + initial_date + ' to ' + end_date
-    plot.fig.suptitle(title_text)
-    # rotate plot x-axis so that the texts do not overlap
-    plot.set_xticklabels(rotation=60)
-    # save plot
-    f_name = initial_date + '_' + y + '_by_' + hue + '_and_' + col + '_panel_violin.png'
-    plot.savefig(os.path.join(graph_output, y, f_name),
-                facecolor='white', edgecolor='none', dpi=500)
+# def graph_violin_plots_diff_data_section(initial_date, end_date, section_var, level, x, y, hue, col):
+#     # open the sectioned data, wether the level or the change depend on input parameter
+#
+#     # set background theme
+#     sns.set_theme(style="whitegrid")
+#     # plot
+#     plot = sns.catplot(x=x, y=y,
+#                     hue=hue, col=col,
+#                     data=E, kind="violin",
+#                     scale="count",
+#                     scale_hue = True,
+#                     inner="quartile",
+#                     split=True,
+#                     bw=.1,
+#                     height=4, aspect=.7)
+#
+#     initial_date = E['panels'].unique()[0]
+#     end_date = E['panels'].unique()[-1]
+#     # add plot title
+#     plt.subplots_adjust(top=0.8)
+#     title_text = 'Violin Plots of ' + y + ' by ' + hue + ' and ' + col + ' from ' + initial_date + ' to ' + end_date
+#     plot.fig.suptitle(title_text)
+#     # rotate plot x-axis so that the texts do not overlap
+#     plot.set_xticklabels(rotation=60)
+#     # save plot
+#     f_name = initial_date + '_' + y + '_by_' + hue + '_and_' + col + '_panel_violin.png'
+#     plot.savefig(os.path.join(graph_output, y, f_name),
+#                 facecolor='white', edgecolor='none', dpi=500)
