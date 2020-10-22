@@ -67,15 +67,15 @@ def divide_dataframe_by_variable_level(initial_date, the_panel, variable, in_pla
         col_name = variable + '_' + the_panel
         for i in range(len(break_points) + 1):
             if i == 0:
-                name = 'below ' + str(break_points[i])
+                name = '<= ' + f'{break_points[i]:,}'
                 E = DF[DF[col_name] <= break_points[i]]
                 DF_dict[name] = E
             if 0 < i < len(break_points):
-                name = 'between ' + str(break_points[i - 1]) + ' and ' + str(break_points[i])
+                name = f'{break_points[i - 1]:,}' + ' < .. <= ' + f'{break_points[i]:,}'
                 E = DF[(DF[col_name] > break_points[i - 1]) & (DF[col_name] <= break_points[i])]
                 DF_dict[name] = E
             if i == len(break_points):
-                name = 'above ' + str(break_points[i - 1])
+                name = '> ' + f'{break_points[i - 1]:,}'
                 E = DF[DF[col_name] > break_points[i - 1]]
                 DF_dict[name] = E
         # check
@@ -95,15 +95,15 @@ def divide_dataframe_by_variable_level(initial_date, the_panel, variable, in_pla
         choices = []
         for i in range(len(break_points) + 1):
             if i == 0:
-                name = 'below ' + str(break_points[i])
+                name = '<= ' + f'{break_points[i]:,}'
                 conditions.insert(i, (DF[col_name] <= break_points[i]))
                 choices.insert(i, name)
             if 0 < i < len(break_points):
-                name = 'between ' + str(break_points[i - 1]) + ' and ' + str(break_points[i])
+                name = f'{break_points[i - 1]:,}' + ' < .. <= ' + f'{break_points[i]:,}'
                 conditions.insert(i, (DF[col_name] > break_points[i-1]) & (DF[col_name] <= break_points[i]))
                 choices.insert(i, name)
             if i == len(break_points):
-                name = 'above ' + str(break_points[i - 1])
+                name = '> ' + f'{break_points[i - 1]:,}'
                 conditions.insert(i, (DF[col_name] > break_points[i-1]))
                 choices.insert(i, name)
         # map the conditions with choices in the new column
@@ -146,15 +146,15 @@ def divide_dataframe_by_variable_change(initial_date, end_date, variable, in_pla
         DF_dict = {}
         for i in range(len(change_points) + 1):
             if i == 0:
-                name = 'no change'
+                name = '0'
                 F = DF[DF[new_col_name] == 0]
                 DF_dict[name] = F
             if 0 < i < len(change_points):
-                name = 'increased between ' + str(change_points[i - 1]) + ' and ' + str(change_points[i])
+                name = f'{change_points[i - 1]:,}' + ' < .. <= ' + f'{change_points[i]:,}'
                 F = DF[(DF[new_col_name] > change_points[i - 1]) & (DF[new_col_name] <= change_points[i])]
                 DF_dict[name] = F
             if i == len(change_points):
-                name = 'increase more than ' + str(change_points[i - 1])
+                name = '> ' + f'{change_points[i - 1]:,}'
                 F = DF[DF[new_col_name] > change_points[i - 1]]
                 DF_dict[name] = F
         # check
@@ -174,15 +174,15 @@ def divide_dataframe_by_variable_change(initial_date, end_date, variable, in_pla
         choices = []
         for i in range(len(change_points) + 1):
             if i == 0:
-                name = 'no change'
+                name = '0'
                 conditions.insert(i, (DF[new_col_name] == 0))
                 choices.insert(i, name)
             if 0 < i < len(change_points):
-                name = 'increased between ' + str(change_points[i - 1]) + ' and ' + str(change_points[i])
+                name = f'{change_points[i - 1]:,}' + ' < .. <= ' + f'{change_points[i]:,}'
                 conditions.insert(i, (DF[new_col_name] > change_points[i-1]) & (DF[new_col_name] <= change_points[i]))
                 choices.insert(i, name)
             if i == len(change_points):
-                name = 'increase more than ' + str(change_points[i - 1])
+                name = '> ' + f'{change_points[i - 1]:,}'
                 conditions.insert(i, (DF[new_col_name] > change_points[i-1]))
                 choices.insert(i, name)
         # map the conditions with choices in the new column
@@ -207,27 +207,61 @@ def descriptive_stats_merged_df(level_1_var, initial_date, the_panel, level_2_va
     q = input_path / '__PANELS__' / folder_name / f_name
     with open(q, 'rb') as f:
         DF = pickle.load(f)
-    #print(DF.head())
+    if level_1_var == 'group_static_minInstalls':
+        # for latex output correctly display math symbols, you need \\ to escape \
+        DF[level_1_var] = DF[level_1_var].str.replace('>', '$>$')
+        DF[level_1_var] = DF[level_1_var].str.replace('<=', "$\\\leq$")
+        DF[level_1_var] = DF[level_1_var].str.replace('<', '$<$')
+        level_1_index_name = 'range of app minimum installs'
+    # replace 1 and 0 for better table representation
+    level_2_col = level_2_vars + '_' + the_panel
+    if level_2_vars == 'GAME':
+        DF[level_2_col].replace(1, 'game', inplace=True)
+        DF[level_2_col].replace(0, 'none-game', inplace=True)
+        level_2_index_name = 'app category'
 
+    level_3_col = level_3_vars + '_' + the_panel
+    if level_3_vars == 'free_True':
+        DF[level_3_col].replace(1, 'free', inplace=True)
+        DF[level_3_col].replace(0, 'paid', inplace=True)
+        level_3_index_name = 'app price'
     # create the descriptive stats dataframes
     ## the groups -- and subgroups I want the descriptive stats for
     ## the numerical variables that I want mean, media, quartile for within each sub groups
     ### level 1 group var: minInstalls groups
-    level_2_col = level_2_vars + '_' + the_panel
-    level_3_col = level_3_vars + '_' + the_panel
     DF_LIST = []
     for var_name in kwargs.values():
         var_col = var_name + '_' + the_panel
         stats = ['count', 'min', 'mean', 'median', 'max']
         grouped_multiple = DF.groupby([level_1_var, level_2_col, level_3_col]).agg({var_col: stats})
-        grouped_multiple.columns = list(map(lambda x: var_name + '_' + str(x), stats))
-        grouped_multiple = grouped_multiple.reset_index()
         count_var = var_name + '_count'
         grouped_multiple.rename(columns = {count_var: 'count'}, inplace = True)
+        grouped_multiple.index.rename([level_1_index_name, level_2_index_name, level_3_index_name], inplace = True)
+        grouped_multiple = grouped_multiple.reset_index()
+        grouped_multiple['attribute'] = var_name
+        grouped_multiple.set_index(['attribute', level_1_index_name, level_2_index_name, level_3_index_name],
+                                   inplace = True)
+        grouped_multiple.columns = grouped_multiple.columns.droplevel()
         DF_LIST.append(grouped_multiple)
     # merge stats of each variable into a single dataframe
-    result_df = reduce(lambda x, y: pd.merge(x, y, on=[level_1_var, level_2_col, level_3_col, 'count']), DF_LIST)
+    result_df = pd.concat(DF_LIST)
+    # print(initial_date)
+    # print(result_df.head())
     # save
-    f_name = initial_date + '_summary_stats_by_group.html'
-    result_df.to_html(os.path.join(table_output, f_name))
+    f_name = initial_date + '_summary_stats_by_group.tex'
+    q = os.path.join(table_output, f_name)
+    #title = initial_date + ' Data: Summary Statistics of App Attributes in ' + the_panel
+    result_df.to_latex(buf=q,
+                       float_format='{:,.2f}'.format,
+                       #caption = title,
+                       escape=False,
+                       column_format='llll|rrrrr',
+                       multicolumn = True,
+                       multirow=True,
+                       bold_rows = True)
     return(result_df)
+
+# the result_df in the function below is
+#def convert_descriptive_stats_to_multiindex_df(result_df):
+
+

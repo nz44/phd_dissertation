@@ -606,32 +606,77 @@ def graph_violin_plots(dataframe, x_axis_group, y_axis_var, split_binary, subplo
                 facecolor='white', edgecolor='none', dpi=500)
 
 
-##################################################################################################
-# def graph_violin_plots_diff_data_section(initial_date, end_date, section_var, level, x, y, hue, col):
-#     # open the sectioned data, wether the level or the change depend on input parameter
+###############################################################################################
+## QQ PLOTS
+# https://data.library.virginia.edu/understanding-q-q-plots/#:~:text=A%20Q%2DQ%20plot%20is%20a,truly%20come%20from%20Normal%20distributions.
+###############################################################################################
+from scipy import stats
+from matplotlib import pyplot as plt
+
+def qq_plots(initial_date, the_panel, variable, theoretical_distribution, **kwargs):
+    # open file and make the variable colume float
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
+    var_col = variable + '_' + str(the_panel)
+    qq_col = D[var_col].to_numpy(float)
+
+    fig = plt.figure()
+    ax1 = plt.subplot(111)
+    stats.probplot(qq_col, dist=eval(theoretical_distribution), plot=ax1)
+    if theoretical_distribution == 'stats.norm':
+        print(str(theoretical_distribution))
+    title = 'Probability Plot for ' + variable + ' with Standard Normal Distribution'
+    ax1.set_title(title)
+
+    # save plot
+    f_name = initial_date + '_' + variable + '_' + the_panel + '_probability_plot.png'
+    fig.savefig(os.path.join(graph_output, variable, f_name),
+                facecolor='white', edgecolor='none', dpi=500)
+
+    return(ax1)
+
+
+###############################################################################################
+## KDE PLOTS
 #
-#     # set background theme
-#     sns.set_theme(style="whitegrid")
-#     # plot
-#     plot = sns.catplot(x=x, y=y,
-#                     hue=hue, col=col,
-#                     data=E, kind="violin",
-#                     scale="count",
-#                     scale_hue = True,
-#                     inner="quartile",
-#                     split=True,
-#                     bw=.1,
-#                     height=4, aspect=.7)
-#
-#     initial_date = E['panels'].unique()[0]
-#     end_date = E['panels'].unique()[-1]
-#     # add plot title
-#     plt.subplots_adjust(top=0.8)
-#     title_text = 'Violin Plots of ' + y + ' by ' + hue + ' and ' + col + ' from ' + initial_date + ' to ' + end_date
-#     plot.fig.suptitle(title_text)
-#     # rotate plot x-axis so that the texts do not overlap
-#     plot.set_xticklabels(rotation=60)
-#     # save plot
-#     f_name = initial_date + '_' + y + '_by_' + hue + '_and_' + col + '_panel_violin.png'
-#     plot.savefig(os.path.join(graph_output, y, f_name),
-#                 facecolor='white', edgecolor='none', dpi=500)
+###############################################################################################
+
+def kde_plots(initial_date, variable, **kwargs):
+    sns.set(style="darkgrid")
+    # open file and make the variable colume float
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
+
+    if 'panels' in kwargs.keys():
+        kwargs['panels'].insert(0, initial_date)
+        var_cols = list(map(lambda x: variable + '_' + str(x), kwargs['panels']))
+        for i in var_cols:
+            D[i] = D[i].astype(float)
+    elif 'the_panel' in kwargs.keys():
+        var_col = variable + '_' + kwargs['the_panel']
+        D[var_col] = D[var_col].astype(float)
+    fig = plt.figure()
+    ax1 = plt.subplot(111)
+
+    if 'hue' in kwargs.keys() and 'the_panel' in kwargs.keys():
+        hue_col = str(kwargs['hue']) + '_' + str(kwargs['the_panel'])
+        ax1 = sns.kdeplot(data=D, x = var_col, hue=hue_col, fill=True)
+        title = 'Density Distribution of ' + variable + ' by ' + str(kwargs['hue']) + ' (Data: ' + initial_date + ')'
+        f_name = initial_date + '_' + variable + ' by ' + str(kwargs['hue'])
+    else:
+        ax1 = sns.kdeplot(data=D[var_cols])
+        title = 'Density Distribution of ' + variable + ' for all the panels' + ' (Data: ' + initial_date + ')'
+        f_name = initial_date + '_' + variable + '_density_plot_all_panels.png'
+    ax1.set_title(title)
+
+    # save plot
+    fig.savefig(os.path.join(graph_output, variable, f_name),
+                facecolor='white', edgecolor='none', dpi=500)
+
+    return(ax1)
