@@ -5,15 +5,9 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from pathlib import Path
-import gensim
-import gensim.corpora as corpora
+#import gensim
+#import gensim.corpora as corpora
 
-# path
-input_path = Path('/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____')
-output_path = Path('/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/___cleaned_datasets___')
-table_output = Path('/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/tables')
-nlp_output = Path('/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/nlp')
 
 import spacy
 from spacy import displacy
