@@ -14,9 +14,6 @@ from pathlib import Path
 import tabulate
 from functools import reduce
 
-graph_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/graphs'
-table_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/tables'
-input_path = Path("/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____")
 ################################################################################################
 # Oct 14 2020
 # the motivation for visualization data in tables is because I see most published papers in economic feild,
@@ -200,18 +197,20 @@ def divide_dataframe_by_variable_change(initial_date, end_date, variable, in_pla
 ################################################################################################
 # make descriptive stats table according to different minInstalls (level and change)
 ################################################################################################
-def descriptive_stats_merged_df(level_1_var, initial_date, the_panel, level_2_vars, level_3_vars, **kwargs):
+def descriptive_stats_merged_df(level_1_var, initial_date, the_panel, level_2_vars, level_3_vars, latex, **kwargs):
     # open file
     folder_name = initial_date + '_PANEL_DF'
     f_name = initial_date + '_MERGED.pickle'
     q = input_path / '__PANELS__' / folder_name / f_name
     with open(q, 'rb') as f:
         DF = pickle.load(f)
-    if level_1_var == 'group_static_minInstalls':
+    if level_1_var == 'group_static_minInstalls' and latex is True:
         # for latex output correctly display math symbols, you need \\ to escape \
         DF[level_1_var] = DF[level_1_var].str.replace('>', '$>$')
         DF[level_1_var] = DF[level_1_var].str.replace('<=', "$\\\leq$")
         DF[level_1_var] = DF[level_1_var].str.replace('<', '$<$')
+        level_1_index_name = 'range of app minimum installs'
+    elif level_1_var == 'group_static_minInstalls' and latex is False:
         level_1_index_name = 'range of app minimum installs'
     # replace 1 and 0 for better table representation
     level_2_col = level_2_vars + '_' + the_panel
@@ -242,23 +241,32 @@ def descriptive_stats_merged_df(level_1_var, initial_date, the_panel, level_2_va
         grouped_multiple.set_index(['attribute', level_1_index_name, level_2_index_name, level_3_index_name],
                                    inplace = True)
         grouped_multiple.columns = grouped_multiple.columns.droplevel()
+        if var_name in ['reviews']:
+            grouped_multiple = grouped_multiple.astype(int)
+        #display(grouped_multiple.dtypes)
         DF_LIST.append(grouped_multiple)
     # merge stats of each variable into a single dataframe
     result_df = pd.concat(DF_LIST)
     # print(initial_date)
     # print(result_df.head())
     # save
-    f_name = initial_date + '_summary_stats_by_group.tex'
-    q = os.path.join(table_output, f_name)
-    #title = initial_date + ' Data: Summary Statistics of App Attributes in ' + the_panel
-    result_df.to_latex(buf=q,
-                       float_format='{:,.2f}'.format,
-                       #caption = title,
-                       escape=False,
-                       column_format='llll|rrrrr',
-                       multicolumn = True,
-                       multirow=True,
-                       bold_rows = True)
+    if latex is True:
+        f_name = initial_date + '_summary_stats_by_group.tex'
+        q = os.path.join(table_output, f_name)
+        #title = initial_date + ' Data: Summary Statistics of App Attributes in ' + the_panel
+        result_df.to_latex(buf=q,
+                           float_format='{:,.2f}'.format,
+                           #caption = title,
+                           escape=False,
+                           column_format='llll|rrrrr',
+                           multicolumn = True,
+                           multirow=True,
+                           bold_rows = True)
+    elif latex is False:
+        f_name = initial_date + '_summary_stats_by_group.html'
+        q = os.path.join(table_output, f_name)
+        result_df.to_html(buf=q,
+                          float_format='{:,.2f}'.format)
     return(result_df)
 
 # the result_df in the function below is

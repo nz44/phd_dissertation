@@ -12,10 +12,6 @@ import ast
 import pickle
 from pathlib import Path
 
-graph_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/graphs'
-table_output = '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/tables'
-input_path = Path("/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____")
-
 #*****************************************************************************************************
 #*** INPUT DATA (scraped before 202009) is transformed to dataframe
 #*****************************************************************************************************
@@ -502,7 +498,7 @@ def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, pa
         group_panel_col = list(map(lambda x: str(x) + '_' + panel_for_group_and_binary, group_names))
         # replace the 1 0 with appropriate content for showing in the legend of graphs
 
-    elif 'subset_df_according' in group:
+    elif 'group_static' in group:
         group_panel_col = [group]
 
     if binary in ['free_True', 'offersIAP_True', 'containsAds_True']:
@@ -557,19 +553,19 @@ def graph_violin_plots(dataframe, x_axis_group, y_axis_var, split_binary, subplo
     # change column name so that title won't be too long
     initial_date = dataframe['panels'].unique()[0]
     end_date = dataframe['panels'].unique()[-1]
-    if 'subset_df_according_to_level_' in subplot_var:
-        save_subplot_var_name = subplot_var.replace('subset_df_according_to_', '')
-        var_text = subplot_var.replace('subset_df_according_to_level_', "")
+    if 'group_static' in subplot_var:
+        save_subplot_var_name = subplot_var.replace('group_static_', '')
+        var_text = subplot_var.replace('group_static_', "")
         dataframe.rename(columns={subplot_var: var_text}, inplace = True)
         subplot_var = var_text
         if 'minInstalls' in var_text:
             var_text = 'minimum installs'
             col_order_list = ['below 500000', 'between 500000 and 5000000', 'above 5000000']
         title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and ' + var_text
-    elif 'subset_df_according_to_change_in_' in subplot_var:
+    elif 'group_change' in subplot_var:
         need_to_remove = '_between_' + initial_date + '_and_'
-        save_subplot_var_name = subplot_var.replace('subset_df_according_to_', '').replace(need_to_remove, '')
-        var_text = subplot_var.replace('subset_df_according_to_change_in_', '').replace(need_to_remove, '')
+        save_subplot_var_name = subplot_var.replace('group_change_', '').replace(need_to_remove, '')
+        var_text = subplot_var.replace('group_change_', '').replace(need_to_remove, '')
         dataframe.rename(columns={subplot_var: var_text}, inplace = True)
         subplot_var = var_text
         if 'minInstalls' in var_text:
