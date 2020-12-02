@@ -285,40 +285,65 @@ def broad_or_niche_topic_words(initial_panel, panels_have_text, type, tup, thres
 ## compare each app's topic words with a list of top topic words (above an arbitrary threshold, for example, >= 1000)
 ## each app has 6 topic words for now (they are not unique), first turn them
 ## classifying niche and broad, you do not need to do it for every year because we assume this is time-invariant feature
-def df_classify_app_into_broad_or_niche(initial_panel, the_panel, threshold_broad, threshold_niche, **kwargs):
+def df_classify_app_into_broad_or_niche(initial_panel, the_panel, threshold_broad, threshold_niche, indicator_type, **kwargs):
     broad_words = broad_or_niche_topic_words(initial_panel, the_panel, type = 'broad', tup = False, threshold = threshold_broad)
     niche_words = broad_or_niche_topic_words(initial_panel, the_panel, type = 'niche', tup = False, threshold = threshold_niche)
     df = open_topic_df(initial_panel)
     if 'sample' in kwargs.keys():
         df = df.sample(n=kwargs['sample'])
-    broad_cols = ['broad_app_' + item for item in the_panel]
-    for i in broad_cols:
-        df[i] = np.nan
-    niche_cols = ['niche_app_' + item for item in the_panel]
-    for i in niche_cols:
-        df[i] = np.nan
 
-    for i in the_panel:
-        with tqdm(total=df.shape[0]) as pbar:
-            for index, row in df.iterrows():
-                pbar.update(1)
-                if any(item in row['topic_list_'+i] for item in broad_words['topic_list_'+i]):
-                    df.at[index, 'broad_app_'+i] = 1
-                if any(item in row['topic_list_'+i] for item in niche_words['topic_list_'+i]):
-                    df.at[index, 'niche_app_'+i] = 1
-    for i in the_panel:
-        df.fillna({'broad_app_'+i: 0, 'niche_app_'+i: 0}, inplace=True)
+    # dummy indicator whether an app is inche / broad, not mutually exclusive
+    if indicator_type == 'dummy':
+        broad_cols = ['broad_app_' + item for item in the_panel]
+        for i in broad_cols:
+            df[i] = np.nan
+        niche_cols = ['niche_app_' + item for item in the_panel]
+        for i in niche_cols:
+            df[i] = np.nan
+        for i in the_panel:
+            with tqdm(total=df.shape[0]) as pbar:
+                for index, row in df.iterrows():
+                    pbar.update(1)
+                    if any(item in row['topic_list_'+i] for item in broad_words['topic_list_'+i]):
+                        df.at[index, 'broad_app_'+i] = 1
+                    if any(item in row['topic_list_'+i] for item in niche_words['topic_list_'+i]):
+                        df.at[index, 'niche_app_'+i] = 1
+        for i in the_panel:
+            df.fillna({'broad_app_'+i: 0, 'niche_app_'+i: 0}, inplace=True)
+        f_name = 'niche_broad_classified.pkl'
+
+    # continuous indicator type. 1 means extremely niche, and 0 means extremely broad
+    elif indicator_type == 'continuous':
+        broad_niche_cols = ['broad_niche_' + item for item in the_panel]
+        for i in broad_niche_cols:
+            df[i] = 0   # The most broad / the default is 0, the higher the number, the most inche the app is
+        for i in the_panel:
+            with tqdm(total=df.shape[0]) as pbar:
+                for index, row in df.iterrows():
+                    pbar.update(1)
+                    num = len(set(row['topic_list_'+i]) & set(broad_words['topic_list_'+i]))
+                    df.at[index, 'broad_niche_'+i] += num
+        f_name = 'niche_broad_continuous.pkl'
+
     # save
     folder_name = initial_panel + '_PANEL_DF'
-    f_name = 'niche_broad_classified.pkl'
     q = input_path / '__PANELS__' / folder_name / f_name
     df.to_pickle(q)
     return df
 
 # ************************************************************************************************************
-def open_niche_classified_df(initial_panel):
+def open_niche_broad_df(initial_panel, indicator_type):
     folder_name = initial_panel + '_PANEL_DF'
-    f_name = 'niche_broad_classified.pkl'
+    if indicator_type == 'dummy':
+        f_name = 'niche_broad_classified.pkl'
+    elif indicator_type == 'continuous':
+        f_name = 'niche_broad_continuous.pkl'
     q = input_path / '__PANELS__' / folder_name / f_name
     df = pd.read_pickle(q)
     return df
+
+def descriptive_stats_niche_broad_apps(initial_panel, the_panel):
+    df = open_niche_broad_df(initial_panel)
+    tab_niche = pd.crosstab(index=df['niche_app_'+the_panel], columns='count')
+    tab_broad = pd.crosstab(index=df['broad_app_'+the_panel], columns='count')
+    return(tab_niche, tab_broad)

@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings; warnings.simplefilter('ignore')
 # macbook 2016 paths
 # input_path = Path('/Users/zhunaixin/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____')
 # output_path = Path('/Users/zhunaixin/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/___cleaned_datasets___')
