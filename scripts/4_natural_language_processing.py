@@ -1,6 +1,8 @@
 # Oct 20, 2020
 # find the products in a niche market (apps belonging to a very narrowly defined category, which is figured out by
 # analyzing descriptions and names and figure out if they serve the same function or purpose)
+import warnings
+warnings.filterwarnings('ignore')
 import pickle
 import re
 from tqdm import tqdm, tqdm_notebook
@@ -15,11 +17,13 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.manifold import TSNE
 import chart_studio.plotly as py
 import plotly.graph_objects as go
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.decomposition import NMF, LatentDirichletAllocation
+from sklearn.datasets import fetch_20newsgroups
 vectorizer = TfidfVectorizer()
 from sklearn import decomposition
 from collections import Counter
-
+import random
 
 import spacy
 from spacy import displacy
@@ -116,32 +120,49 @@ def open_token_df(initial_panel):
     DF = pd.read_pickle(q)
     return DF
 
+def combine_tokenized_cols_into_single_col(initial_panel, panels_have_text):
+    df = open_token_df(initial_panel)
+    tokenized_cols = ['description_' + item for item in panels_have_text]
+    for i in range(len(tokenized_cols)):
+        if i == 0:
+            df['combined_panels_description'] = df[tokenized_cols[i]]
+        else:
+            df['combined_panels_description'] = df['combined_panels_description'] + df[tokenized_cols[i]]
+    return df
+
+def combine_all_tokens_into_single_document(initial_panel, panels_have_text):
+    df = combine_tokenized_cols_into_single_col(initial_panel, panels_have_text)
+    doc = []
+    for index, row in df.iterrows():
+        doc.extend(row['combined_panels_description'])
+    return doc
+
 def tfi_vectorizer_for_an_app_description(tokenized_app_description):
     c = vectorizer.fit_transform(tokenized_app_description)
-    terms = vectorizer.get_feature_names()
-    return c, terms
+    nmf_feature_names = vectorizer.get_feature_names()
+    return c, nmf_feature_names
 
-def create_model(init, k, tokenized_app_description):
-    model = decomposition.NMF(init=init, n_components=k)
+def create_model(k, tokenized_app_description, random_state):
+    nmf = NMF(n_components=k, random_state=random_state)
     c, terms = tfi_vectorizer_for_an_app_description(tokenized_app_description)
     # apply the model and extract the two factor matrices
-    W = model.fit_transform(c)
-    H = model.components_
-    return W, H
+    nmf_output = nmf.fit_transform(c)
+    nmf_weights = nmf.components_
+    return nmf_output, nmf_weights
 
 # below function is directly copied from
 # https://github.com/derekgreene/topic-model-tutorial/blob/master/2%20-%20NMF%20Topic%20Models.ipynb
 # The top ranked terms from the H factor for each topic can give us an insight into the content of that topic.
 # This is often called the topic descriptor. Let's define a function that extracts the descriptor for a specified topic:
-def get_descriptor( init, k, tokenized_app_description, topic_index, top ):
-    C, terms = tfi_vectorizer_for_an_app_description(tokenized_app_description)
-    W, H = create_model(init, k, tokenized_app_description)
+def get_descriptor(k, tokenized_app_description, topic_index, top , random_state):
+    c, nmf_feature_names = tfi_vectorizer_for_an_app_description(tokenized_app_description)
+    nmf_output, nmf_weights = create_model(k, tokenized_app_description, random_state)
     # reverse sort the values to sort the indices
-    top_indices = np.argsort( H[topic_index,:] )[::-1]
+    top_indices = np.argsort( nmf_output[topic_index,:] )[::-1]
     # now get the terms corresponding to the top-ranked indices
     top_terms = []
     for term_index in top_indices[0:top]:
-        top_terms.append( terms[term_index] )
+        top_terms.append(nmf_feature_names[term_index])
     return top_terms
 
 
@@ -150,52 +171,59 @@ def get_descriptor( init, k, tokenized_app_description, topic_index, top ):
 # result in slightly different topic words.
 # so in order to keep consistency, you cannot run get_descriptor_in_tuple_or_list twice, once get tuple and once
 # get list, because this way you are actually running get_descriptor twice and get different topic words in tuple and list.
-def get_descriptor_in_tuple( init, k, tokenized_app_description, top):
-    try:
-        descriptors = []
-        for topic_index in range(k):
-            d = get_descriptor(init, k, tokenized_app_description, topic_index, top)
-            str_descriptor = ", ".join(d)
-            topic_tuple = (topic_index+1, str_descriptor)
-            descriptors.append(topic_tuple)
-        return descriptors
-    except:
-        str_tokenized = ', '.join(tokenized_app_description)
-        print('error : ' + str_tokenized)
-
-
-def take_words_from_tuple(list_of_tuples):
-    a = []
-    if list_of_tuples is not None:
-        for tup in list_of_tuples:
-            # corresponding to [(1, 'marker, photo'), (2, 'design, instagram')]
-            if isinstance(tup[1], str):
-                x = tup[1].split(', ')
-                a.extend(x) # use extend bc x is a list of strings
-            # corresponding to [('game', 14420), ('app', 13258)]
-            elif isinstance(tup[0], str):
-                a.append(tup[0]) # use append bc tup[0] is just a string
-        # need to filter out duplicated topic words within each app's description
-        # this is good for later comparing them with the most frequently occurring topic words across all apps.
-        return list(set(a))
+## Dec 04, 2020, after setting the random state, I guess I can produce the same results for tuple or list
+def get_descriptor_in_tuple_or_list(k, tokenized_app_description, top, random_state, tup):
+    if tup is True:
+        try:
+            descriptors = []
+            for topic_index in range(k):
+                d = get_descriptor(k, tokenized_app_description, topic_index, top, random_state)
+                str_descriptor = ", ".join(d)
+                topic_tuple = (topic_index+1, str_descriptor)
+                descriptors.append(topic_tuple)
+            return descriptors
+        except:
+            str_tokenized = ', '.join(tokenized_app_description)
+            print('error : ' + str_tokenized)
     else:
-        return 'none' # to avoid 'float' type is not iterable in below row[i]
+        try:
+            descriptors = []
+            for topic_index in range(k):
+                d = get_descriptor(k, tokenized_app_description, topic_index, top, random_state)
+                descriptors.append(d)
+            return list(set(descriptors))
+        except:
+            str_tokenized = ', '.join(tokenized_app_description)
+            print('error : ' + str_tokenized)
 
 
-def get_descriptor_for_each_row( initial_panel, panels_have_text, init, k, top, **kwargs ):
-    df = open_token_df(initial_panel)
-    # the columns to store the ranked topics
-    topic_tuple_cols = ['topic_tuple_' + item for item in panels_have_text]
-    topic_list_cols = ['topic_list_' + item for item in panels_have_text]
-    for i in topic_tuple_cols:
-        df[i] = np.nan
-    for i in topic_list_cols:
-        df[i] = np.nan
+# def take_words_from_tuple(list_of_tuples):
+#     if list_of_tuples is not None:
+#         a = []
+#         for tup in list_of_tuples:
+#             # corresponding to [(1, 'marker, photo'), (2, 'design, instagram')]
+#             if isinstance(tup[1], str):
+#                 x = tup[1].split(', ')
+#                 a.extend(x) # use extend bc x is a list of strings
+#             # corresponding to [('game', 14420), ('app', 13258)]
+#             elif isinstance(tup[0], str):
+#                 a.append(tup[0]) # use append bc tup[0] is just a string
+#         # need to filter out duplicated topic words within each app's description
+#         # this is good for later comparing them with the most frequently occurring topic words across all apps.
+#         return list(set(a))
+#     else:
+#         return 'none'
+
+
+def get_descriptor_for_each_row( initial_panel, panels_have_text, k, top, random_state, tup, **kwargs ):
+    df = combine_tokenized_cols_into_single_col(initial_panel, panels_have_text)
     if 'sample' in kwargs.keys():
         df = df.sample(n=kwargs['sample'])
-    for i in panels_have_text:
-        df['topic_tuple_'+i] = df['description_'+i].progress_apply(lambda x: get_descriptor_in_tuple( init, k, x, top ))
-        df['topic_list_' + i] = df['topic_tuple_' + i].progress_apply(lambda x: take_words_from_tuple(x))
+    # the columns to store the ranked topics
+    df['topic_tuple'] = np.nan
+    df['topic_list'] = np.nan
+    df['topic_tuple'] = df['combined_panels_description'].progress_apply(lambda x: get_descriptor_in_tuple( init, k, x, top, random_state, tup))
+    df['topic_list'] = df['combined_panels_description'].progress_apply(lambda x: get_descriptor_in_tuple( init, k, x, top, random_state, tup))
 
     # save
     folder_name = initial_panel + '_PANEL_DF'
@@ -218,68 +246,10 @@ def open_topic_df(initial_panel):
     return df
 
 # https://towardsdatascience.com/lovecraft-with-natural-language-processing-part-2-tokenisation-and-word-counts-f970f6ff5690
-# bag-of-words: an unordered aggregated representation of a larger volume of text, which can be a document, chapter, paragraph, sentence, etc….
-# The grammar, punctuation, and word order from the original text are ignored, the only thing that’s kept is the
-# unique words and a number attached to them. That number can be the frequency with which the word occurs in the text, or it can be a binary 0 or 1,
-# simply measuring whether the word is in the text or not.
-
-## put all the topic words from relevent columns into a list (dict value) corresponding to panel names (dict key).
-def bag_of_words(initial_panel, panels_have_text):
-    df = open_topic_df(initial_panel)
-    topic_list_cols = ['topic_list_' + item for item in panels_have_text]
-    bow = dict.fromkeys(topic_list_cols, [])
-    for i in bow.keys():
-        for index, row in df.iterrows():
-            bow[i].extend(row[i])
-    return bow
-
-## count the frequency of a word appearing in a list (dict value) corresponding to panel names (dict key)
-def frequencies_bag_of_words(initial_panel, panels_have_text):
-    bow = bag_of_words(initial_panel, panels_have_text)
-    fre_bow = dict.fromkeys(bow.keys())
-    for k, v in bow.items():
-        fre_bow[k] = Counter(v)
-    return fre_bow
-
-# create a function that arbitrarily define a list of broad topic words for each panel
-def broad_or_niche_topic_words(initial_panel, panels_have_text, type, tup, threshold):
-    fre_bow = frequencies_bag_of_words(initial_panel, panels_have_text)
-    if type == 'broad':
-        if tup is True:
-            l = dict.fromkeys(fre_bow.keys())
-            for k, v in fre_bow.items():
-                l[k] = []
-                for word, frequency in v.items():
-                    if frequency >= threshold:
-                        l[k].append(tuple((word, frequency)))
-                l[k] = sorted(l[k], key=lambda x: x[1], reverse=True)
-            return l
-        else:
-            l = dict.fromkeys(fre_bow.keys())
-            for k, v in fre_bow.items():
-                l[k] = []
-                for word, frequency in v.items():
-                    if frequency >= threshold:
-                        l[k].append(word)
-            return l
-    if type == 'niche':
-        if tup is True:
-            l = dict.fromkeys(fre_bow.keys())
-            for k, v in fre_bow.items():
-                l[k] = []
-                for word, frequency in v.items():
-                    if frequency < threshold:
-                        l[k].append(tuple((word, frequency)))
-                l[k] = sorted(l[k], key=lambda x: x[1], reverse=True)
-            return l
-        else:
-            l = dict.fromkeys(fre_bow.keys())
-            for k, v in fre_bow.items():
-                l[k] = []
-                for word, frequency in v.items():
-                    if frequency < threshold:
-                        l[k].append(word)
-            return l
+# https://shravan-kuchkula.github.io/topic-modeling/#build-nmf-model-using-sklearn
+# Dec 04 2020, remove bag of words and frequency of bag of words function, because I am ditching counting the frequencies of topic words
+# for each app, instead, I am running topic model on the entire apps' corpus to generate overall topic list.
+# Go to git to find historical versions.
 
 
 ## compare each app's topic words with a list of top topic words (above an arbitrary threshold, for example, >= 1000)
