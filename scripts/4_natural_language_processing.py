@@ -20,6 +20,7 @@ import plotly.graph_objects as go
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.decomposition import NMF, LatentDirichletAllocation
 from sklearn.datasets import fetch_20newsgroups
+from sklearn.pipeline import Pipeline
 vectorizer = TfidfVectorizer()
 from sklearn import decomposition
 from collections import Counter
