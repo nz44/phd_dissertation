@@ -21,10 +21,16 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.decomposition import NMF, LatentDirichletAllocation
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.pipeline import Pipeline
+from sklearn.cluster import KMeans
 vectorizer = TfidfVectorizer()
 from sklearn import decomposition
+from sklearn.cluster import KMeans
+from sklearn.decomposition import TruncatedSVD
+from scipy.sparse import random as sparse_random
+from sklearn.random_projection import sparse_random_matrix
 from collections import Counter
 import random
+import skfuzzy as fuzz
 
 import spacy
 from spacy import displacy
@@ -184,3 +190,24 @@ def open_topic_df(initial_panel):
     df = pd.read_pickle(q)
     return df
 
+# 2020 Dec 12: I decide not to combine all topics words of each app into a single document.
+# Instead, I will keep the n topic words for one app as a unity, and use hierarchical clustering to
+# group those small unities, so you will not need to set arbitrary criteria for comparing the topic words within one app
+# with the top topic words generated from a single document.
+
+def combine_topics_into_a_dict(initial_panel):
+    df = open_topic_df(initial_panel)
+    topic_dict = dict.fromkeys(df.index)
+    for index, row in df.iterrows():
+        topic_dict[index] = row['topic_words']
+    return topic_dict
+
+# in order to apply td-idf transformation, you need each document to be a string, containing all the topic words
+# rather than a list of topic words
+def combine_topics_into_a_list(initial_panel):
+    df = open_topic_df(initial_panel)
+    topic_list = []
+    for index, row in df.iterrows():
+        listToStr = ' '.join([str(elem) for elem in row['topic_words']])
+        topic_list.append(listToStr)
+    return topic_list
