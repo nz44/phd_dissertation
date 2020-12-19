@@ -202,6 +202,7 @@ def combine_topics_into_a_dict(initial_panel):
         topic_dict[index] = row['topic_words']
     return topic_dict
 
+
 # in order to apply td-idf transformation, you need each document to be a string, containing all the topic words
 # rather than a list of topic words
 def combine_topics_into_a_list(initial_panel):
@@ -211,3 +212,11 @@ def combine_topics_into_a_list(initial_panel):
         listToStr = ' '.join([str(elem) for elem in row['topic_words']])
         topic_list.append(listToStr)
     return topic_list
+
+def combine_topics_into_pandas(initial_panel):
+    df = open_topic_df(initial_panel)
+    for index, row in df.iterrows():
+        listToStr = ' '.join([str(elem) for elem in row['topic_words']])
+        df.at[index, 'topic_string'] = listToStr
+    df_out = df[['topic_string']] # single brackets will only return you a pandas series instead of pandas dataframe!
+    return df_out
