@@ -22,6 +22,7 @@ from sklearn.decomposition import NMF, LatentDirichletAllocation
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.pipeline import Pipeline
 from sklearn.cluster import KMeans
+from sklearn import metrics
 vectorizer = TfidfVectorizer()
 from sklearn import decomposition
 from sklearn.cluster import KMeans
@@ -220,3 +221,38 @@ def combine_topics_into_pandas(initial_panel):
         df.at[index, 'topic_string'] = listToStr
     df_out = df[['topic_string']] # single brackets will only return you a pandas series instead of pandas dataframe!
     return df_out
+
+# one of the list is the index of orginal dataframe (storing app ids), the other list is the cluster labels, they are of same length
+def merge_lists_to_list_of_tuples(list1, list2):
+    merged_list = [(list1[i], list2[i]) for i in range(0, len(list1))]
+    return merged_list
+
+def merge_lists_to_dataframe(appid, cluster_label, type_of_cluster):
+    df = pd.DataFrame({'app_id': appid, type_of_cluster: cluster_label})
+    df.set_index('app_id', inplace=True)
+    return df
+
+# after obtainning each app id's cluster lable, create a new column to the original pandas dataframe and save
+# merged_df is obtained through merge_lists_to_dataframe
+def add_cluster_label_to_df(initial_panel, merged_df):
+    df = open_topic_df(initial_panel)
+    df2 = df.merge(merged_df, left_index=True, right_index=True)
+    # save
+    folder_name = initial_panel + '_PANEL_DF'
+    f_name = 'description_tokens_converted_to_topics_cluster_labels.pkl'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    df2.to_pickle(q)
+    return df2
+
+def open_topic_and_cluster_df(initial_panel):
+    folder_name = initial_panel + '_PANEL_DF'
+    f_name = 'description_tokens_converted_to_topics_cluster_labels.pkl'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    df = pd.read_pickle(q)
+    return df
+
+def select_cluster_labels(initial_panel, cluster_col_name, cluster_label_value):
+    df = open_topic_and_cluster_df(initial_panel)
+    label = df[cluster_col_name] == cluster_label_value
+    df2 = df[label][['topic_words', cluster_col_name]]
+    return df2
