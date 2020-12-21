@@ -45,19 +45,50 @@ stopwords = list(STOP_WORDS)
 tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
 # ********************************************************************************************************
-### Preprocessing
-# ********************************************************************************************************
-
-def take_out_the_text_colume_from_merged_df(initial_panel, text_column_name):
+### open_file_func functional parameter
+def open_merged_df(initial_panel):
     folder_name = initial_panel + '_PANEL_DF'
     f_name = initial_panel + '_MERGED.pickle'
     q = input_path / '__PANELS__' / folder_name / f_name
-    with open(q, 'rb') as f:
-        D = pickle.load(f)
-    text_cols = D.filter(regex=text_column_name).columns
-    F =D[text_cols]
-    F.fillna('not available', inplace=True)
-    return F
+    df = pd.read_pickle(q)
+    return df
+
+def open_token_df(initial_panel):
+    folder_name = initial_panel + '_PANEL_DF'
+    f_name = 'description_converted_to_spacy_tokens.pkl'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    df = pd.read_pickle(q)
+    return df
+
+def open_topic_df(initial_panel):
+    folder_name = initial_panel + '_PANEL_DF'
+    f_name = 'description_tokens_converted_to_topics.pkl'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    df = pd.read_pickle(q)
+    return df
+
+def open_cluster_df(initial_panel, cluster_type):
+    folder_name = initial_panel + '_PANEL_DF'
+    if cluster_type == 'k-means':
+        f_name = 'df_with_k_means_labels.pkl'
+    elif cluster_type == 'fuzzy-c-means':
+        f_name = 'df_with_fuzzy_c_means_labels.pkl'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    df = pd.read_pickle(q)
+    return df
+# ********************************************************************************************************
+
+
+# ********************************************************************************************************
+### Preprocessing
+# ********************************************************************************************************
+
+def take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name): # open_merged_df
+    df = open_file_func(initial_panel)
+    text_cols = df.filter(regex=text_column_name).columns
+    f =df[text_cols]
+    f.fillna('not available', inplace=True)
+    return f
 
 #### 1. Tokenization: break text into sentences and then into words, remove punctuations and stopword
 #### 2. Lemmatization: for example, change third person verb to first person verb, change past tense to present tense
@@ -121,15 +152,9 @@ def convert_df_to_nlp_tokens(initial_panel, text_column_name, **kwargs):
 # SKlean negative matrix model
 # please refer to topic_modeling_playground.ipynb
 # ********************************************************************************************************
-def open_token_df(initial_panel):
-    folder_name = initial_panel + '_PANEL_DF'
-    f_name = 'description_converted_to_spacy_tokens.pkl'
-    q = input_path / '__PANELS__' / folder_name / f_name
-    DF = pd.read_pickle(q)
-    return DF
 
-def combine_tokenized_cols_into_single_col(initial_panel, panels_have_text):
-    df = open_token_df(initial_panel)
+def combine_tokenized_cols_into_single_col(open_file_func, initial_panel, panels_have_text): # open_token_df
+    df = open_file_func(initial_panel)
     tokenized_cols = ['description_' + item for item in panels_have_text]
     for i in range(len(tokenized_cols)):
         if i == 0:
@@ -184,44 +209,48 @@ def get_nmf_topics_for_each_row( initial_panel, panels_have_text, pipe, num_topi
 # https://scikit-learn.org/stable/modules/clustering.html
 # https://medium.com/@sametgirgin/hierarchical-clustering-model-in-5-steps-with-python-6c45087d4318
 # ********************************************************************************************************
-def open_topic_df(initial_panel):
-    folder_name = initial_panel + '_PANEL_DF'
-    f_name = 'description_tokens_converted_to_topics.pkl'
-    q = input_path / '__PANELS__' / folder_name / f_name
-    df = pd.read_pickle(q)
+
+################ get the documents (single string) for each app for tf-idf and clustering ################
+# ********************************************************************************************************
+def combine_descriptions_into_str(open_file_func, initial_panel, text_column_name, panels_with_text): # use take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name)
+    df = take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name)
+    description_cols = ['description_' + item for item in panels_with_text]
+    for i in range(len(description_cols)):
+        if i == 0:
+            df['description_all_panels'] = df[description_cols[i]]
+        else:
+            df['description_all_panels'] = df['description_all_panels'] + df[description_cols[i]]
+    df = df[['description_all_panels']]
     return df
 
-# 2020 Dec 12: I decide not to combine all topics words of each app into a single document.
-# Instead, I will keep the n topic words for one app as a unity, and use hierarchical clustering to
-# group those small unities, so you will not need to set arbitrary criteria for comparing the topic words within one app
-# with the top topic words generated from a single document.
-
-def combine_topics_into_a_dict(initial_panel):
-    df = open_topic_df(initial_panel)
+def combine_topics_into_a_dict(open_file_func, initial_panel):
+    df = open_file_func(initial_panel)
     topic_dict = dict.fromkeys(df.index)
     for index, row in df.iterrows():
         topic_dict[index] = row['topic_words']
     return topic_dict
 
-
 # in order to apply td-idf transformation, you need each document to be a string, containing all the topic words
 # rather than a list of topic words
-def combine_topics_into_a_list(initial_panel):
-    df = open_topic_df(initial_panel)
+def combine_topics_into_a_list(open_file_func, initial_panel):
+    df = open_file_func(initial_panel)
     topic_list = []
     for index, row in df.iterrows():
         listToStr = ' '.join([str(elem) for elem in row['topic_words']])
         topic_list.append(listToStr)
     return topic_list
 
-def combine_topics_into_pandas(initial_panel):
-    df = open_topic_df(initial_panel)
+def combine_topics_into_pandas(open_file_func, initial_panel):
+    df = open_file_func(initial_panel)
     for index, row in df.iterrows():
         listToStr = ' '.join([str(elem) for elem in row['topic_words']])
         df.at[index, 'topic_string'] = listToStr
     df_out = df[['topic_string']] # single brackets will only return you a pandas series instead of pandas dataframe!
     return df_out
+# ********************************************************************************************************
 
+
+# ********************************************************************************************************
 # one of the list is the index of orginal dataframe (storing app ids), the other list is the cluster labels, they are of same length
 def merge_lists_to_list_of_tuples(list1, list2):
     merged_list = [(list1[i], list2[i]) for i in range(0, len(list1))]
@@ -234,25 +263,33 @@ def merge_lists_to_dataframe(appid, cluster_label, type_of_cluster):
 
 # after obtainning each app id's cluster lable, create a new column to the original pandas dataframe and save
 # merged_df is obtained through merge_lists_to_dataframe
-def add_cluster_label_to_df(initial_panel, merged_df):
-    df = open_topic_df(initial_panel)
+def add_cluster_label_to_df(open_file_func, initial_panel, merged_df, cluster_type):
+    df = open_file_func(initial_panel)
     df2 = df.merge(merged_df, left_index=True, right_index=True)
     # save
     folder_name = initial_panel + '_PANEL_DF'
-    f_name = 'description_tokens_converted_to_topics_cluster_labels.pkl'
+    if cluster_type == 'k-means':
+        f_name = 'df_with_k_means_labels.pkl'
+    elif cluster_type == 'fuzzy-c-means':
+        f_name = 'df_with_fuzzy_c_means_labels.pkl'
     q = input_path / '__PANELS__' / folder_name / f_name
     df2.to_pickle(q)
     return df2
 
-def open_topic_and_cluster_df(initial_panel):
-    folder_name = initial_panel + '_PANEL_DF'
-    f_name = 'description_tokens_converted_to_topics_cluster_labels.pkl'
-    q = input_path / '__PANELS__' / folder_name / f_name
-    df = pd.read_pickle(q)
-    return df
-
-def select_cluster_labels(initial_panel, cluster_col_name, cluster_label_value):
-    df = open_topic_and_cluster_df(initial_panel)
-    label = df[cluster_col_name] == cluster_label_value
-    df2 = df[label][['topic_words', cluster_col_name]]
+def select_cluster_labels(open_file_func, initial_panel, cluster_type, cluster_label_value):
+    df = open_file_func(initial_panel, cluster_type)
+    label = df[cluster_type] == cluster_label_value
+    df2 = df[label][['combined_panels_description', cluster_type]]
     return df2
+
+# given an app's id, see which other apps are in the same cluster (k-means)
+def see_apps_from_the_same_cluster_of_a_given_app(open_file_func, initial_panel, cluster_type, given_app_id): # use open_topic_and_cluster_df
+    df = open_file_func(initial_panel, cluster_type)
+    app_cluster_number = df.loc[given_app_id, cluster_type]
+    print(given_app_id, 'has cluster label', str(app_cluster_number))
+    label = df[cluster_type] == app_cluster_number
+    df2 = df[label][['combined_panels_description', cluster_type]]
+    return df2
+
+# look at how many apps are allocated inside each cluster (k-means)
+# def how_many_apps_are_inside_each_cluster(open_file_func, initial_panel): # use open_topic_and_cluster_df
