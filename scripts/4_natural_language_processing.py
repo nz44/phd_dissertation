@@ -32,7 +32,7 @@ from sklearn.random_projection import sparse_random_matrix
 from collections import Counter
 import random
 import skfuzzy as fuzz
-
+from fcmeans import FCM
 import spacy
 from spacy import displacy
 nlp = spacy.load('en_core_web_sm')
@@ -291,5 +291,24 @@ def see_apps_from_the_same_cluster_of_a_given_app(open_file_func, initial_panel,
     df2 = df[label][['combined_panels_description', cluster_type]]
     return df2
 
+def see_apps_from_a_particular_cluster(open_file_func, initial_panel, cluster_type, cluster_label): # use open_topic_and_cluster_df
+    df = open_file_func(initial_panel, cluster_type)
+    label = df[cluster_type] == cluster_label
+    df2 = df[label][['combined_panels_description', cluster_type]]
+    return df2
+
+# compare if the same apps are allocated to the same cluster for both k-means and fuzzy-c-means, this is a check before using the memberhsip score
+def merge_k_means_fuzzy_c_means(initial_panel,cluster_type_1,cluster_type_2):
+    k_means = open_cluster_df(initial_panel, cluster_type_1)
+    f_c_means = open_cluster_df(initial_panel, cluster_type_2)
+    k_means = k_means[['combined_panels_description', 'k-means']]
+    f_c_means = f_c_means[['combined_panels_description', 'fuzzy-c-means']]
+    k_c = k_means.merge(f_c_means, left_index=True, right_index=True)
+    return k_c
+
 # look at how many apps are allocated inside each cluster (k-means)
-# def how_many_apps_are_inside_each_cluster(open_file_func, initial_panel): # use open_topic_and_cluster_df
+# input dataframe is the output of merge_k_means_fuzzy_c_means
+def count_apps_by_cluster(k_c):
+    df_k_count = k_c.groupby(['k-means']).count()
+    df_c_count = k_c.groupby(['fuzzy-c-means']).count()
+    return df_k_count, df_c_count
