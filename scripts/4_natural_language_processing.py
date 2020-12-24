@@ -76,6 +76,13 @@ def open_cluster_df(initial_panel, cluster_type):
     q = input_path / '__PANELS__' / folder_name / f_name
     df = pd.read_pickle(q)
     return df
+
+def merge_k_means_to_prices(open_file_func, initial_panel, cluster_type, panels):
+    k_df = open_file_func(initial_panel, cluster_type) # use open_cluster_df
+    k_df = k_df[['combined_panels_description', 'k-means']]
+    all_df = open_topic_df(initial_panel)
+
+
 # ********************************************************************************************************
 
 
