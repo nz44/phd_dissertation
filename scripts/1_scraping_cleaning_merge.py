@@ -2,18 +2,7 @@ from google_play_scraper import app
 from tqdm import tqdm
 import numpy as np
 import random
-
-# convert the data scraped before 202009 from list of dictionaries to a dictionary with app ids as keys
-# some of them uses app_id as key and some of them uses appId as key
-# from 202009 onwards, the key conversion happend in scraping stage
-def convert_list_data_to_dict_with_appid_keys(C):
-    new_data = {}
-    for i in C:
-        try:
-            new_data[i['app_id']] = i
-        except:
-            new_data[i['appId']] = i
-    return(new_data)
+import datetime
 
 
 # get ID list
@@ -43,22 +32,55 @@ def scraping_apps_according_to_id(id_list):
     return(app_details)
 
 
-class app_detail_dicts:
-    # this app_detail_dict is opened from open_files class open_app_details_dict method
-    def __init__(self, app_details_dict):
-        self.app_details_dict = app_details_dict
+class app_detail_dicts():
+    # this self is opened from open_files class open_app_details_dict method or open_initial_panel_with_its_tracking_panels method
+    def __init__(self, d):
+        self.d = d
+
+    def convert_keys_to_datetime(self):
+        datetime_list = []
+        for i in self.d.keys():
+            date_time_obj = datetime.datetime.strptime(i, '%Y%m')
+            datetime_list.append(date_time_obj.date())
+        return datetime_list
 
     def get_a_glimpse(self):
-        for k, v in self.app_details_dict.items():
+        for k, v in self.d.items():
             print('PANEL', k)
-            random_app_id = random.choice(v.keys())
+            random_app_id = random.choice(list(v))
             print('a random app id is:', random_app_id)
             the_app_detail = v[random_app_id]
-            for feature, content in the_app_detail.items():
-                print(feature, " : ", content)
+            if the_app_detail is not None:
+                for feature, content in the_app_detail.items():
+                    print(feature, " : ", content)
+                print()
+            else:
+                print('the app detail is None')
+                print()
+
+    # convert the data scraped before 202009 from list of dictionaries to a dictionary with app ids as keys
+    # some of them uses app_id as key and some of them uses appId as key
+    # from 202009 onwards, the key conversion happened in scraping stage
+    def convert_list_data_to_dict_with_appid_keys(self):
+        new_data = dict.fromkeys(self.d.keys(), {})
+        x = datetime.datetime(2020, 9, 1)
+        for i in self.d.keys():
+            date_time_obj = datetime.datetime.strptime(i, '%Y%m')
+            if date_time_obj < x: # check the date is before 2020 September
+                for j in self.d[i]: # self[i] is a list here
+                    if j is not None:
+                        if 'app_id' in j.keys():
+                            new_data[i][j['app_id']] = j
+                        elif 'appId' in j.keys():
+                            new_data[i][j['appId']] = j
+            else: # for data scraped in 202009 and onwards, leave them as they are
+                new_data[i] = self.d[i]
+        return new_data
+
 
     def transform_old_scraper_dict_dataframe(self):
         # c are panels scraped before 202009
+        # that means in the folder TRACKING_THE_SAME_ID_MONTHLY_SCRAPE 202009 and later does not need to use this function
         D = pd.DataFrame.from_dict(raw_data)
         E = D.T
         E.rename(columns={"category": "genreId", "description_html": "descriptionHTML",
