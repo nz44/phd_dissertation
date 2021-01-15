@@ -3,10 +3,15 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 import random
-import datetime
+from datetime import datetime as dt
+from datetime import date
 import functools
 import collections
 import operator
+import functools
+import re
+import math
+from collections.abc import Iterable
 
 
 # get ID list
@@ -57,29 +62,19 @@ class app_detail_dicts():
                         'recentChanges', 'recent_changes', 'summaryHTML', 'androidVersionText', 'icon', 'genre',
                         'headerImage', 'screenshots', 'video', 'videoImage', 'developerInternalID', 'content_rating',
                         'contentRatingDescription', 'installs', 'url', 'free_False', 'offersIAP_False',
-                        'recentChangesHTML', 'adSupported_False', 'containsAds_False', 'genreId', 'recentChanges',
+                        'recentChangesHTML', 'adSupported_False', 'containsAds_False', 'recentChanges',
                         'category', 'iap_range', 'app_id', 'androidVersionText', 'androidVersion',
                         'current_version', 'version', 'required_android_version', 'sale', 'saleTime', 'originalPrice',
                         'saleText']
-
-        self.cols_to_dummy = ['free', 'offersIAP', 'adSupported', 'containsAds', 'genreId', 'contentRating']
-
-        self.cols_to_string = ['title', 'description', 'summary', 'developer', 'developerId', 'developerEmail',
-                          'developerWebsite', 'developerAddress']
-
-        self.cols_to_float = ['minInstalls', 'score', 'ratings', 'reviews', 'size', 'androidVersion']
-
-        self.cols_in_list_or_dict_need_to_expand = ['histogram', 'price', 'comments']
-
-        self.cols_to_datetime = ['released', 'updated']
 
 
     def convert_keys_to_datetime(self):
         datetime_list = []
         for i in self.d.keys():
-            date_time_obj = datetime.datetime.strptime(i, '%Y%m')
+            date_time_obj = dt.strptime(i, '%Y%m')
             datetime_list.append(date_time_obj.date())
         return datetime_list
+
 
     def get_a_glimpse(self):
         dict_data = self.convert_list_data_to_dict_with_appid_keys()
@@ -96,6 +91,124 @@ class app_detail_dicts():
                 print('the app detail is None')
                 print()
 
+
+    def merge_panels_into_single_df(self):
+        old_data = self.format_cols() # this is a dictionary with panel as keys
+        df_list = []
+        for panel, df in old_data.items():
+            df.drop([x for x in df.columns if x in self.cols_to_drop], axis=1, inplace=True)
+            df = df.add_suffix('_' + panel)
+            df_list.append(df)
+        merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
+        return merged_df
+
+
+    def check_data_type(self):
+        data = self.combine_similar_and_drop_extra_cols()
+        for panel, df in data.items():
+            print(panel)
+            print(df.dtypes)
+            print()
+
+
+    def check_unique_value_in_cols(self, col_name):
+        data = self.format_cols()
+        for panel, df in data.items():
+            print(panel, col_name)
+            print('Unique Values:')
+            print(df[col_name].unique())
+            print()
+            print('Frequency Table:')
+            print(df[col_name].value_counts(dropna=False))
+            print()
+            print()
+
+
+    def format_cols(self):
+        old_data = self.format_missing_values()
+        new_data = dict.fromkeys(self.d.keys())
+        numeric_cols = ['minInstalls', 'score', 'ratings', 'reviews', 'size', 'price']
+        datetime_cols = ['released', 'updated']
+        dummy_cols = ['adSupported', 'containsAds', 'free', 'offersIAP', 'contentRating', 'genreId']
+        # ---------------------------------------------------------------------------------------------
+        def convert_string_to_datetime(x):
+            for fmt in ('%b %d, %Y', '%d-%b-%y', '%B %d, %Y'):
+                try:
+                    return dt.strptime(x, fmt).date()
+                except:
+                    pass
+
+        def convert_unix_to_datetime(x):
+            if isinstance(x, dt) or isinstance(x, date):
+                pass
+                return x
+            elif x is None:
+                pass
+                return np.datetime64("NaT")
+            else:
+                date_time_obj = dt.fromtimestamp(x)
+                return date_time_obj.date()
+
+        def remove_characters_from_numeric_cols(x):
+            num = re.sub(r'\D+', "", x)
+            return num
+
+        def unlist_a_col_containing_list_of_strings(x):
+            if x is not None and re.search(r'\[\]+', x):
+                s = eval(x)
+                if isinstance(s, list):
+                    s2 = ', '.join(str(ele) for ele in s)
+                    return s2
+            else:
+                return x
+
+        everyone_pattern = re.compile(r'(Everyone+)|(10\++)')
+        teen_pattern = re.compile(r'(Teen+)|(Mature+)')
+        adult_pattern = re.compile(r'(Adults+)|(18\++)')
+        def combine_contentRating_into_3_groups(x):
+            if x is not None:
+                if re.search(everyone_pattern, x):
+                    return 'Everyone'
+                elif re.search(teen_pattern, x):
+                    return 'Teen'
+                elif re.search(adult_pattern, x):
+                    return 'Adult'
+            else:
+                return x
+        # ---------------------------------------------------------------------------------------------
+        for panel, df in old_data.items():
+            df['size'] = df['size'].apply(lambda x: remove_characters_from_numeric_cols(x) if isinstance(x, str) else x)
+            df['price'] = df['price'].apply(lambda x: remove_characters_from_numeric_cols(x) if isinstance(x, str) else x)
+            df['released'] = df['released'].apply(lambda x: convert_string_to_datetime(x) if isinstance(x, str) else convert_unix_to_datetime(x))
+            df['updated'] = df['updated'].apply(lambda x: convert_string_to_datetime(x) if isinstance(x, str) else convert_unix_to_datetime(x))
+            df['contentRating'] = df['contentRating'].apply(unlist_a_col_containing_list_of_strings)
+            df['contentRating'] = df['contentRating'].apply(combine_contentRating_into_3_groups)
+            # since AdSupported only contains True and None, so fill None with False
+            df['adSupported'].fillna(False, inplace=True)
+            # df_temp = pd.get_dummies(df[dummy_cols], dummy_na=True)
+            # df = df.join(df_temp, how='inner')
+            df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric)
+            new_data[panel] = df
+        return new_data
+
+
+    def format_missing_values(self):
+        old_data = self.combine_similar_and_drop_extra_cols()
+        new_data = dict.fromkeys(self.d.keys())
+        numeric_cols = ['minInstalls', 'score', 'ratings', 'reviews', 'size', 'price', 'inAppProductPrice'] # use np.nan
+        none_numeric_cols = ['adSupported', 'containsAds', 'free', 'offersIAP', 'contentRating', 'genreId',
+                             'released', 'updated', 'summary', 'description', 'title', 'comments',
+                             'developerId', 'developerEmail', 'developerWebsite', 'developerAddress'] # use None
+        for panel, df in old_data.items():
+            # where(condition, df2) if True, leave as they are (df1), if False, use df2
+            # use list comprehension because dataframe before 202009 does not have inAppProductPrice column
+            df[[x for x in df.columns if x in numeric_cols]] = df[[x for x in df.columns if x in numeric_cols]].where(df.notnull(), np.nan) # replace None with nan
+            df[none_numeric_cols] = df[none_numeric_cols].replace(r'^\s*$', np.nan, regex=True) # fill whitespaces with np.nan
+            df[none_numeric_cols] = df[none_numeric_cols].where(df.notnull(), None) # replace nan with None
+            new_data[panel] = df
+        return new_data
+
+
     def check_for_duplicate_cols(self):
         df_dict = self.combine_similar_and_drop_extra_cols()
         for i, df in df_dict.items():
@@ -110,9 +223,10 @@ class app_detail_dicts():
                 print([item for item, count in collections.Counter(df.columns).items() if
                        count > 1])
 
+
     def combine_similar_and_drop_extra_cols(self):
-        new_data = dict.fromkeys(self.d.keys())
         old_data = self.convert_from_dict_to_df()
+        new_data = dict.fromkeys(self.d.keys())
         for i, df in old_data.items():
             ## __________________________________________ Combine Similar Cols ___________________________________________________
             # first check whether the dataframe contains BOTH old and new cols, yes then combine, no keep the same
@@ -135,17 +249,9 @@ class app_detail_dicts():
             # drop columns that will not be needed
             # after dropping columns, the only useful col that exist in and after 202009 is inAppProductPrice, which does not existed before
             df.drop([x for x in df.columns if x in self.cols_to_drop], axis=1, inplace=True)
-            # # change column names with date suffix so that
-            df = df.add_suffix('_' + i)
             new_data[i] = df
         return new_data
 
-
-    def format_dfs(self):
-        x = datetime.datetime(2020, 9, 1)
-        i = '201812'
-        date_time_obj = datetime.datetime.strptime(i, '%Y%m')
-        return i
 
     def convert_from_dict_to_df(self):
         old_data = self.convert_list_data_to_dict_with_appid_keys()
@@ -162,9 +268,9 @@ class app_detail_dicts():
     # from 202009 onwards, the key conversion happened in scraping stage
     def convert_list_data_to_dict_with_appid_keys(self):
         new_data = dict.fromkeys(self.d.keys(), {})
-        x = datetime.datetime(2020, 9, 1)
+        x = dt(2020, 9, 1)
         for i in self.d.keys():
-            date_time_obj = datetime.datetime.strptime(i, '%Y%m')
+            date_time_obj = dt.strptime(i, '%Y%m')
             if date_time_obj < x: # check the date is before 2020 September
                 for j in self.d[i]: # self[i] is a list here
                     if j is not None:
@@ -176,152 +282,3 @@ class app_detail_dicts():
                 new_data[i] = self.d[i]
         return new_data
 
-
-# ================================================================
-# extra code
-##################################################################
-
-
-                ## __________________________________________ Combine Similar Cols ___________________________________________________
-                # df_dummies = df2[[x for x in df2.columns if x in cols_to_dummy]]
-                # df_cat = pd.get_dummies(df_dummies.categories.apply(pd.Series).stack(),
-                #                     dummy_na=True, dtype=int).sum(level=0)
-                # df2 = df2.join(df_cat, how='inner')
-                #
-                # # create new minInstalls column
-                # df2["minInstalls"] = df2['installs'].str.replace('[^\w\s]', '')
-                # df2['minInstalls'] = df2['minInstalls'].astype(float)
-                #
-                # df2[[x for x in df2.columns if x in cols_to_string]].astype("string")
-        #
-        #         # remove the list brackets in certain columns
-        #         df2['genreId'] = df2['genreId'].apply(pd.Series)
-        #
-        #         df2['GAME'] = np.where(df2['genreId'].str.contains("GAME"), 1, 0)
-        #         utils = ['MEDICAL', 'EDUCATION', 'HEALTH_AND_FITNESS',
-        #                  'PARENTING', 'LIBRARIES_AND_DEMO',
-        #                  'HOUSE_AND_HOME', 'FINANCE', 'WEATHER', 'BOOKS_AND_REFERENCE',
-        #                  'TOOLS', 'BUSINESS', 'PRODUCTIVITY', 'TRAVEL_AND_LOCAL',
-        #                  'MAPS_AND_NAVIGATION', 'AUTO_AND_VEHICLES']
-        #         df2['UTILITIES'] = np.where(df2['genreId'].str.contains('|'.join(utils)), 1, 0)
-        #
-        #         social_media_l = ['COMICS', 'BEAUTY', 'ART_AND_DESIGN', 'DATING',
-        #                           'VIDEO_PLAYERS', 'SPORTS', 'LIFESTYLE',
-        #                           'PERSONALIZATION', 'SHOPPING', 'FOOD_AND_DRINK',
-        #                           'MUSIC_AND_AUDIO',
-        #                           'NEWS_AND_MAGAZINES', 'PHOTOGRAPHY', 'COMMUNICATION',
-        #                           'ENTERTAINMENT', 'SOCIAL', 'EVENTS']
-        #         df2['SOCIAL_MEDIA_LEISURE'] = np.where(df2['genreId'].str.contains('|'.join(social_media_l)), 1, 0)
-        #
-        #         # remove duplicate groups categories
-        #         # df2.loc[(E.UTILITIES == 1 & ), 'Event'] = 'Hip-Hop'
-        #         df2['UTILITIES'] = np.where(((df2.GAME == 1) & (df2.UTILITIES == 1)), 0, df2.UTILITIES)
-        #         df2['SOCIAL_MEDIA_LEISURE'] = np.where(((df2.GAME == 1) & (df2.SOCIAL_MEDIA_LEISURE == 1)), 0, df2.SOCIAL_MEDIA_LEISURE)
-        #         # because the conflicts mostly occur where family education is in the same category as entertainment or art and design
-        #         df2['SOCIAL_MEDIA_LEISURE'] = np.where(((df2.UTILITIES == 1) & (df2.SOCIAL_MEDIA_LEISURE == 1)), 0,
-        #                                              df2.SOCIAL_MEDIA_LEISURE)
-        #
-        #         df2['check_all_genre_covered'] = df2['GAME'] + df2['UTILITIES'] + df2['SOCIAL_MEDIA_LEISURE']
-        #
-        #         # a column is a pandas series, so this problem is creating pandas series from dictionary
-        #         # Since it is in string format, so first turn string into dictionary, then extract the dictioanry values and turn them into a list
-        #         # now I can use pd.Series to break this list into several columns
-        #         # note that unlike data scraped using the new scraper, they put the 5-star number of ratings in the first position
-        #         # initial data or trakcing data scraped in 201907, 201908, 201912, 202001, 202002 do not have histogram, using
-        #         # ast.literal_eval will raise value error, note str.contains is only a pandas series method
-        #         y = datetime.datetime(2020, 3, 1)
-        #         if date_time_obj < y:  # before 202003, you do not have score histograms
-        #             df2[['score_5', 'score_4', 'score_3', 'score_2', 'score_1']] = np.nan
-        #             df2['ratings'] = np.nan
-        #
-        #         else: # there are actually those dataframe scraped between 202003 and 202009
-        #             temp1 = df2['histogram'].apply(lambda x: ast.literal_eval(x))
-        #             temp2 = temp1.apply(lambda x: list(x.values()))
-        #             df2[['score_5', 'score_4', 'score_3', 'score_2', 'score_1']] = temp2.apply(pd.Series)
-        #             df2['ratings'] = df2['score_5'] + df2['score_4'] + df2['score_3'] + df2['score_2'] + df2['score_1']
-        #
-        #         # convert IAP price range into IAP price low or IAP price high -- skip the null
-        #         # for 201812,it seems that if you use list(). the list would break every digit into an element, so I will use str.split into two columns here
-        #         # however, for 2019 and onwards, the inAppProductPrice is already in list, so apply pd.Series worked
-        #         # in Both cases, they have some weird contents, mostly from content rating, in IAPprice column, I do not know why. I just removed all letters [a-z]
-        #         z = datetime.datetime(2018, 12, 1)
-        #         if date_time_obj == z:
-        #             df2['inAppProductPrice'] = np.where(df2['inAppProductPrice'].str.contains('[a-z]', regex=True), np.nan,
-        #                                               df2.inAppProductPrice)
-        #             df2['inAppProductPrice'] = df2['inAppProductPrice'].str.replace('$', '')
-        #             df2['inAppProductPrice'] = df2['inAppProductPrice'].str.replace('(', '')
-        #             df2['inAppProductPrice'] = df2['inAppProductPrice'].str.replace(')', '')
-        #             df2['inAppProductPrice'] = df2['inAppProductPrice'].str.replace("'", '')
-        #             df2[['IAP_low', 'IAP_high']] = df2['inAppProductPrice'].str.split(",", n=2, expand=True)
-        #             df2[['IAP_low', 'IAP_high']] = df2[['IAP_low', 'IAP_high']].astype(float)
-        #
-        #         else:
-        #             df2[['IAP_low', 'IAP_high']] = df2['inAppProductPrice'].apply(lambda x: pd.Series(x))
-        #             df2['IAP_low'] = df2['IAP_low'].str.replace('$', '')
-        #             df2['IAP_high'] = df2['IAP_high'].str.replace('$', '')
-        #             df2['IAP_low'] = np.where(df2['IAP_low'].str.contains('[a-z]', regex=True), np.nan,
-        #                                     df2.IAP_low)
-        #             df2['IAP_high'] = np.where(df2['IAP_high'].str.contains('[a-z]', regex=True), np.nan,
-        #                                      df2.IAP_high)
-        #             df2[['IAP_low', 'IAP_high']] = df2[['IAP_low', 'IAP_high']].astype(float)
-        #
-        #         df2['price'] = df2['price'].str.replace('$', '').astype(float)
-        #         # E['price'] = E['price'].astype(float)
-        #
-                # fill none with nan, and remove rows that contain nan in ALL columns
-                # df2 = df2.fillna(value=np.nan)
-                # df2 = df2.dropna(axis=0, how="all")
-                # df2.drop([x for x in df2.columns if x in cols_to_drop], axis=1, inplace=True)
-                # # change column names with date suffix so that
-                # df2 = df2.add_suffix('_' + i)
-                # new_data.append(df2)
-        #
-        #     else: # panels scraped in and after 202009
-        #         df = pd.DataFrame.from_dict(dict_data[i])
-        #         df2 = df.T
-        #         # df2['updated_datetime'] = pd.to_datetime(df2['updated'], origin='unix')
-        #         df2['released_datetime'] = pd.to_datetime(df2['released']).dt.date
-        #         df2['today_datetime'] = datetime.date.today()
-        #         df2['days_since_released'] = (df2['today_datetime'] - df2['released_datetime']).dt.days
-        #         df2 = pd.get_dummies(df2, columns=['free', 'offersIAP',
-        #                                        'adSupported', 'containsAds', 'contentRating'], dtype=int)
-        #         df2['GAME'] = np.where(df2['genreId'].str.contains("GAME"), 1, 0)
-        #         df2['UTILITIES'] = np.where(np.isin(df2['genreId'], ['MEDICAL', 'EDUCATION', 'HEALTH_AND_FITNESS',
-        #                                                          'PARENTING', 'LIBRARIES_AND_DEMO',
-        #                                                          'BOOKS_AND_REFERENCE',
-        #                                                          'HOUSE_AND_HOME', 'FINANCE', 'WEATHER',
-        #                                                          'TOOLS', 'BUSINESS', 'PRODUCTIVITY',
-        #                                                          'TRAVEL_AND_LOCAL',
-        #                                                          'MAPS_AND_NAVIGATION', 'AUTO_AND_VEHICLES']), 1, 0)
-        #         df2['SOCIAL_MEDIA_LEISURE'] = np.where(
-        #             np.isin(df2['genreId'], ['COMICS', 'BEAUTY', 'ART_AND_DESIGN', 'DATING',
-        #                                    'VIDEO_PLAYERS', 'SPORTS', 'LIFESTYLE',
-        #                                    'PERSONALIZATION', 'SHOPPING', 'FOOD_AND_DRINK',
-        #                                    'MUSIC_AND_AUDIO',
-        #                                    'NEWS_AND_MAGAZINES', 'PHOTOGRAPHY',
-        #                                    'COMMUNICATION',
-        #                                    'ENTERTAINMENT', 'SOCIAL', 'EVENTS']), 1, 0)
-        #         df2['check_all_genre_covered'] = df2['GAME'] + df2['UTILITIES'] + df2['SOCIAL_MEDIA_LEISURE']
-        #         # print("Non missing values in each column ", E.count())
-        #
-        #         # first remove none ascii characters from the string then convert object to string type
-        #         df2['title'] = df2['title'].str.encode("ascii", "ignore").astype("string")
-        #         df2['description'] = df2['description'].str.encode("ascii", "ignore").astype("string")
-        #         df2['summary'] = df2['summary'].str.encode("ascii", "ignore").astype("string")
-        #         df2['developer'] = df2['developer'].str.encode("ascii", "ignore").astype("string")
-        #         df2['developerId'] = df2['developerId'].str.encode("ascii", "ignore").astype("string")
-        #         df2['developerdf2mail'] = df2['developerdf2mail'].str.encode("ascii", "ignore").astype("string")
-        #         df2['developerWebsite'] = df2['developerWebsite'].str.encode("ascii", "ignore").astype("string")
-        #         df2['developerAddress'] = df2['developerAddress'].str.encode("ascii", "ignore").astype("string")
-        #         df2['comments'] = df2['comments'].str.encode("ascii", "ignore").astype("string")
-        #
-        #         # a column is a pandas series, so this problem is creating pandas series from list
-        #         df2[['score_1', 'score_2', 'score_3', 'score_4', 'score_5']] = df2['histogram'].apply(pd.Series)
-                # fill none with nan, and remove rows that contain nan in ALL columns
-                # df2 = df2.fillna(value=np.nan)
-                # df2 = df2.dropna(axis=0, how="all")
-
-        #
-        #         new_data.append(df2)
-        # # merge all the dataframes in the list
-        # new_data_df = functools.reduce(lambda x1, x2: x1.join(x2, how='inner'), new_data)

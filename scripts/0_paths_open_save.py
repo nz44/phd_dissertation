@@ -94,6 +94,14 @@ class open_files(Linux_Paths):
             dfs[i] = df
         return dfs
 
+    def open_initial_app_dict(self): # just open the initially scraped panel
+        filename = 'ALL_APP_DETAILS_' + self.initial_panel + '.pickle'
+        q = self.input_path / "NEW_ALGORITHM_MONTHLY_SCRAPE" / self.initial_panel / filename
+        with open(q, 'rb') as f:
+            df = pickle.load(f)
+        return df
+
+
     def open_initial_panel_with_its_tracking_panels(self): # for opening the initial month and the following panels tracking the initial month
         dfs = dict.fromkeys(self.tracking_panels)
         for i in range(len(self.tracking_panels)):
@@ -115,12 +123,18 @@ class open_files(Linux_Paths):
 
 class save_files(Linux_Paths):
 
-    def __init__(self, initial_panel, current_panel, app_details_dict):
+    def __init__(self, initial_panel, current_panel=None, app_details_dict=None, merged_df=None):
         super().__init__(initial_panel)
         self.current_panel = current_panel
         self.app_details_dict = app_details_dict
+        self.merged_df = merged_df
 
     def save_scraped_app_details(self):
         filename = 'TRACKING_' + self.initial_panel + '.pickle'
         q = self.input_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.current_panel / filename
         pickle.dump(self.app_details_dict, open(q, 'wb'))
+
+    def save_merged_df(self):
+        filename = self.initial_panel + '_MERGED.pkl'
+        q = self.input_path / '__PANELS__' / self.initial_panel + '_PANEL_DF' / filename
+        self.merged_df.to_pickle(q)
