@@ -48,9 +48,8 @@ class open_files(Linux_Paths):
         super().__init__(initial_panel)
 
     def open_merged_df(self):
-        folder_name = self.initial_panel + '_PANEL_DF'
-        f_name = self.initial_panel + '_MERGED.pickle'
-        q = self.input_path / '__PANELS__' / folder_name / f_name
+        f_name = self.initial_panel + '_MERGED.pkl'
+        q = self.input_path / '__PANELS__' / f_name
         df = pd.read_pickle(q)
         return df
 
@@ -136,5 +135,6 @@ class save_files(Linux_Paths):
 
     def save_merged_df(self):
         filename = self.initial_panel + '_MERGED.pkl'
-        q = self.input_path / '__PANELS__' / self.initial_panel + '_PANEL_DF' / filename
-        self.merged_df.to_pickle(q)
+        q = self.input_path / '__PANELS__' / filename
+        pickle.dump(self.merged_df, open(q, 'wb'))
+        # self.merged_df.to_pickle(q) # cannot use this

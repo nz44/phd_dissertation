@@ -43,8 +43,9 @@ def scraping_apps_according_to_id(id_list):
 
 class app_detail_dicts():
     # this self is opened from open_files class open_app_details_dict method or open_initial_panel_with_its_tracking_panels method
-    def __init__(self, d):
+    def __init__(self, d, all_panels):
         self.d = d
+        self.all_panels = all_panels # containing the initial panel
         # for some dataframe, there are two very similar cols and the contents could be combine
         # first combine, and then rename
         self.df1_to_combine = ['developerId', 'developerWebsite', 'developerEmail', 'developerAddress', 'offersIAP',
@@ -61,11 +62,15 @@ class app_detail_dicts():
         self.cols_to_drop = ['editors_choice', 'interactive_elements', 'description_html', 'descriptionHTML', 'privacyPolicy',
                         'recentChanges', 'recent_changes', 'summaryHTML', 'androidVersionText', 'icon', 'genre',
                         'headerImage', 'screenshots', 'video', 'videoImage', 'developerInternalID', 'content_rating',
-                        'contentRatingDescription', 'installs', 'url', 'free_False', 'offersIAP_False',
-                        'recentChangesHTML', 'adSupported_False', 'containsAds_False', 'recentChanges',
-                        'category', 'iap_range', 'app_id', 'androidVersionText', 'androidVersion',
-                        'current_version', 'version', 'required_android_version', 'sale', 'saleTime', 'originalPrice',
-                        'saleText']
+                        'contentRatingDescription', 'installs', 'url', 'recentChangesHTML', 'recentChanges',
+                        'category', 'iap_range', 'app_id', 'androidVersionText', 'androidVersion', 'current_version', 'version',
+                        'required_android_version', 'sale', 'saleTime', 'originalPrice', 'saleText']
+
+        self.cols_to_drop_after_formatting = ['free_False', 'offersIAP_False', 'adSupported_False', 'containsAds_False',
+                                              'adSupported', 'containsAds', 'free', 'offersIAP', 'contentRating', 'genreId']
+
+        self.impute_missing_cols = ['free_nan', 'offersIAP_nan', 'adSupported_nan', 'genreId_nan',
+                                    'containsAds_nan', 'contentRating_nan']
 
 
     def convert_keys_to_datetime(self):
@@ -92,17 +97,6 @@ class app_detail_dicts():
                 print()
 
 
-    def merge_panels_into_single_df(self):
-        old_data = self.format_cols() # this is a dictionary with panel as keys
-        df_list = []
-        for panel, df in old_data.items():
-            df.drop([x for x in df.columns if x in self.cols_to_drop], axis=1, inplace=True)
-            df = df.add_suffix('_' + panel)
-            df_list.append(df)
-        merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
-        return merged_df
-
-
     def check_data_type(self):
         data = self.combine_similar_and_drop_extra_cols()
         for panel, df in data.items():
@@ -122,6 +116,42 @@ class app_detail_dicts():
             print(df[col_name].value_counts(dropna=False))
             print()
             print()
+
+
+    def impute_missing_from_panel(self):
+        old_df = self.merge_panels_into_single_df()
+        pass
+        return old_df
+
+
+    def compare_values_across_panels(self):
+        old_df = self.merge_panels_into_single_df()
+
+
+
+    def merge_panels_into_single_df(self):
+        old_data = self.format_cols() # this is a dictionary with panel as keys
+        df_list = []
+        for panel, df in old_data.items():
+            df = df.add_suffix('_' + panel)
+            df_list.append(df)
+        merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
+        return merged_df
+
+
+    def check_for_duplicate_cols(self):
+        df_dict = self.format_cols()
+        for i, df in df_dict.items():
+            # check for duplicate columns
+            unique_cols = set(df.columns)
+            print(i)
+            if len(unique_cols) == len(df.columns):
+                print('There are no duplicate columns')
+                print(df.columns)
+            else:
+                print('The following columns are duplicates:')
+                print([item for item, count in collections.Counter(df.columns).items() if
+                       count > 1])
 
 
     def format_cols(self):
@@ -175,6 +205,22 @@ class app_detail_dicts():
                     return 'Adult'
             else:
                 return x
+
+        game_pattern = re.compile(r'(GAME+)|(VIDEO_PLAYERS+)')
+        productivity_pattern = re.compile(
+            r'^(?<!GAME_)(TOOLS+)|(EDUCATION+)|(MEDICAL+)|(LIBRARIES+)|(PARENTING+)|(AUTO_AND_VEHICLES+)|(WEATHER+)|(FINANCE+)|(TRAVEL+)|(BUSINESS+)')
+        social_entertainment_pattern = re.compile(
+            r'^(?<!GAME_)(ENTERTAINMENT+)|(LIFESTYLE+)|(EVENTS+)|(COMICS+)|(DATING+)|(ART_AND_DESIGN+)|(BEAUTY+)|(SOCIAL+)|(MUSIC_AND_AUDIO+)|(SHOPPING+)|(MAPS_AND_NAVIGATION+)|(PERSONALIZATION+)')
+        def combine_genreId_into_3_groups(x):
+            if x is not None:
+                if re.search(game_pattern, x):
+                    return 'Game'
+                elif re.search(productivity_pattern, x):
+                    return 'Productivity'
+                elif re.search(social_entertainment_pattern, x):
+                    return 'Entertainment'
+            else:
+                return x
         # ---------------------------------------------------------------------------------------------
         for panel, df in old_data.items():
             df['size'] = df['size'].apply(lambda x: remove_characters_from_numeric_cols(x) if isinstance(x, str) else x)
@@ -183,11 +229,16 @@ class app_detail_dicts():
             df['updated'] = df['updated'].apply(lambda x: convert_string_to_datetime(x) if isinstance(x, str) else convert_unix_to_datetime(x))
             df['contentRating'] = df['contentRating'].apply(unlist_a_col_containing_list_of_strings)
             df['contentRating'] = df['contentRating'].apply(combine_contentRating_into_3_groups)
+            df['genreId'] = df['genreId'].apply(combine_genreId_into_3_groups)
             # since AdSupported only contains True and None, so fill None with False
-            df['adSupported'].fillna(False, inplace=True)
-            # df_temp = pd.get_dummies(df[dummy_cols], dummy_na=True)
-            # df = df.join(df_temp, how='inner')
+            # data scraped before 202009 contains only True and None for containsAds, but after that it contains True, False and None
+            # So I decided to fill None with False for containsAds; same for offersIAP (contains True, False and nan)
+            # for the missing in genreId and contentRating, I will impute using data from other panels of the same app
+            df[['adSupported', 'containsAds', 'offersIAP']].fillna(False, inplace=True)
+            df_temp = pd.get_dummies(df[dummy_cols], dummy_na=True)
+            df = df.join(df_temp, how='inner')
             df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric)
+            df.drop([x for x in df.columns if x in self.cols_to_drop_after_formatting], axis=1, inplace=True)
             new_data[panel] = df
         return new_data
 
@@ -207,21 +258,6 @@ class app_detail_dicts():
             df[none_numeric_cols] = df[none_numeric_cols].where(df.notnull(), None) # replace nan with None
             new_data[panel] = df
         return new_data
-
-
-    def check_for_duplicate_cols(self):
-        df_dict = self.combine_similar_and_drop_extra_cols()
-        for i, df in df_dict.items():
-            # check for duplicate columns
-            unique_cols = set(df.columns)
-            print(i)
-            if len(unique_cols) == len(df.columns):
-                print('There are no duplicate columns')
-                print(df.columns)
-            else:
-                print('The following columns are duplicates:')
-                print([item for item, count in collections.Counter(df.columns).items() if
-                       count > 1])
 
 
     def combine_similar_and_drop_extra_cols(self):
