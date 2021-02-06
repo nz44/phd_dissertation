@@ -41,10 +41,10 @@ class Linux_Paths(Paths):
 # ********************************************************************************************************
 # ********************************************************************************************************
 class open_files(Linux_Paths):
-    def __init__(self, initial_panel=None, cluster_type=None, current_panel=None, tracking_panels=None):
+    def __init__(self, initial_panel=None, cluster_type=None, current_panel=None, all_panels=None):
         self.cluster_type = cluster_type
         self.current_panel = current_panel
-        self.tracking_panels = tracking_panels
+        self.all_panels = all_panels
         super().__init__(initial_panel)
 
     def open_merged_df(self):
@@ -83,16 +83,6 @@ class open_files(Linux_Paths):
         df = pd.read_pickle(q)
         return df
 
-    def open_app_detail_dict(self): # for opening the current month and the panels you scraped in that month
-        dfs = dict.fromkeys(self.tracking_panels)
-        for i in self.tracking_panels:
-            filename = 'TRACKING_' + i + '.pickle'
-            q = self.input_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.current_panel / filename
-            with open(q, 'rb') as f:
-                df = pickle.load(f)
-            dfs[i] = df
-        return dfs
-
     def open_initial_app_dict(self): # just open the initially scraped panel
         filename = 'ALL_APP_DETAILS_' + self.initial_panel + '.pickle'
         q = self.input_path / "NEW_ALGORITHM_MONTHLY_SCRAPE" / self.initial_panel / filename
@@ -100,10 +90,10 @@ class open_files(Linux_Paths):
             df = pickle.load(f)
         return df
 
-
     def open_initial_panel_with_its_tracking_panels(self): # for opening the initial month and the following panels tracking the initial month
-        dfs = dict.fromkeys(self.tracking_panels)
-        for i in range(len(self.tracking_panels)):
+        # here the tracking panels are actually all panels including the initial panel
+        dfs = dict.fromkeys(self.all_panels)
+        for i in range(len(self.all_panels)):
             if i == 0: # open the initial panel
                 filename = 'ALL_APP_DETAILS_' + self.initial_panel + '.pickle'
                 q = self.input_path / "NEW_ALGORITHM_MONTHLY_SCRAPE" / self.initial_panel / filename
@@ -111,9 +101,9 @@ class open_files(Linux_Paths):
                     dfs[self.initial_panel] = pickle.load(f)
             else:
                 filename = 'TRACKING_' + self.initial_panel + '.pickle'
-                q = self.input_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.tracking_panels[i] / filename
+                q = self.input_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.all_panels[i] / filename
                 with open(q, 'rb') as f:
-                    dfs[self.tracking_panels[i]] = pickle.load(f)
+                    dfs[self.all_panels[i]] = pickle.load(f)
         return dfs
 
 
