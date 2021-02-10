@@ -35,14 +35,141 @@ class summary_statistics():
     def print_num_rows(self):
         print(len(self.df.index))
 
+    def search_col_contains(self, text):
+        col_list = []
+        for col in self.df.columns:
+            if text in col:
+                col_list.append(col)
+        print(col_list)
+        return col_list
+
+    def drop_cols(self, list_of_col_names):
+        new_df = self.df.drop(list_of_col_names, axis=1)
+        print('Before dropping we have', len(self.df.columns), 'columns')
+        print('After dropping we have', len(new_df.columns), 'columns')
+        return new_df
+
+    def keep_cols(self, list_of_col_names):
+        new_df = self.df[list_of_col_names]
+        print('Before keeping we have', len(self.df.columns), 'columns')
+        print('After keeping we have', len(new_df.columns), 'columns')
+        return new_df
+
+    def drop_rows(self, list_of_row_labels):
+        new_df = self.df.drop(list_of_row_labels, axis=0)
+        print('Before dropping we have', len(self.df.index), 'rows')
+        print('After dropping we have', len(new_df.index), 'rows')
+        return new_df
+
+    def peek_at_appid_and_var(self, appid, var):
+        l1 = self.search_col_contains(text=var)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        new_df = new_df.loc[[appid]]
+        return new_df
 
 
 
 #################################################################################################################
 class impute_missing(summary_statistics):
-    # if you do not want to override parent properties or add new properties, you do not need to initialize in child class
-    # it automatically inherits everything from the parent class
-    pass
+    def __init__(self, merged_df, initial_date=None, all_panels=None,
+                 numeric_vars=None, dummy_vars=None, text_vars=None, datetime_vars=None,
+                 address_vars=None, misc_vars=None, missing_ratio=None):
+        super().__init__(merged_df, initial_date, all_panels, numeric_vars, dummy_vars,
+                         text_vars, datetime_vars, address_vars, misc_vars)
+        self.missing_ratio = missing_ratio # below the missing ratio, do not need to impute, just delete
+
+    def cols_missing_ratio(self):
+        num_of_cols_above_missing_threshold = 0
+        missing_cols_and_missing_ratios = []
+        missing_cols = []
+        for col in self.df.columns:
+            null_data = self.df[[col]][self.df[[col]].isnull().any(axis=1)]
+            r = len(null_data.index) / len(self.df.index)
+            if r >= self.missing_ratio:
+                num_of_cols_above_missing_threshold += 1
+                missing_cols_and_missing_ratios.append((col, r))
+                missing_cols.append(col)
+        print('total number of columns contain missing value above', self.missing_ratio, 'is', num_of_cols_above_missing_threshold)
+        print('out of total number of columns', len(self.df.columns))
+        print(missing_cols_and_missing_ratios)
+        return missing_cols_and_missing_ratios, missing_cols
+
+    def rows_missing_ratio(self):
+        df_t = self.df.T
+        num_of_cols_above_missing_threshold = 0
+        missing_cols_and_missing_ratios = []
+        missing_cols = []
+        for col in df_t.columns:
+            null_data = df_t[[col]][df_t[[col]].isnull().any(axis=1)]
+            r = len(null_data.index) / len(df_t.index)
+            if r >= self.missing_ratio:
+                num_of_cols_above_missing_threshold += 1
+                missing_cols_and_missing_ratios.append((col, r))
+                missing_cols.append(col)
+        print('total number of apps contain missing attributes above', self.missing_ratio, 'is',
+              num_of_cols_above_missing_threshold)
+        print('out of total number of apps', len(df_t.columns))
+        print(missing_cols_and_missing_ratios)
+        return missing_cols_and_missing_ratios, missing_cols
+
+    def peek_at_missing(self, var, sample):
+        for col in self.df.columns:
+            if var in col: # var is a substring of the full column name
+                null_df = self.df[[col]][self.df[[col]].isnull().any(axis=1)]
+                print(col, 'contains', len(null_df.index), 'of missing values')
+                if len(null_df.index) >= sample:
+                    null_sample = null_df.sample(sample)
+                    print('randomly select', sample, 'rows from', col)
+                    print(null_sample)
+                    print()
+    # STRATEGY 1: ------------------------------------------------------------------
+    ### VARS: minInstalls
+    # if the missing panel(s) are in between none-missing ones, take the average of before and after panel values and fill in the missing
+    # if the minInstalls are missing for consecutively three panels or more, delete that row (because this is an important variable).
+    def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing):
+        l1 = self.search_col_contains(text=var)
+        df2 = self.keep_cols(list_of_col_names=l1)
+        null_data = df2[df2.isnull().any(axis=1)]
+        null_data_t = null_data.T
+        appids_with_consec_missing_panels = []
+        for appid in null_data_t.columns:
+            app_panels = null_data_t[[appid]]
+            # https://stackoverflow.com/questions/29007830/identifying-consecutive-nans-with-pandas
+            # https://numpy.org/doc/stable/reference/generated/numpy.cumsum.html
+            # nan row (panel) will be 0 and none-missing rows (panel) wil be 1
+            # and each row is the sum of all the rows preceding it
+            # so when two rows have the same value means 1 missing row occured. Three rows have the same value, meaning two consecutive missing rows occured.
+            cumlative_none_missing_df = app_panels.notnull().astype(int).cumsum()
+            # https://stackoverflow.com/questions/35584085/how-to-count-duplicate-rows-in-pandas-dataframe
+            missing_count = cumlative_none_missing_df.groupby(cumlative_none_missing_df.columns.tolist(), as_index=False).size()
+            consec_missing_count = missing_count['size'].max()
+            threshold = number_consec_panels_missing+1
+            if consec_missing_count >= threshold: # == 2 means only 1 panel is missing, == 3 means 2 consecutive panels are missing, note greater or equal than the threshold
+                appids_with_consec_missing_panels.append(appid)
+        appids_intend_to_drop = null_data_t[appids_with_consec_missing_panels]
+        print('number of apps with at least', number_consec_panels_missing, 'consecutive missing panels for', var, 'are', len(appids_with_consec_missing_panels))
+        print('out of', len(df2.index), 'apps.')
+        return appids_intend_to_drop, appids_with_consec_missing_panels
+
+    def impute_the_missing_panel_according_to_adjacent_panel(self, var): # the self.df here should be the newly passed df that has deleted all rows and cols that will not be imputed
+        l1 = self.search_col_contains(text=var)
+        df2 = self.keep_cols(list_of_col_names=l1)
+        for i in range(len(df2.columns)):
+            if i == 0: # the first panel is missing, impute with the next panel
+                df2[df2.columns[i]] = df2.apply(
+                    lambda row: row[df2.columns[i+1]] if np.isnan(row[df2.columns[i]]) else row[df2.columns[i]],
+                    axis=1
+                )
+            else: # all other panels impute with previous panels
+                df2[df2.columns[i]] = df2.apply(
+                    lambda row: row[df2.columns[i-1]] if np.isnan(row[df2.columns[i]]) else row[df2.columns[i]],
+                    axis=1
+                )
+        return df2
+
+
+
+
 
 
 
