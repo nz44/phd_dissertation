@@ -117,18 +117,6 @@ class app_detail_dicts():
             print()
             print()
 
-
-    def impute_missing_from_panel(self):
-        old_df = self.merge_panels_into_single_df()
-        pass
-        return old_df
-
-
-    def compare_values_across_panels(self):
-        old_df = self.merge_panels_into_single_df()
-
-
-
     def merge_panels_into_single_df(self):
         old_data = self.format_cols() # this is a dictionary with panel as keys
         df_list = []
@@ -137,7 +125,6 @@ class app_detail_dicts():
             df_list.append(df)
         merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
         return merged_df
-
 
     def check_for_duplicate_cols(self):
         df_dict = self.format_cols()
@@ -152,7 +139,6 @@ class app_detail_dicts():
                 print('The following columns are duplicates:')
                 print([item for item, count in collections.Counter(df.columns).items() if
                        count > 1])
-
 
     def format_cols(self):
         old_data = self.format_missing_values()
@@ -235,7 +221,7 @@ class app_detail_dicts():
             # So I decided to fill None with False for containsAds; same for offersIAP (contains True, False and nan)
             # for the missing in genreId and contentRating, I will impute using data from other panels of the same app
             df[['adSupported', 'containsAds', 'offersIAP']].fillna(False, inplace=True)
-            df_temp = pd.get_dummies(df[dummy_cols], dummy_na=True)
+            df_temp = pd.get_dummies(df[dummy_cols])
             df = df.join(df_temp, how='inner')
             df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric)
             df.drop([x for x in df.columns if x in self.cols_to_drop_after_formatting], axis=1, inplace=True)

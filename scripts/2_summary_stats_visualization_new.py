@@ -17,7 +17,7 @@ class summary_statistics():
 
     def __init__(self, merged_df, initial_date=None, all_panels=None,
                  numeric_vars=None, dummy_vars=None, text_vars=None, datetime_vars=None,
-                 address_vars=None, misc_vars=None):
+                 address_vars=None, misc_vars=None, time_variant_vars=None, time_invariant_vars=None):
         self.df = merged_df
         self.initial_date = initial_date
         self.all_panels = all_panels
@@ -27,6 +27,8 @@ class summary_statistics():
         self.datetime_vars = datetime_vars
         self.misc_vars = misc_vars
         self.address_vars = address_vars
+        self.time_variant_vars = time_variant_vars
+        self.time_invariant_vars = time_invariant_vars
 
     def print_col_names(self):
         for col in self.df.columns:
@@ -40,19 +42,28 @@ class summary_statistics():
         for col in self.df.columns:
             if text in col:
                 col_list.append(col)
-        print(col_list)
+        # print(col_list)
         return col_list
 
     def drop_cols(self, list_of_col_names):
         new_df = self.df.drop(list_of_col_names, axis=1)
-        print('Before dropping we have', len(self.df.columns), 'columns')
-        print('After dropping we have', len(new_df.columns), 'columns')
+        # print('Before dropping we have', len(self.df.columns), 'columns')
+        # print('After dropping we have', len(new_df.columns), 'columns')
         return new_df
 
     def keep_cols(self, list_of_col_names):
         new_df = self.df[list_of_col_names]
-        print('Before keeping we have', len(self.df.columns), 'columns')
-        print('After keeping we have', len(new_df.columns), 'columns')
+        # print('Before keeping we have', len(self.df.columns), 'columns')
+        # print('After keeping we have', len(new_df.columns), 'columns')
+        return new_df
+
+    def replace_cols(self, new_cols):
+        col_names = new_cols.columns.tolist()
+        new_df = self.drop_cols(list_of_col_names=col_names)
+        new_df = new_df.join(new_cols, how='inner')
+        if len(new_df.index) == len(self.df.index):
+            print('successfully replaced the old cols with replacement cols:')
+            print(col_names)
         return new_df
 
     def drop_rows(self, list_of_row_labels):
@@ -67,6 +78,54 @@ class summary_statistics():
         new_df = new_df.loc[[appid]]
         return new_df
 
+    def peek_at_sample_var_panels(self, var, sample):
+        l1 = self.search_col_contains(text=var)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        new_df = new_df.sample(n=sample)
+        return new_df
+
+    def mean_of_var_panels(self, var):
+        l1 = self.search_col_contains(text=var)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        new_df_mean = new_df.mean(axis=1).to_frame(name=var+'_stats')
+        new_df = new_df.join(new_df_mean, how='inner')
+        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
+        return new_df
+
+    def standard_deviation_of_var_panels(self, var):
+        l1 = self.search_col_contains(text=var)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        new_df_std = new_df.std(axis=1).to_frame(name=var+'_stats')
+        new_df = new_df.join(new_df_std, how='inner')
+        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
+        return new_df
+
+    def peek_at_outliers(self, var, method, quantiles, q_inter, **kwargs):
+        # method determines which var you are using histogram over, if none, use it over the var itself
+        # if average, or standard deviation, first calculate the average and std of the var over all panels, then draw the histogram on that average or std
+        if method == 'std':
+            df_with_stats = self.standard_deviation_of_var_panels(var=var)
+        elif method == 'mean':
+            df_with_stats = self.mean_of_var_panels(var=var)
+        # -------------------------------------------------------------
+        s_q = df_with_stats[[var + '_stats']].quantile(q=quantiles, axis=0, interpolation=q_inter)
+        if 'ind' in kwargs.keys():
+            ax = df_with_stats[var + '_stats'].plot.kde(ind=kwargs['ind'])
+        else:
+            ax = df_with_stats[var+'_stats'].plot.kde()
+        return s_q, ax
+
+    def define_outlier_appids(self, var, method, cutoff_q, q_inter): # first peek_at_outliers, then decide at which quantile to truncate the data
+        if method == 'std':
+            df_with_stats = self.standard_deviation_of_var_panels(var=var)
+            s_q = df_with_stats[[var + '_stats']].quantile(q=cutoff_q, axis=0, interpolation=q_inter)
+        # -------------------------------------------------------------
+        cutoff_value = s_q.iat[0] # this is pandas series
+        print('The cutoff value for', var, 'at', cutoff_q, '_th quantile is', cutoff_value)
+        df_outliers = df_with_stats.loc[(df_with_stats[var+'_stats'] >= cutoff_value)]
+        print('number of outliers are', len(df_outliers.index), 'out of', len(df_with_stats.index), 'total apps.')
+        outlier_appids = df_outliers.index.tolist()
+        return df_outliers, outlier_appids
 
 
 #################################################################################################################
@@ -122,6 +181,7 @@ class impute_missing(summary_statistics):
                     print('randomly select', sample, 'rows from', col)
                     print(null_sample)
                     print()
+
     # STRATEGY 1: ------------------------------------------------------------------
     ### VARS: minInstalls
     # if the missing panel(s) are in between none-missing ones, take the average of before and after panel values and fill in the missing
@@ -166,6 +226,9 @@ class impute_missing(summary_statistics):
                     axis=1
                 )
         return df2
+
+
+
 
 
 
