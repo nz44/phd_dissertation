@@ -1,6 +1,8 @@
 import pandas as pd
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 import numpy as np
+import math
 import random
 from datetime import datetime as dt
 from datetime import date
@@ -15,12 +17,13 @@ import seaborn
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
 class summary_statistics():
 
-    def __init__(self, merged_df, initial_date=None, all_panels=None,
+    def __init__(self, merged_df, initial_panel=None, all_panels=None, consec_panels=None,
                  numeric_vars=None, dummy_vars=None, text_vars=None, datetime_vars=None,
                  address_vars=None, misc_vars=None, time_variant_vars=None, time_invariant_vars=None):
         self.df = merged_df
-        self.initial_date = initial_date
+        self.initial_panel = initial_panel
         self.all_panels = all_panels
+        self.consec_panels = consec_panels
         self.numeric_vars = numeric_vars
         self.dummy_vars = dummy_vars
         self.text_vars = text_vars
@@ -37,11 +40,11 @@ class summary_statistics():
     def print_num_rows(self):
         print(len(self.df.index))
 
-    def search_col_contains(self, text):
-        col_list = []
-        for col in self.df.columns:
-            if text in col:
-                col_list.append(col)
+    def search_col_contains(self, text, consecutive_panels=False):
+        if consecutive_panels is True: # only panels scraped in 202009 and onwards are monthly panels
+            col_list = [text + '_' + i for i in self.consec_panels]
+        else:
+            col_list = [text + '_' + i for i in self.all_panels]
         # print(col_list)
         return col_list
 
@@ -130,12 +133,9 @@ class summary_statistics():
 
 #################################################################################################################
 class impute_missing(summary_statistics):
-    def __init__(self, merged_df, initial_date=None, all_panels=None,
-                 numeric_vars=None, dummy_vars=None, text_vars=None, datetime_vars=None,
-                 address_vars=None, misc_vars=None, missing_ratio=None):
-        super().__init__(merged_df, initial_date, all_panels, numeric_vars, dummy_vars,
-                         text_vars, datetime_vars, address_vars, misc_vars)
-        self.missing_ratio = missing_ratio # below the missing ratio, do not need to impute, just delete
+    def __init__(self, missing_ratio, **kwargs):
+        super().__init__(**kwargs)
+        self.missing_ratio = missing_ratio
 
     def cols_missing_ratio(self):
         num_of_cols_above_missing_threshold = 0
@@ -228,95 +228,113 @@ class impute_missing(summary_statistics):
         return df2
 
 
-
-
-
-
-
-
-
-
-
 #################################################################################################################
-class select_vars_for_graphs(impute_missing):
+class single_variable_stats(summary_statistics):
+    def __init__(self, v1, var_type, **kwargs):
+        super().__init__(**kwargs)
+        self.v1 = v1
+        self.var_type = var_type
 
-    pass
+    def tabulate(self):
+        l1 = self.search_col_contains(text=self.v1)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        tab_list = []
+        if self.var_type in ['category', 'dummy']:
+            for i in self.all_panels:
+                new_df[i+'_count'] = 'count'
+                tab = new_df[[self.v1+'_'+i, i+'_count']].groupby(by=self.v1+'_'+i, dropna=False).count()
+                tab_list.append(tab)
+            final_df = functools.reduce(lambda a, b : a.join(b, how='inner'), tab_list)
+        return final_df
 
+    def transform_the_var(self, log=False, standardize=False, min_max=False):
+    # https://towardsdatascience.com/catalog-of-variable-transformations-to-make-your-model-works-better-7b506bf80b97
+        l1 = self.search_col_contains(text=self.v1)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        if log is True:
+            cols_to_keep = [i+'_log' for i in new_df.columns]
+            for i in new_df.columns:
+                new_df[i+'_log'] = new_df[i].apply(lambda x: math.log(x+1))
+        new_df = new_df[cols_to_keep]
+        return new_df
 
+    def binning_the_var(self, num_bins, pre_transformation=None):
+        if pre_transformation == 'log':
+            new_df = self.transform_the_var(log=True)
+        else: # when no pre-transformation is performed
+            l1 = self.search_col_contains(text=self.v1)
+            new_df = self.keep_cols(list_of_col_names=l1)
+        for i in new_df.columns:
+            new_df[i + '_bin'] = pd.cut(new_df[i], bins=num_bins, labels=False)
+        return new_df
 
-#################################################################################################################
-class line_graphs(select_vars_for_graphs):
-    # inside init meaning the default value could be None for child class
-    def __init__(self, merged_df, initial_date=None, all_panels=None,
-                 numeric_vars=None, dummy_vars=None, text_vars=None, datetime_vars=None,
-                 address_vars=None, misc_vars=None, interval_start=None, interval_end=None):
-        # but inside super __init__ calling the parent properties, should not set None.
-        super().__init__(merged_df, initial_date, all_panels, numeric_vars, dummy_vars, text_vars, datetime_vars, address_vars, misc_vars)
-        # new child properties are added
-        self.interval_start = interval_start
-        self.interval_end = interval_end
-
-
-    def change_in_var_over_interval(self):
-        start_date_var = self.v1 + '_' + self.int_start
-        end_date_var = self.v1 + '_' + self.int_end
-        the_df = self.impute_missing()
-        the_df.loc[:, 'change_over_interval'] = the_df.loc[:, end_date_var] - the_df.loc[:, start_date_var]
-        the_df = the_df.sort_values(by='change_over_interval', ascending=False)
-        n_rows = int(len(the_df.axes[0]))
-        x = getattr(self, 'br', None)
-        if x is not None:
-            top_performers = the_df.loc[the_df['change_over_interval'] > x]
-            top_performers = top_performers.index.tolist()
-        elif n_rows >= 10:
-            top_performers = the_df.head(10)
-            top_performers = top_performers.index.tolist()
+    def bin_boundary_and_count(self, num_bins, pre_transformation=None, view=None):
+        new_df = self.binning_the_var(num_bins, pre_transformation)
+        result_df_list = []
+        if pre_transformation is None:
+            for i in self.all_panels:
+                couple_df = new_df[[self.v1+'_'+i, self.v1+'_'+i+'_bin']]
+                result_df = couple_df.groupby(by=self.v1+'_'+i+'_bin', dropna=False).agg(['mean', 'max', 'min', 'count'])
+                result_df_list.append(result_df)
+        elif pre_transformation == 'log':
+            for i in self.all_panels:
+                couple_df = new_df[[self.v1+'_'+i+'_log', self.v1+'_'+i+'_log_bin']]
+                result_df = couple_df.groupby(by=self.v1+'_'+i+'_log_bin', dropna=False).agg(['mean', 'max', 'min', 'count'])
+                result_df_list.append(result_df)
+        if view is not None:
+            df_v_list = []
+            for df in result_df_list:
+                col_list = [i for i in df.columns if view in i]
+                df_v = df[col_list]
+                df_v_list.append(df_v)
+            final_df = functools.reduce(lambda a, b: a.join(b, how='inner'), df_v_list)
         else:
-            top_performers = the_df
-            top_performers = top_performers.index.tolist()
-        # the_df.drop('change_over_interval', inplace=True, axis=1)
-        # the_df = the_df.T
-        return the_df
+            final_df = functools.reduce(lambda a, b: a.join(b, how='inner'), result_df_list)
+        return final_df
 
+    def change_in_var_over_interval(self, int_start, int_end):
+        l1 = self.search_col_contains(text=self.v1)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        star_var = self.v1 + '_' + int_start
+        end_var = self.v1 + '_' + int_end
+        if self.var_type == 'continuous':
+            new_df['change_in_'+self.v1] = new_df[end_var] - new_df[star_var]
+            new_df.sort_values(by='change_in_'+self.v1, axis=0, ascending=False, inplace=True, na_position='first')
+        return new_df
 
-    def select_vars_for_graph(self, sample=None, var_type=None):
-        if sample is not None:
-            df2 = self.df.sample(sample)
-        else:
-            df2 = self.df
-        # if var_type is not None:
-        #     if var_type == 'numeric':
-        #         for var_name in self.numeric_vars:
-        #             col_names = list(map(lambda x: var_names + str(x), self.panels))
-        #             df3 = df2[col_names]
-        #             for i in col_names:
-        #                 df3[i] = df3[i].astype(float)
-        #     elif var_type == 'dummy':
-        #         for var_name in self.dummy_vars:
-        #     elif var_type == 'text':
-        #         for var_name in self.text_vars:
-        #     elif var_type == 'geography':
-        #         for var_name in self.address_vars:
-        #     elif var_type == 'date':
-        #         for var_name in self.datetime_vars:
-        return df2
+    def delta_one_period_change_in_var(self):
+        l1 = self.search_col_contains(text=self.v1, consecutive_panels=True)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        for i in range(len(self.consec_panels)):
+            if i != 0:
+                new_col_name = self.v1+'_'+self.consec_panels[i]+'_'+self.consec_panels[i-1]
+                new_df[new_col_name] = new_df[self.v1+'_'+self.consec_panels[i]] - new_df[self.v1+'_'+self.consec_panels[i-1]]
+        return new_df
 
+    def density_distribution(self):
+        l1 = self.search_col_contains(text=self.v1)
+        new_df = self.keep_cols(list_of_col_names=l1)
+        # ----------------------------------------------------------------------------------
+        fig, axs = plt.subplots(nrows=len(self.all_panels), sharex=True, sharey=True, figsize=(10, 80), dpi=500, facecolor='white')
+        fig.suptitle(self.v1+' Density Distributions')
+        if self.var_type == 'continuous':
+            for i in range(len(new_df.columns)):
+                new_df[new_df.columns[i]].plot.kde(ax=axs[i])
+                axs[i].set_title(new_df.columns[i] +' kde plot')
+        for ax in axs:
+            ax.label_outer()
+        return fig
 
-
-
-#####################################################################################
-        # figure out which apps have increase in the variable over the entire period
-
-        # create a column for graphing xticks (since you already modified panels, so you can skip adding the initial date)
-        # time_axis = []
-        # for j in panels:
-        #     time_axis.append(datetime.datetime.strptime(j, '%Y%m').strftime('%Y %b'))
-        # C['x'] = time_axis
-        #
-        # # take the title of app as the value of a dictionary for annotation in plotting
-        # top_performers_dict = dict.fromkeys(top_performers)
-        # title_column = 'title_' + initial_date
-        # for app_id in top_performers_dict.keys():
-        #     top_performers_dict[app_id] = B.at[app_id, title_column]
-        #
-        # return(C, top_performers_dict)
+    def histogram(self, num_bins, pre_transformation=None):
+        if pre_transformation=='log':
+            new_df = self.transform_the_var(log=True)
+        # ----------------------------------------------------------------------------------
+        fig, axs = plt.subplots(nrows=len(self.all_panels), sharex=True, sharey=True, figsize=(10, 80), dpi=500, facecolor='white')
+        fig.suptitle(self.v1+' Histogram')
+        if self.var_type == 'continuous':
+            for i in range(len(new_df.columns)):
+                new_df[new_df.columns[i]].hist(ax=axs[i], bins=num_bins)
+                axs[i].set_title(new_df.columns[i] +' histogram')
+        for ax in axs:
+            ax.label_outer()
+        return fig
