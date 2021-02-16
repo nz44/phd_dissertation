@@ -36,8 +36,8 @@ class open_files(Linux_Paths):
         self.current_panel = current_panel
         self.all_panels = all_panels
 
-    def open_merged_df(self):
-        f_name = self.initial_panel + '_MERGED.pkl'
+    def open_panel_df(self, type):
+        f_name = self.initial_panel + '_' + type + '.pkl'
         q = super().input_path / '__PANELS__' / f_name
         df = pd.read_pickle(q)
         return df
@@ -97,16 +97,16 @@ class open_files(Linux_Paths):
 
 
 
-
-
+# ********************************************************************************************************
+# ********************************************************************************************************
 class save_files(Linux_Paths):
 
     def __init__(self, initial_panel=None, current_panel=None,
-                 app_details_dict=None, merged_df=None, fig=None):
+                 app_details_dict=None, df=None, fig=None):
         self.initial_panel = initial_panel
         self.current_panel = current_panel
         self.app_details_dict = app_details_dict
-        self.merged_df = merged_df
+        self.df = df
         self.fig = fig
 
     def save_scraped_app_details(self):
@@ -114,10 +114,10 @@ class save_files(Linux_Paths):
         q = super().input_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.current_panel / filename
         pickle.dump(self.app_details_dict, open(q, 'wb'))
 
-    def save_merged_df(self):
-        filename = self.initial_panel + '_MERGED.pkl'
+    def save_panel_df(self, type):
+        filename = self.initial_panel + '_' + type + '.pkl'
         q = super().input_path / '__PANELS__' / filename
-        pickle.dump(self.merged_df, open(q, 'wb'))
+        pickle.dump(self.df, open(q, 'wb'))
         # self.merged_df.to_pickle(q) # cannot use this
 
     def save_fig(self, fig_name, sub_folder):
