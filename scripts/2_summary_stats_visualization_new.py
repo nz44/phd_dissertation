@@ -16,8 +16,11 @@ import seaborn
 #################################################################################################################
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
 class summary_statistics():
-    def __init__(self, df, initial_panel=None, all_panels=None, consec_panels=None):
+    def __init__(self, df, df_developer_index=None, df_multiindex=None, initial_panel=None,
+                 all_panels=None, consec_panels=None):
         self.df = df
+        self.df_di = df_developer_index
+        self.df_mi = df_multiindex
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.consec_panels = consec_panels
@@ -63,6 +66,21 @@ class summary_statistics():
         combined_df = combined_df.T
         return combined_df
 
+    def stats_count_missing(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
+        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
+        summary_dfs = []
+        for df in dfs:
+            df3 = df.isnull().sum().rename('count missing').to_frame()
+            summary_dfs.append(df3)
+        combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
+        return combined_df
+
+    def peek_at_missing(self, var, select_one_panel):
+        col_list, panel_list = self.select_the_var(var=var, select_one_panel=select_one_panel)
+        for var in col_list:
+            df = self.df[self.df[var].isnull()]
+        return df
+
     def stats_table_address(self, var='developerAddress', consecutive=False, select_one_panel=None, group_by=None):
         pass
 
@@ -80,23 +98,23 @@ class summary_statistics():
     def print_num_rows(self):
         print(len(self.df.index))
 
-    def select_the_var(self, var, consecutive_panels=False):
-        if consecutive_panels is True: # only panels scraped in 202009 and onwards are monthly panels
+    def select_the_var(self, var, consecutive=False, select_one_panel=None):
+        if consecutive is True: # only panels scraped in 202009 and onwards are monthly panels
             col_list = [var + '_' + i for i in self.consec_panels]
-        else:
+            panel_list = self.consec_panels
+        elif consecutive is False:
             col_list = [var + '_' + i for i in self.all_panels]
-        return col_list
+            panel_list = self.all_panels
+        elif select_one_panel is not None:
+            col_list = [var + '_' + select_one_panel]
+            panel_list = select_one_panel
+        return col_list, panel_list
 
     def select_var_df(self, var_list, consecutive=False, select_one_panel=None):
         dfs = []
         for var in var_list:
-            if consecutive is True:
-                l1 = self.select_the_var(var=var, consecutive_panels=True)
-            elif select_one_panel is not None:
-                l1 = self.select_the_var_and_the_panel(var=var, panel=select_one_panel)
-            else:
-                l1 = self.select_the_var(var=var)
-            df2 = self.keep_cols(list_of_col_names=l1)
+            col_list, panel_list = self.select_the_var(var, consecutive, select_one_panel)
+            df2 = self.keep_cols(list_of_col_names=col_list)
             dfs.append(df2)
         return dfs
 
@@ -107,14 +125,74 @@ class summary_statistics():
         col_list = [i for i in self.df.columns if panel in i]
         return col_list
 
-    def select_the_var_and_the_panel(self, var, panel):
-        col_name = var + '_' + panel
-        return col_name
-
     def keep_cols(self, list_of_col_names):
         new_df = self.df[list_of_col_names]
         return new_df
 
+    def combined_appids_changed_in_var_over_time(self, var, consecutive=False):
+        appid_dict, appid_dfs = self.appids_that_have_var_that_changes_over_time(var=var, consecutive=consecutive)
+        combined_appids = []
+        for k, v in appid_dict.items():
+            if v is not None:
+                [combined_appids.append(x) for x in v if x not in combined_appids]
+        return combined_appids
+
+    def appids_that_have_var_that_changes_over_time(self, var, consecutive=False):
+        diff_dfs = self.check_whether_var_is_time_invariant(var=var, consecutive=consecutive)
+        if consecutive is False:
+            appid_dict = dict.fromkeys(self.all_panels)
+            appid_dfs = dict.fromkeys(self.all_panels)
+        elif consecutive is True:
+            appid_dict = dict.fromkeys(self.consec_panels)
+            appid_dfs = dict.fromkeys(self.consec_panels)
+        for df in diff_dfs:
+            for v in df.columns:
+                if 'appId' in v:
+                    if len(df[[v]][df[v].isnull()].index) == 0:
+                        appid_list = df[v].tolist()
+                        res = [i for i in v if i.isdigit()]
+                        panel = "".join(res)
+                        appid_dict[panel] = appid_list
+        for k, v in appid_dict.items():
+            if v is not None:
+                appid_dfs[k] = self.df[self.df.index.isin(v)]
+        return appid_dict, appid_dfs
+
+    def check_whether_var_is_time_invariant(self, var, consecutive=False):
+        col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
+        df_list = []
+        for j in range(len(col_list)):
+            new_df = self.keep_cols(list_of_col_names=[col_list[j],'appId_'+panel_list[j]])
+            new_df.rename(columns={col_list[j]: var}, inplace=True)
+            df_list.append(new_df)
+        diff_dfs = []
+        for i in range(len(df_list)-1):
+            diff_df_l = self.dataframe_difference(df_list[i], df_list[i+1], var=var, which='left_only')
+            diff_df_r = self.dataframe_difference(df_list[i], df_list[i+1], var=var, which='right_only')
+            if len(diff_df_l.index) != 0 or len(diff_df_r.index) != 0:
+                print(var, 'is NOT time invariant due to conflicts between', col_list[i], 'and', col_list[i+1])
+                diff_dfs.extend([diff_df_l, diff_df_r])
+            else:
+                print(var, 'is time invariant variable for rows are exactly same between', col_list[i], 'and', col_list[i+1])
+        return diff_dfs
+
+    def dataframe_difference(self, df1, df2, var, which=None): # which can be 'both', 'left_only', 'right_only'
+        """Find rows which are different between two DataFrames.
+        https://hackersandslackers.com/compare-rows-pandas-dataframes/"""
+        comparison_df = df1.merge(
+            df2,
+            on = var,
+            indicator = True,
+            how = 'outer'
+        )
+        if which is None:
+            diff_df = comparison_df[comparison_df['_merge'] != 'both']
+        else:
+            diff_df = comparison_df[comparison_df['_merge'] == which]
+        return diff_df
+
+    def find_difference_in_var_among_panels(self, var, consecutive=False):
+        pass
     # ------------------------------------------------------------------------------
     # Use with caution: they will update class properties
     def replace_cols(self, new_cols):
@@ -130,31 +208,64 @@ class summary_statistics():
     def drop_cols(self, list_of_col_names):
         self.df = self.df.drop(list_of_col_names, axis=1)
         return self.df
+
+    def convert_from_appid_to_developerid_index(self,
+        developer_level_vars,
+        consecutive=False,
+        select_one_panel=None):
+        if consecutive is True:
+            col_list = []
+            for var in developer_level_vars:
+                col, panels = self.select_the_var(var, consecutive_panels=True)
+                col_list.extend(col)
+        if consecutive is False:
+            col_list = []
+            for var in developer_level_vars:
+                col, panels = self.select_the_var(var)
+                col_list.extend(col)
+        elif select_one_panel is not None:
+            col_list = []
+            for var in developer_level_vars:
+                col, panels = self.select_the_var(var=var, select_one_panel=select_one_panel)
+                col_list.append(col)
+        new_df = self.keep_cols(list_of_col_names=col_list)
+        new_df.reset_index(drop=True, inplace=True)
+        for i in new_df.columns:
+            if 'developer' in i:
+                new_df.set_index(i, inplace=True)
+                break
+        return new_df
+
+    def convert_from_developerid_to_appid_index(self): # add new developer level variables and then transform it back to appid level
+        pass
+
+    def convert_from_appid_to_multiindex_df(self):
+        pass
     # ------------------------------------------------------------------------------
 
     def peek_at_appid_and_var(self, appid, var):
-        l1 = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
         new_df = new_df.loc[[appid]]
         return new_df
 
     def peek_at_sample_var_panels(self, var, sample):
-        l1 = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
         new_df = new_df.sample(n=sample)
         return new_df
 
     def mean_of_var_panels(self, var):
-        l1 = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
         new_df_mean = new_df.mean(axis=1).to_frame(name=var+'_stats')
         new_df = new_df.join(new_df_mean, how='inner')
         new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
         return new_df
 
     def standard_deviation_of_var_panels(self, var):
-        l1 = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
         new_df_std = new_df.std(axis=1).to_frame(name=var+'_stats')
         new_df = new_df.join(new_df_std, how='inner')
         new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
@@ -199,7 +310,7 @@ class impute_missing(summary_statistics):
         missing_cols_and_missing_ratios = []
         missing_cols = []
         for col in self.df.columns:
-            null_data = self.df[[col]][self.df[[col]].isnull().any(axis=1)]
+            null_data = self.df[[col]][self.df[col].isnull()]
             r = len(null_data.index) / len(self.df.index)
             if r >= self.missing_ratio:
                 num_of_cols_above_missing_threshold += 1
@@ -216,7 +327,7 @@ class impute_missing(summary_statistics):
         missing_cols_and_missing_ratios = []
         missing_cols = []
         for col in df_t.columns:
-            null_data = df_t[[col]][df_t[[col]].isnull().any(axis=1)]
+            null_data = df_t[[col]][df_t[col].isnull()]
             r = len(null_data.index) / len(df_t.index)
             if r >= self.missing_ratio:
                 num_of_cols_above_missing_threshold += 1
@@ -228,25 +339,14 @@ class impute_missing(summary_statistics):
         print(missing_cols_and_missing_ratios)
         return missing_cols_and_missing_ratios, missing_cols
 
-    def peek_at_missing(self, var, sample):
-        for col in self.df.columns:
-            if var in col: # var is a substring of the full column name
-                null_df = self.df[[col]][self.df[[col]].isnull().any(axis=1)]
-                print(col, 'contains', len(null_df.index), 'of missing values')
-                if len(null_df.index) >= sample:
-                    null_sample = null_df.sample(sample)
-                    print('randomly select', sample, 'rows from', col)
-                    print(null_sample)
-                    print()
-
     # STRATEGY 1: ------------------------------------------------------------------
     ### VARS: minInstalls
     # if the missing panel(s) are in between none-missing ones, take the average of before and after panel values and fill in the missing
     # if the minInstalls are missing for consecutively three panels or more, delete that row (because this is an important variable).
     def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing):
-        l1 = self.select_the_var(var=var)
-        df2 = self.keep_cols(list_of_col_names=l1)
-        null_data = df2[df2.isnull().any(axis=1)]
+        col, panels = self.select_the_var(var=var)
+        df2 = self.keep_cols(list_of_col_names=col)
+        null_data = df2[df2.isnull()]
         null_data_t = null_data.T
         appids_with_consec_missing_panels = []
         for appid in null_data_t.columns:
@@ -269,8 +369,8 @@ class impute_missing(summary_statistics):
         return appids_intend_to_drop, appids_with_consec_missing_panels
 
     def impute_the_missing_panel_according_to_adjacent_panel(self, var): # the self.df here should be the newly passed df that has deleted all rows and cols that will not be imputed
-        l1 = self.select_the_var(var=var)
-        df2 = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=var)
+        df2 = self.keep_cols(list_of_col_names=col)
         for i in range(len(df2.columns)):
             if i == 0: # the first panel is missing, impute with the next panel
                 df2[df2.columns[i]] = df2.apply(
@@ -293,8 +393,8 @@ class single_variable_stats(summary_statistics):
         self.var_type = var_type
 
     def tabulate(self):
-        l1 = self.select_the_var(var=self.v1)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=self.v1)
+        new_df = self.keep_cols(list_of_col_names=col)
         tab_list = []
         if self.var_type in ['category', 'dummy']:
             for i in self.all_panels:
@@ -306,8 +406,8 @@ class single_variable_stats(summary_statistics):
 
     def transform_the_var(self, log=False, standardize=False, min_max=False):
     # https://towardsdatascience.com/catalog-of-variable-transformations-to-make-your-model-works-better-7b506bf80b97
-        l1 = self.select_the_var(var=self.v1)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=self.v1)
+        new_df = self.keep_cols(list_of_col_names=col)
         if log is True:
             cols_to_keep = [i+'_log' for i in new_df.columns]
             for i in new_df.columns:
@@ -319,8 +419,8 @@ class single_variable_stats(summary_statistics):
         if pre_transformation == 'log':
             new_df = self.transform_the_var(log=True)
         else: # when no pre-transformation is performed
-            l1 = self.select_the_var(var=self.v1)
-            new_df = self.keep_cols(list_of_col_names=l1)
+            col, panels = self.select_the_var(var=self.v1)
+            new_df = self.keep_cols(list_of_col_names=col)
         for i in new_df.columns:
             new_df[i + '_bin'] = pd.cut(new_df[i], bins=num_bins, labels=False)
         return new_df
@@ -350,8 +450,8 @@ class single_variable_stats(summary_statistics):
         return final_df
 
     def change_in_var_over_interval(self, int_start, int_end):
-        l1 = self.select_the_var(var=self.v1)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=self.v1)
+        new_df = self.keep_cols(list_of_col_names=col)
         star_var = self.v1 + '_' + int_start
         end_var = self.v1 + '_' + int_end
         if self.var_type == 'continuous':
@@ -360,8 +460,8 @@ class single_variable_stats(summary_statistics):
         return new_df
 
     def delta_one_period_change_in_var(self):
-        l1 = self.select_the_var(var=self.v1, consecutive_panels=True)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=self.v1, consecutive_panels=True)
+        new_df = self.keep_cols(list_of_col_names=col)
         for i in range(len(self.consec_panels)):
             if i != 0:
                 new_col_name = self.v1+'_'+self.consec_panels[i]+'_'+self.consec_panels[i-1]
@@ -369,8 +469,8 @@ class single_variable_stats(summary_statistics):
         return new_df
 
     def density_distribution(self):
-        l1 = self.select_the_var(var=self.v1)
-        new_df = self.keep_cols(list_of_col_names=l1)
+        col, panels = self.select_the_var(var=self.v1)
+        new_df = self.keep_cols(list_of_col_names=col)
         # ----------------------------------------------------------------------------------
         fig, axs = plt.subplots(nrows=len(self.all_panels), sharex=True, sharey=True, figsize=(10, 80), dpi=500, facecolor='white')
         fig.suptitle(self.v1+' Density Distributions')
@@ -386,8 +486,8 @@ class single_variable_stats(summary_statistics):
         if pre_transformation=='log':
             new_df = self.transform_the_var(log=True)
         elif pre_transformation is None:
-            l1 = self.select_the_var(var=self.v1)
-            new_df = self.keep_cols(list_of_col_names=l1)
+            col, panels = self.select_the_var(var=self.v1)
+            new_df = self.keep_cols(list_of_col_names=col)
         # ----------------------------------------------------------------------------------
         fig, axs = plt.subplots(nrows=len(self.all_panels), sharex=True, sharey=True, figsize=(10, 80), dpi=500, facecolor='white')
         fig.suptitle(self.v1+' Histogram')
