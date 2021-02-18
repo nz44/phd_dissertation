@@ -24,6 +24,10 @@ class summary_statistics():
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.consec_panels = consec_panels
+    def check_duplicate_indices(self, df_type): # df_type could be appid, or it could be developer, or dev_multi
+        if df_type == 'appid':
+            dup_index_list = self.df.index[self.df.index.duplicated()].tolist()
+        return dup_index_list
     # ******************************************************************************
     # Output summary stats tables
     def stats_table_numeric(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
@@ -75,11 +79,20 @@ class summary_statistics():
         combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
         return combined_df
 
-    def peek_at_missing(self, var, select_one_panel):
+    def peek_at_missing(self, var, select_one_panel, full_df=True, additional_vars=None):
         col_list, panel_list = self.select_the_var(var=var, select_one_panel=select_one_panel)
-        for var in col_list:
-            df = self.df[self.df[var].isnull()]
-        return df
+        for v1 in col_list:
+            if full_df is False:
+                df = self.df[self.df[v1].isnull()]
+                ccols = self.print_col_names(text=var)
+                if additional_vars is not None:
+                    for j in additional_vars:
+                        cols = self.print_col_names(text=j)
+                        ccols.extend(cols)
+                df2 = df[ccols]
+            elif full_df is True:
+                df2 = self.df[self.df[v1].isnull()]
+        return df2
 
     def stats_table_address(self, var='developerAddress', consecutive=False, select_one_panel=None, group_by=None):
         pass
@@ -91,9 +104,18 @@ class summary_statistics():
         pass
 
     # ******************************************************************************
-    def print_col_names(self):
-        for col in self.df.columns:
-            print(col)
+    def print_col_names(self, text=None):
+        cols = []
+        if text is not None:
+            for col in self.df.columns:
+                if text in col:
+                    print(col)
+                    cols.append(col)
+        elif text is None:
+            for col in self.df.columns:
+                print(col)
+                cols = self.df.columns
+        return cols
 
     def print_num_rows(self):
         print(len(self.df.index))
@@ -125,89 +147,112 @@ class summary_statistics():
         col_list = [i for i in self.df.columns if panel in i]
         return col_list
 
+    def keep_both_cols_and_rows(self, list_of_row_labels, list_of_col_names):
+        new_df = self.keep_rows(list_of_row_labels=list_of_row_labels)
+        new_df2 = new_df[list_of_col_names]
+        return new_df2
+
+    def keep_rows(self, list_of_row_labels):
+        new_df = self.df.loc[list_of_row_labels]
+        return new_df
+
     def keep_cols(self, list_of_col_names):
         new_df = self.df[list_of_col_names]
         return new_df
 
-    def combined_appids_changed_in_var_over_time(self, var, consecutive=False):
-        appid_dict, appid_dfs = self.appids_that_have_var_that_changes_over_time(var=var, consecutive=consecutive)
+    # need to delete those apps with missing in developer before finding out which apps have changed developers over time
+    def appids_that_have_missing_in_any_panels(self, var, consecutive=False):
+        col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
+        df2 = self.keep_cols(list_of_col_names=col_list)
+        data = df2[df2.isnull().any(axis=1)]
+        appids = data.index.tolist()
+        return appids, data
+
+    def appids_have_time_variant_var(self, var, consecutive=False, format_text=False):
+        df_list, diff_dfs = self.check_whether_var_is_time_invariant(var=var, consecutive=consecutive, format_text=format_text)
         combined_appids = []
-        for k, v in appid_dict.items():
-            if v is not None:
-                [combined_appids.append(x) for x in v if x not in combined_appids]
-        return combined_appids
-
-    def appids_that_have_var_that_changes_over_time(self, var, consecutive=False):
-        diff_dfs = self.check_whether_var_is_time_invariant(var=var, consecutive=consecutive)
-        if consecutive is False:
-            appid_dict = dict.fromkeys(self.all_panels)
-            appid_dfs = dict.fromkeys(self.all_panels)
-        elif consecutive is True:
-            appid_dict = dict.fromkeys(self.consec_panels)
-            appid_dfs = dict.fromkeys(self.consec_panels)
         for df in diff_dfs:
-            for v in df.columns:
-                if 'appId' in v:
-                    if len(df[[v]][df[v].isnull()].index) == 0:
-                        appid_list = df[v].tolist()
-                        res = [i for i in v if i.isdigit()]
-                        panel = "".join(res)
-                        appid_dict[panel] = appid_list
-        for k, v in appid_dict.items():
-            if v is not None:
-                appid_dfs[k] = self.df[self.df.index.isin(v)]
-        return appid_dict, appid_dfs
+            if len(df.index) != 0:
+                # df.dropna(axis=1, how='all', inplace=True)
+                appid_list = df.index.tolist()
+                combined_appids.extend(appid_list)
+        unique_index = list(set(combined_appids))
+        return diff_dfs, unique_index
 
-    def check_whether_var_is_time_invariant(self, var, consecutive=False):
+    def format_text_for_developer(self, text):
+        if text is not None:
+            result_text = ''.join(c.lower() for c in text if not c.isspace()) # remove spaces
+            punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~+''' # remove functuations
+            for ele in result_text:
+                if ele in punc:
+                    result_text = result_text.replace(ele, "")
+            extra1 = re.compile(r'(corporated$)|(corporation$)|(corp$)|(company$)|(limited$)|(games$)|(game$)|(studios$)|(studio$)|(mobile$)')
+            extra2 = re.compile(r'(technologies$)|(technology$)|(tech$)|(solutions$)|(solution$)|(com$)|(llc$)|(inc$)|(ltd$)|(apps$)|(app$)|(org$)|(gmbh$)')
+            res1 = re.sub(extra1, '', result_text)
+            res2 = re.sub(extra2, '', res1)
+        else:
+            res2 = np.nan
+        return res2
+
+    def check_whether_var_is_time_invariant(self, var, consecutive=False, format_text=False): # note the var cannot be appId
         col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
         df_list = []
         for j in range(len(col_list)):
-            new_df = self.keep_cols(list_of_col_names=[col_list[j],'appId_'+panel_list[j]])
+            new_df = self.keep_cols(list_of_col_names=col_list[j]).to_frame()
             new_df.rename(columns={col_list[j]: var}, inplace=True)
+            if format_text is True:
+                new_df[var]=new_df[var].apply(lambda x: self.format_text_for_developer(x))
             df_list.append(new_df)
         diff_dfs = []
         for i in range(len(df_list)-1):
-            diff_df_l = self.dataframe_difference(df_list[i], df_list[i+1], var=var, which='left_only')
-            diff_df_r = self.dataframe_difference(df_list[i], df_list[i+1], var=var, which='right_only')
-            if len(diff_df_l.index) != 0 or len(diff_df_r.index) != 0:
+            diff_df = self.dataframe_difference(df_list[i], df_list[i+1], var=var)
+            if len(diff_df.index) != 0:
                 print(var, 'is NOT time invariant due to conflicts between', col_list[i], 'and', col_list[i+1])
-                diff_dfs.extend([diff_df_l, diff_df_r])
+                diff_dfs.extend([diff_df])
             else:
                 print(var, 'is time invariant variable for rows are exactly same between', col_list[i], 'and', col_list[i+1])
-        return diff_dfs
+        return df_list, diff_dfs
 
-    def dataframe_difference(self, df1, df2, var, which=None): # which can be 'both', 'left_only', 'right_only'
+    def dataframe_difference(self, df1, df2, var): # ALL YOU need is left only, because you are compare df1 to df2, df2 to df3...
         """Find rows which are different between two DataFrames.
         https://hackersandslackers.com/compare-rows-pandas-dataframes/"""
-        comparison_df = df1.merge(
+        comparison_df = df1.reset_index().merge(
             df2,
             on = var,
             indicator = True,
-            how = 'outer'
-        )
-        if which is None:
-            diff_df = comparison_df[comparison_df['_merge'] != 'both']
-        else:
-            diff_df = comparison_df[comparison_df['_merge'] == which]
+            how = 'left'
+        ).set_index('index')
+        diff_df = comparison_df[comparison_df['_merge'] == 'left_only']
         return diff_df
 
     def find_difference_in_var_among_panels(self, var, consecutive=False):
         pass
-    # ------------------------------------------------------------------------------
-    # Use with caution: they will update class properties
+
+    def drop_col_row_and_replace_cols(self, list_of_row_labels, list_of_col_names, new_cols):
+        new_df = self.drop_both_cols_and_rows(list_of_row_labels=list_of_row_labels, list_of_col_names=list_of_col_names)
+        col_names = new_cols.columns.tolist()
+        new_df2 = new_df.drop(columns=col_names)
+        new_df2 = new_df2.join(new_cols, how='inner')
+        return new_df2
+
     def replace_cols(self, new_cols):
         col_names = new_cols.columns.tolist()
-        self.df = self.drop_cols(list_of_col_names=col_names)
-        self.df = self.df.join(new_cols, how='inner')
-        return self.df
+        new_df = self.drop_cols(list_of_col_names=col_names)
+        new_df = new_df.join(new_cols, how='inner')
+        return new_df
+
+    def drop_both_cols_and_rows(self, list_of_row_labels, list_of_col_names):
+        new_df = self.df.drop(index=list_of_row_labels)
+        new_df2 = new_df.drop(columns=list_of_col_names)
+        return new_df2
 
     def drop_rows(self, list_of_row_labels):
-        self.df = self.df.drop(list_of_row_labels, axis=0)
-        return self.df
+        new_df = self.df.drop(index=list_of_row_labels)
+        return new_df
 
     def drop_cols(self, list_of_col_names):
-        self.df = self.df.drop(list_of_col_names, axis=1)
-        return self.df
+        new_df = self.df.drop(columns=list_of_col_names)
+        return new_df
 
     def convert_from_appid_to_developerid_index(self,
         developer_level_vars,
@@ -346,7 +391,7 @@ class impute_missing(summary_statistics):
     def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing):
         col, panels = self.select_the_var(var=var)
         df2 = self.keep_cols(list_of_col_names=col)
-        null_data = df2[df2.isnull()]
+        null_data = df2[df2.isnull().any(axis=1)]
         null_data_t = null_data.T
         appids_with_consec_missing_panels = []
         for appid in null_data_t.columns:
@@ -383,6 +428,9 @@ class impute_missing(summary_statistics):
                     axis=1
                 )
         return df2
+
+    def impute_none_with_value_from_adj_panel(self, var):
+        pass
 
 
 #################################################################################################################
