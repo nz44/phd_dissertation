@@ -11,25 +11,242 @@ import operator
 import functools
 import itertools
 import re
+import os
+import geopy
+from geopy.geocoders import AzureMaps
+from tqdm import tqdm
+tqdm.pandas()
 import matplotlib
 import seaborn
 #################################################################################################################
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
 class summary_statistics():
-    def __init__(self, df, df_developer_index=None, df_multiindex=None, initial_panel=None,
-                 all_panels=None, consec_panels=None):
+
+    def __init__(self,
+                 df,
+                 df_index,
+                 df_developer_index=None,
+                 df_developer_index_geocoded=None,
+                 df_multiindex=None,
+                 df_multiindex_geocoded=None,
+                 initial_panel=None,
+                 all_panels=None,
+                 consec_panels=None):
         self.df = df
+        self.df_index = df_index
         self.df_di = df_developer_index
+        self.df_dig = df_developer_index_geocoded
         self.df_mi = df_multiindex
+        self.df_mig = df_multiindex_geocoded
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.consec_panels = consec_panels
-    def check_duplicate_indices(self, df_type): # df_type could be appid, or it could be developer, or dev_multi
-        if df_type == 'appid':
-            dup_index_list = self.df.index[self.df.index.duplicated()].tolist()
-        return dup_index_list
-    # ******************************************************************************
-    # Output summary stats tables
+
+    # SELECTION FUNCTIONS
+    ###############################################################################################################################
+    def print_col_names(self, text=None):
+        cols = []
+        if text is not None:
+            for col in self.df.columns:
+                if text in col:
+                    print(col)
+                    cols.append(col)
+        elif text is None:
+            for col in self.df.columns:
+                print(col)
+                cols = self.df.columns
+        return cols
+
+    def select_the_panel(self, panel):
+        col_list = [i for i in self.df.columns if panel in i]
+        return col_list
+
+    def select_the_var(self, var, consecutive=False, select_one_panel=None):
+        if consecutive is True:  # only panels scraped in 202009 and onwards are monthly panels
+            col_list = [var + '_' + i for i in self.consec_panels]
+            panel_list = self.consec_panels
+        elif consecutive is False:
+            col_list = [var + '_' + i for i in self.all_panels]
+            panel_list = self.all_panels
+        elif select_one_panel is not None:
+            col_list = [var + '_' + select_one_panel]
+            panel_list = select_one_panel
+        return col_list, panel_list
+
+    def select_var_df(self, var_list, consecutive=False, select_one_panel=None):
+        dfs = []
+        for var in var_list:
+            col_list, panel_list = self.select_the_var(var, consecutive, select_one_panel)
+            df2 = self.keep_cols(list_of_col_names=col_list)
+            dfs.append(df2)
+        return dfs
+
+    def peek_at_df_conditional_on_var_value(self, var, var_value, consecutive=False, select_one_panel=None, full_df=False):
+        """you can also use this to peek_at_missing, just set var_value=None"""
+        col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive, select_one_panel=select_one_panel)
+        if full_df is False:
+            df2 = self.keep_cols(list_of_col_names=col_list)
+        elif full_df is True:
+            df2 = self.df
+        for j in df2.columns:
+            if full_df is False:
+                if var_value is not None:
+                    pass
+
+
+    def keep_rows(self, list_of_row_labels):
+        if self.df_index == 'appid':
+            new_df = self.df.loc[list_of_row_labels]
+            return new_df
+        elif self.df_index == 'dev_multiindex_geocoded':
+            new_df = self.df[self.df.index.get_level_values('appId').isin(list_of_row_labels)]
+            return new_df
+
+    def keep_cols(self, list_of_col_names):
+        new_df = self.df[list_of_col_names]
+        return new_df
+
+    def keep_both_cols_and_rows(self, list_of_row_labels, list_of_col_names):
+        new_df = self.keep_rows(list_of_row_labels=list_of_row_labels)
+        new_df2 = new_df[list_of_col_names]
+        return new_df2
+
+    def drop_rows(self, list_of_row_labels):
+        if self.df_index == 'appid':
+            new_df = self.df.drop(index=list_of_row_labels)
+            return new_df
+        elif self.df_index == 'dev_multiindex_geocoded':
+            rows_index_to_drop = self.df.index.get_level_values('appId').isin(list_of_row_labels)
+            rows_index_to_keep = ~rows_index_to_drop
+            new_df = self.df[rows_index_to_keep]
+            return new_df
+
+    def drop_cols(self, list_of_col_names):
+        new_df = self.df.drop(columns=list_of_col_names)
+        return new_df
+
+    def drop_both_cols_and_rows(self, list_of_row_labels, list_of_col_names):
+        new_df = self.df.drop(index=list_of_row_labels)
+        new_df2 = new_df.drop(columns=list_of_col_names)
+        return new_df2
+
+    def replace_cols(self, new_cols):
+        col_names = new_cols.columns.tolist()
+        new_df = self.drop_cols(list_of_col_names=col_names)
+        new_df = new_df.join(new_cols, how='inner')
+        return new_df
+
+    def drop_col_row_and_replace_cols(self, list_of_row_labels, list_of_col_names, new_cols):
+        new_df = self.drop_both_cols_and_rows(list_of_row_labels=list_of_row_labels, list_of_col_names=list_of_col_names)
+        col_names = new_cols.columns.tolist()
+        new_df2 = new_df.drop(columns=col_names)
+        if self.df_index == 'appid':
+            new_df2 = new_df2.join(new_cols, how='inner')
+            return new_df2
+        elif self.df_index == 'dev_multiindex_geocoded':
+            new_df2 = new_df2.join(new_cols, on=['developer', 'appId'], how='inner')
+            return new_df2
+
+    # REVERT INDEX (FROM APPID to DEVELOPER)
+    ###############################################################################################################################
+    def convert_developer_to_appid_index(self, multiindex, consecutive=False):
+        if multiindex is True:
+            df2 = self.df_mig.reset_index(drop=True).set_index('developer_' + self.initial_panel)
+            return df2
+
+    def lat_and_long_columns(self, multiindex=False, consecutive=False):
+        dfd = self.convert_appid_to_developer_index(multiindex=multiindex, consecutive=consecutive)
+        # ------------ start geociding ------------------------------------------------------------
+        geopy.geocoders.options.default_timeout = 7
+        geolocator = AzureMaps(subscription_key='zLTKWFX7Ng5foT0nxB-CD-vgriqXUiNlk4IMhfD-PTQ')
+        dfd['location'] = dfd['developerAddress_'+self.all_panels[0]].progress_apply(lambda loc: geolocator.geocode(loc) if loc else None)
+        dfd['longitude'] = dfd['location'].progress_apply(lambda loc: loc.longitude if loc else None)
+        dfd['latitude'] = dfd['location'].progress_apply(lambda loc: loc.latitude if loc else None)
+        self.df_dig = dfd
+        return dfd
+
+    def convert_appid_to_developer_index(self, multiindex, consecutive=False):
+        time_invariant_df, time_invariant_appids = self.check_whether_var_varies_across_panels(var='developer', consecutive=consecutive)
+        df2 = self.df.loc[time_invariant_appids]
+        if multiindex is True:
+            df2 = df2.reset_index().set_index(['developer_'+self.initial_panel, 'index'])
+            df2.index.rename(['developer', 'appId'], inplace=True)
+            # remove developers b/c we have only kept time-invariant developer information
+            for j in df2.columns:
+                if 'developer_' in j:
+                    df2.drop(j, axis=1, inplace=True)
+            # add number of apps variable to each row
+            df3 = df2.reset_index().groupby('developer')['appId'].nunique().rename('num_apps_owned').to_frame()
+
+            df2 = df2.reset_index().merge(df3, on='developer', how='left')
+            df2.set_index(['developer', 'appId'], inplace=True)
+            self.df_mi = df2
+            return df2
+        elif multiindex is False:
+            dev_level_vars = ['developer', 'developerId', 'developerEmail', 'developerWebsite', 'developerAddress']
+            cols = []
+            for v in dev_level_vars:
+                col_list, panel_list = self.select_the_var(var=v, consecutive=consecutive)
+                cols.extend(col_list)
+            df2 = df2[cols]
+            df2 = df2.reset_index(drop=True).set_index('developer_'+self.initial_panel)
+            df2.index.rename('developer', inplace=True)
+            # drop duplicate index rows
+            index = df2.index
+            is_duplicate = index.duplicated(keep="first")
+            not_duplicate = ~is_duplicate
+            df2 = df2[not_duplicate]
+            # remove developers b/c we have only kept time-invariant developer information
+            for j in df2.columns:
+                if 'developer_' in j:
+                    df2.drop(j, axis=1, inplace=True)
+            self.df_di = df2
+            return df2
+
+    # TIME INVARIANT VARIABLE
+    ###############################################################################################################################
+    def format_text_for_developer(self, text):
+        if text is not None:
+            result_text = ''.join(c.lower() for c in text if not c.isspace())  # remove spaces
+            punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~+'''  # remove functuations
+            for ele in result_text:
+                if ele in punc:
+                    result_text = result_text.replace(ele, "")
+            extra1 = re.compile(
+                r'(corporated$)|(corporation$)|(corp$)|(company$)|(limited$)|(games$)|(game$)|(studios$)|(studio$)|(mobile$)')
+            extra2 = re.compile(
+                r'(technologies$)|(technology$)|(tech$)|(solutions$)|(solution$)|(com$)|(llc$)|(inc$)|(ltd$)|(apps$)|(app$)|(org$)|(gmbh$)')
+            res1 = re.sub(extra1, '', result_text)
+            res2 = re.sub(extra2, '', res1)
+        else:
+            res2 = np.nan
+        return res2
+
+    def check_whether_var_varies_across_panels(self, var, consecutive=False):
+        """without dropping missings first, just use this single function to find out time variant rows and delete them"""
+        col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
+        df2 = self.df[col_list]
+        if var == 'developer':
+            for j in df2.columns:
+                df2[j] = df2[j].apply(lambda x: self.format_text_for_developer(x))
+        df_time_invariant_indicators = [] # true, time invariant; false, NOT time invariant
+        for index, row in df2.iterrows():
+            row_time_invariant_indicators = []
+            for j in range(len(df2.columns)-1):
+                if row[df2.columns[j]] == row[df2.columns[j+1]]:
+                    row_time_invariant_indicators.append(True)
+                else:
+                    row_time_invariant_indicators.append(False)
+            if all(row_time_invariant_indicators) is True:
+                df_time_invariant_indicators.append(True)
+            else:
+                df_time_invariant_indicators.append(False)
+        time_invariant_df = df2[df_time_invariant_indicators]
+        time_invariant_appids = time_invariant_df.index.tolist()
+        return time_invariant_df, time_invariant_appids
+
+    # Output summary stats tables (app level features are to be performed on app-level dataframe)
+    ###############################################################################################################################
     def stats_table_numeric(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
         dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
         summary_dfs = []
@@ -79,21 +296,6 @@ class summary_statistics():
         combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
         return combined_df
 
-    def peek_at_missing(self, var, select_one_panel, full_df=True, additional_vars=None):
-        col_list, panel_list = self.select_the_var(var=var, select_one_panel=select_one_panel)
-        for v1 in col_list:
-            if full_df is False:
-                df = self.df[self.df[v1].isnull()]
-                ccols = self.print_col_names(text=var)
-                if additional_vars is not None:
-                    for j in additional_vars:
-                        cols = self.print_col_names(text=j)
-                        ccols.extend(cols)
-                df2 = df[ccols]
-            elif full_df is True:
-                df2 = self.df[self.df[v1].isnull()]
-        return df2
-
     def stats_table_address(self, var='developerAddress', consecutive=False, select_one_panel=None, group_by=None):
         pass
 
@@ -103,63 +305,9 @@ class summary_statistics():
     def convert_stats_tables(self, style):
         pass
 
-    # ******************************************************************************
-    def print_col_names(self, text=None):
-        cols = []
-        if text is not None:
-            for col in self.df.columns:
-                if text in col:
-                    print(col)
-                    cols.append(col)
-        elif text is None:
-            for col in self.df.columns:
-                print(col)
-                cols = self.df.columns
-        return cols
 
-    def print_num_rows(self):
-        print(len(self.df.index))
-
-    def select_the_var(self, var, consecutive=False, select_one_panel=None):
-        if consecutive is True: # only panels scraped in 202009 and onwards are monthly panels
-            col_list = [var + '_' + i for i in self.consec_panels]
-            panel_list = self.consec_panels
-        elif consecutive is False:
-            col_list = [var + '_' + i for i in self.all_panels]
-            panel_list = self.all_panels
-        elif select_one_panel is not None:
-            col_list = [var + '_' + select_one_panel]
-            panel_list = select_one_panel
-        return col_list, panel_list
-
-    def select_var_df(self, var_list, consecutive=False, select_one_panel=None):
-        dfs = []
-        for var in var_list:
-            col_list, panel_list = self.select_the_var(var, consecutive, select_one_panel)
-            df2 = self.keep_cols(list_of_col_names=col_list)
-            dfs.append(df2)
-        return dfs
-
-    def change_index_from_appid_to_developerid(self):
-        pass
-
-    def select_the_panel(self, panel):
-        col_list = [i for i in self.df.columns if panel in i]
-        return col_list
-
-    def keep_both_cols_and_rows(self, list_of_row_labels, list_of_col_names):
-        new_df = self.keep_rows(list_of_row_labels=list_of_row_labels)
-        new_df2 = new_df[list_of_col_names]
-        return new_df2
-
-    def keep_rows(self, list_of_row_labels):
-        new_df = self.df.loc[list_of_row_labels]
-        return new_df
-
-    def keep_cols(self, list_of_col_names):
-        new_df = self.df[list_of_col_names]
-        return new_df
-
+    # HIGH LEVEL MISSING FUNCTIONS
+    ###############################################################################################################################
     # need to delete those apps with missing in developer before finding out which apps have changed developers over time
     def appids_that_have_missing_in_any_panels(self, var, consecutive=False):
         col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
@@ -167,126 +315,6 @@ class summary_statistics():
         data = df2[df2.isnull().any(axis=1)]
         appids = data.index.tolist()
         return appids, data
-
-    def appids_have_time_variant_var(self, var, consecutive=False, format_text=False):
-        df_list, diff_dfs = self.check_whether_var_is_time_invariant(var=var, consecutive=consecutive, format_text=format_text)
-        combined_appids = []
-        for df in diff_dfs:
-            if len(df.index) != 0:
-                # df.dropna(axis=1, how='all', inplace=True)
-                appid_list = df.index.tolist()
-                combined_appids.extend(appid_list)
-        unique_index = list(set(combined_appids))
-        return diff_dfs, unique_index
-
-    def format_text_for_developer(self, text):
-        if text is not None:
-            result_text = ''.join(c.lower() for c in text if not c.isspace()) # remove spaces
-            punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~+''' # remove functuations
-            for ele in result_text:
-                if ele in punc:
-                    result_text = result_text.replace(ele, "")
-            extra1 = re.compile(r'(corporated$)|(corporation$)|(corp$)|(company$)|(limited$)|(games$)|(game$)|(studios$)|(studio$)|(mobile$)')
-            extra2 = re.compile(r'(technologies$)|(technology$)|(tech$)|(solutions$)|(solution$)|(com$)|(llc$)|(inc$)|(ltd$)|(apps$)|(app$)|(org$)|(gmbh$)')
-            res1 = re.sub(extra1, '', result_text)
-            res2 = re.sub(extra2, '', res1)
-        else:
-            res2 = np.nan
-        return res2
-
-    def check_whether_var_is_time_invariant(self, var, consecutive=False, format_text=False): # note the var cannot be appId
-        col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
-        df_list = []
-        for j in range(len(col_list)):
-            new_df = self.keep_cols(list_of_col_names=col_list[j]).to_frame()
-            new_df.rename(columns={col_list[j]: var}, inplace=True)
-            if format_text is True:
-                new_df[var]=new_df[var].apply(lambda x: self.format_text_for_developer(x))
-            df_list.append(new_df)
-        diff_dfs = []
-        for i in range(len(df_list)-1):
-            diff_df = self.dataframe_difference(df_list[i], df_list[i+1], var=var)
-            if len(diff_df.index) != 0:
-                print(var, 'is NOT time invariant due to conflicts between', col_list[i], 'and', col_list[i+1])
-                diff_dfs.extend([diff_df])
-            else:
-                print(var, 'is time invariant variable for rows are exactly same between', col_list[i], 'and', col_list[i+1])
-        return df_list, diff_dfs
-
-    def dataframe_difference(self, df1, df2, var): # ALL YOU need is left only, because you are compare df1 to df2, df2 to df3...
-        """Find rows which are different between two DataFrames.
-        https://hackersandslackers.com/compare-rows-pandas-dataframes/"""
-        comparison_df = df1.reset_index().merge(
-            df2,
-            on = var,
-            indicator = True,
-            how = 'left'
-        ).set_index('index')
-        diff_df = comparison_df[comparison_df['_merge'] == 'left_only']
-        return diff_df
-
-    def find_difference_in_var_among_panels(self, var, consecutive=False):
-        pass
-
-    def drop_col_row_and_replace_cols(self, list_of_row_labels, list_of_col_names, new_cols):
-        new_df = self.drop_both_cols_and_rows(list_of_row_labels=list_of_row_labels, list_of_col_names=list_of_col_names)
-        col_names = new_cols.columns.tolist()
-        new_df2 = new_df.drop(columns=col_names)
-        new_df2 = new_df2.join(new_cols, how='inner')
-        return new_df2
-
-    def replace_cols(self, new_cols):
-        col_names = new_cols.columns.tolist()
-        new_df = self.drop_cols(list_of_col_names=col_names)
-        new_df = new_df.join(new_cols, how='inner')
-        return new_df
-
-    def drop_both_cols_and_rows(self, list_of_row_labels, list_of_col_names):
-        new_df = self.df.drop(index=list_of_row_labels)
-        new_df2 = new_df.drop(columns=list_of_col_names)
-        return new_df2
-
-    def drop_rows(self, list_of_row_labels):
-        new_df = self.df.drop(index=list_of_row_labels)
-        return new_df
-
-    def drop_cols(self, list_of_col_names):
-        new_df = self.df.drop(columns=list_of_col_names)
-        return new_df
-
-    def convert_from_appid_to_developerid_index(self,
-        developer_level_vars,
-        consecutive=False,
-        select_one_panel=None):
-        if consecutive is True:
-            col_list = []
-            for var in developer_level_vars:
-                col, panels = self.select_the_var(var, consecutive_panels=True)
-                col_list.extend(col)
-        if consecutive is False:
-            col_list = []
-            for var in developer_level_vars:
-                col, panels = self.select_the_var(var)
-                col_list.extend(col)
-        elif select_one_panel is not None:
-            col_list = []
-            for var in developer_level_vars:
-                col, panels = self.select_the_var(var=var, select_one_panel=select_one_panel)
-                col_list.append(col)
-        new_df = self.keep_cols(list_of_col_names=col_list)
-        new_df.reset_index(drop=True, inplace=True)
-        for i in new_df.columns:
-            if 'developer' in i:
-                new_df.set_index(i, inplace=True)
-                break
-        return new_df
-
-    def convert_from_developerid_to_appid_index(self): # add new developer level variables and then transform it back to appid level
-        pass
-
-    def convert_from_appid_to_multiindex_df(self):
-        pass
-    # ------------------------------------------------------------------------------
 
     def peek_at_appid_and_var(self, appid, var):
         col, panels = self.select_the_var(var=var)
