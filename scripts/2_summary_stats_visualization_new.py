@@ -1,4 +1,6 @@
 import pandas as pd
+pd.set_option('display.max_colwidth', -1)
+pd.options.display.max_rows = 999
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +22,7 @@ import matplotlib
 import seaborn
 #################################################################################################################
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
-class summary_statistics():
+class pre_processing():
 
     def __init__(self,
                  df,
@@ -93,6 +95,17 @@ class summary_statistics():
                 if var_value is not None:
                     pass
 
+    def peek_at_appid_and_var(self, appid, var):
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
+        new_df = new_df.loc[[appid]]
+        return new_df
+
+    def peek_at_sample_var_panels(self, var, sample):
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
+        new_df = new_df.sample(n=sample)
+        return new_df
 
     def keep_rows(self, list_of_row_labels):
         if self.df_index == 'appid':
@@ -130,6 +143,13 @@ class summary_statistics():
         new_df2 = new_df.drop(columns=list_of_col_names)
         return new_df2
 
+    def replace_cols_list(self, list_new_cols):
+        combined_cols = functools.reduce(lambda a, b: a.join(b, how='inner'), list_new_cols)
+        col_names = combined_cols.columns.tolist()
+        new_df = self.drop_cols(list_of_col_names=col_names)
+        new_df = new_df.join(combined_cols, how='inner')
+        return new_df
+
     def replace_cols(self, new_cols):
         col_names = new_cols.columns.tolist()
         new_df = self.drop_cols(list_of_col_names=col_names)
@@ -147,21 +167,34 @@ class summary_statistics():
             new_df2 = new_df2.join(new_cols, on=['developer', 'appId'], how='inner')
             return new_df2
 
+    # STANDARD SINGLE VAR STATS
+    ###############################################################################################################################
+    def mean_of_var_panels(self, var):
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
+        new_df_mean = new_df.mean(axis=1).to_frame(name=var+'_stats')
+        new_df = new_df.join(new_df_mean, how='inner')
+        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
+        return new_df
+
+    def standard_deviation_of_var_panels(self, var):
+        col, panels = self.select_the_var(var=var)
+        new_df = self.keep_cols(list_of_col_names=col)
+        new_df_std = new_df.std(axis=1).to_frame(name=var+'_stats')
+        new_df = new_df.join(new_df_std, how='inner')
+        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
+        return new_df
+
     # REVERT INDEX (FROM APPID to DEVELOPER)
     ###############################################################################################################################
-    def convert_developer_to_appid_index(self, multiindex, consecutive=False):
-        if multiindex is True:
-            df2 = self.df_mig.reset_index(drop=True).set_index('developer_' + self.initial_panel)
-            return df2
-
     def lat_and_long_columns(self, multiindex=False, consecutive=False):
         dfd = self.convert_appid_to_developer_index(multiindex=multiindex, consecutive=consecutive)
         # ------------ start geociding ------------------------------------------------------------
         geopy.geocoders.options.default_timeout = 7
         geolocator = AzureMaps(subscription_key='zLTKWFX7Ng5foT0nxB-CD-vgriqXUiNlk4IMhfD-PTQ')
         dfd['location'] = dfd['developerAddress_'+self.all_panels[0]].progress_apply(lambda loc: geolocator.geocode(loc) if loc else None)
-        dfd['longitude'] = dfd['location'].progress_apply(lambda loc: loc.longitude if loc else None)
-        dfd['latitude'] = dfd['location'].progress_apply(lambda loc: loc.latitude if loc else None)
+        dfd['longitude'] = dfd['location'].apply(lambda loc: loc.longitude if loc else None)
+        dfd['latitude'] = dfd['location'].apply(lambda loc: loc.latitude if loc else None)
         self.df_dig = dfd
         return dfd
 
@@ -245,105 +278,8 @@ class summary_statistics():
         time_invariant_appids = time_invariant_df.index.tolist()
         return time_invariant_df, time_invariant_appids
 
-    # Output summary stats tables (app level features are to be performed on app-level dataframe)
+    # DELETE OUTLIERS
     ###############################################################################################################################
-    def stats_table_numeric(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
-        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
-        summary_dfs = []
-        for df in dfs:
-            df3 = df.agg(func=['count', 'min', 'max', 'mean', 'std'],
-                          axis=0)
-            if isinstance(df3, pd.Series):
-                df3 = df3.to_frame()
-            summary_dfs.append(df3)
-        combined_df = functools.reduce(lambda a, b: a.join(b, how='inner'), summary_dfs)
-        combined_df = combined_df.T
-        return combined_df
-
-    # there are no categorical variables, all the cat variables have been converted to dummy in 1_scraping_cleaning_merge.py
-    # it shows that almost ALL dummies are NOT time invariant
-    def stats_table_dummy(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
-        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
-        summary_dfs = []
-        for df in dfs:
-            for col in df.columns:
-                df_col = df[[col]]
-                df_col[col+'_count'] = 'count'
-                tab = df_col.groupby(by=col, dropna=False).count()
-                summary_dfs.append(tab)
-        combined_df = functools.reduce(lambda a, b: a.join(b, how='inner'), summary_dfs)
-        combined_df = combined_df.T
-        combined_df['count'] = combined_df[0] + combined_df[1]
-        return combined_df
-
-    def stats_table_datetime(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
-        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
-        summary_dfs = []
-        for df in dfs:
-            df3 = df.agg(func=['count', 'min', 'max'],
-                          axis=0)
-            summary_dfs.append(df3)
-        combined_df = functools.reduce(lambda a, b: a.join(b, how='inner'), summary_dfs)
-        combined_df = combined_df.T
-        return combined_df
-
-    def stats_count_missing(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
-        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
-        summary_dfs = []
-        for df in dfs:
-            df3 = df.isnull().sum().rename('count missing').to_frame()
-            summary_dfs.append(df3)
-        combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
-        return combined_df
-
-    def stats_table_address(self, var='developerAddress', consecutive=False, select_one_panel=None, group_by=None):
-        pass
-
-    def combine_stats_tables(self, table_func_1, table_func_2, table_func_3=None):
-        pass
-
-    def convert_stats_tables(self, style):
-        pass
-
-
-    # HIGH LEVEL MISSING FUNCTIONS
-    ###############################################################################################################################
-    # need to delete those apps with missing in developer before finding out which apps have changed developers over time
-    def appids_that_have_missing_in_any_panels(self, var, consecutive=False):
-        col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
-        df2 = self.keep_cols(list_of_col_names=col_list)
-        data = df2[df2.isnull().any(axis=1)]
-        appids = data.index.tolist()
-        return appids, data
-
-    def peek_at_appid_and_var(self, appid, var):
-        col, panels = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=col)
-        new_df = new_df.loc[[appid]]
-        return new_df
-
-    def peek_at_sample_var_panels(self, var, sample):
-        col, panels = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=col)
-        new_df = new_df.sample(n=sample)
-        return new_df
-
-    def mean_of_var_panels(self, var):
-        col, panels = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=col)
-        new_df_mean = new_df.mean(axis=1).to_frame(name=var+'_stats')
-        new_df = new_df.join(new_df_mean, how='inner')
-        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
-        return new_df
-
-    def standard_deviation_of_var_panels(self, var):
-        col, panels = self.select_the_var(var=var)
-        new_df = self.keep_cols(list_of_col_names=col)
-        new_df_std = new_df.std(axis=1).to_frame(name=var+'_stats')
-        new_df = new_df.join(new_df_std, how='inner')
-        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
-        return new_df
-
     def peek_at_outliers(self, var, method, quantiles, q_inter, **kwargs):
         # method determines which var you are using histogram over, if none, use it over the var itself
         # if average, or standard deviation, first calculate the average and std of the var over all panels, then draw the histogram on that average or std
@@ -371,12 +307,17 @@ class summary_statistics():
         outlier_appids = df_outliers.index.tolist()
         return df_outliers, outlier_appids
 
-
-#################################################################################################################
-class impute_missing(summary_statistics):
-    def __init__(self, missing_ratio, **kwargs):
-        super().__init__(**kwargs)
-        self.missing_ratio = missing_ratio
+    # IMPUTE MISSING and DELETING MISSING that cannot be imputed
+    ###############################################################################################################################
+    # need to delete those apps with missing in developer before finding out which apps have changed developers over time
+    def count_missing(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
+        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
+        summary_dfs = []
+        for df in dfs:
+            df3 = df.isnull().sum().rename('count missing').to_frame()
+            summary_dfs.append(df3)
+        combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
+        return combined_df
 
     def cols_missing_ratio(self):
         num_of_cols_above_missing_threshold = 0
@@ -412,10 +353,6 @@ class impute_missing(summary_statistics):
         print(missing_cols_and_missing_ratios)
         return missing_cols_and_missing_ratios, missing_cols
 
-    # STRATEGY 1: ------------------------------------------------------------------
-    ### VARS: minInstalls
-    # if the missing panel(s) are in between none-missing ones, take the average of before and after panel values and fill in the missing
-    # if the minInstalls are missing for consecutively three panels or more, delete that row (because this is an important variable).
     def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing):
         col, panels = self.select_the_var(var=var)
         df2 = self.keep_cols(list_of_col_names=col)
@@ -441,28 +378,91 @@ class impute_missing(summary_statistics):
         print('out of', len(df2.index), 'apps.')
         return appids_intend_to_drop, appids_with_consec_missing_panels
 
-    def impute_the_missing_panel_according_to_adjacent_panel(self, var): # the self.df here should be the newly passed df that has deleted all rows and cols that will not be imputed
+    def impute_missing_using_adj_panels(self, var, adj_panels, method):
         col, panels = self.select_the_var(var=var)
         df2 = self.keep_cols(list_of_col_names=col)
-        for i in range(len(df2.columns)):
-            if i == 0: # the first panel is missing, impute with the next panel
-                df2[df2.columns[i]] = df2.apply(
-                    lambda row: row[df2.columns[i+1]] if np.isnan(row[df2.columns[i]]) else row[df2.columns[i]],
-                    axis=1
-                )
-            else: # all other panels impute with previous panels
-                df2[df2.columns[i]] = df2.apply(
-                    lambda row: row[df2.columns[i-1]] if np.isnan(row[df2.columns[i]]) else row[df2.columns[i]],
-                    axis=1
-                )
-        return df2
-
-    def impute_none_with_value_from_adj_panel(self, var):
-        pass
-
+        df_list = []
+        for j in range(len(df2.columns)):
+            if j < adj_panels//2: # the first panel uses the next n panels to impute
+                df = df2.iloc[:, 0:adj_panels+1]
+            elif j >= len(df2.columns)-adj_panels//2: # the last panel uses the previous n panels to impute
+                df = df2.iloc[:, len(df2.columns)-adj_panels-1:len(df2.columns)]
+            else: # all the in-between panels use the n/2 previous panel and n/3 next panels to impute
+                if adj_panels == 1:
+                    df = df2.iloc[:, j-1:j+2]
+                else:
+                    df = df2.iloc[:, j-adj_panels//2:j+adj_panels//2+1]
+            if method == 'mean':
+                df['mean'] = df.mean(axis=1, skipna=True)
+            elif method == 'mode':
+                df['mode'] = df.mode(axis=1, numeric_only=False, dropna=True).iloc[:,0]
+            for col in df.columns:
+                if col != method:
+                    df[col].fillna(df[method], inplace=True)
+            df = df[[df2.columns[j]]]
+            df_list.append(df)
+        imputed_df = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        return imputed_df
 
 #################################################################################################################
-class single_variable_stats(summary_statistics):
+class summary_stats_tables(pre_processing):
+    def __init__(self, missing_ratio, **kwargs):
+        super().__init__(**kwargs)
+        self.missing_ratio = missing_ratio
+
+    # Output summary stats tables (app level features are to be performed on app-level dataframe)
+    ###############################################################################################################################
+    def stats_table_numeric(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
+        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
+        summary_dfs = []
+        for df in dfs:
+            df3 = df.agg(func=['count', 'min', 'max', 'mean', 'std'],
+                         axis=0)
+            if isinstance(df3, pd.Series):
+                df3 = df3.to_frame()
+            summary_dfs.append(df3)
+        combined_df = functools.reduce(lambda a, b: a.join(b, how='inner'), summary_dfs)
+        combined_df = combined_df.T
+        return combined_df
+
+    # there are no categorical variables, all the cat variables have been converted to dummy in 1_scraping_cleaning_merge.py
+    # it shows that almost ALL dummies are NOT time invariant
+    def stats_table_dummy(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
+        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
+        summary_dfs = []
+        for df in dfs:
+            for col in df.columns:
+                df_col = df[[col]]
+                df_col[col + '_count'] = 'count'
+                tab = df_col.groupby(by=col, dropna=False).count()
+                summary_dfs.append(tab)
+        combined_df = functools.reduce(lambda a, b: a.join(b, how='inner'), summary_dfs)
+        combined_df = combined_df.T
+        combined_df['count'] = combined_df[0] + combined_df[1]
+        return combined_df
+
+    def stats_table_datetime(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
+        dfs = self.select_var_df(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
+        summary_dfs = []
+        for df in dfs:
+            df3 = df.agg(func=['count', 'min', 'max'],
+                         axis=0)
+            summary_dfs.append(df3)
+        combined_df = functools.reduce(lambda a, b: a.join(b, how='inner'), summary_dfs)
+        combined_df = combined_df.T
+        return combined_df
+
+    def stats_table_address(self, var='developerAddress', consecutive=False, select_one_panel=None, group_by=None):
+        pass
+
+    def combine_stats_tables(self, table_func_1, table_func_2, table_func_3=None):
+        pass
+
+    def convert_stats_tables(self, style):
+        pass
+
+#################################################################################################################
+class single_variable_stats(pre_processing):
     def __init__(self, v1, var_type, **kwargs):
         super().__init__(**kwargs)
         self.v1 = v1
@@ -577,7 +577,7 @@ class single_variable_stats(summary_statistics):
 
 
 #################################################################################################################
-class two_variables_stats(summary_statistics):
+class two_variables_stats(pre_processing):
     def __init__(self, v1, v1_type, v2, v2_type, **kwargs):
         super().__init__(**kwargs)
         self.v1 = v1

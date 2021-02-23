@@ -88,3 +88,29 @@ def dataframe_difference(self, df1, df2, var): # ALL YOU need is left only, beca
     ).set_index('index')
     diff_df = comparison_df[comparison_df['_merge'] == 'left_only']
     return diff_df
+
+
+
+def impute_missing_using_adjacent_panel(self, var): # the self.df here should be the newly passed df that has deleted all rows and cols that will not be imputed
+    col, panels = self.select_the_var(var=var)
+    df2 = self.keep_cols(list_of_col_names=col)
+    for i in range(len(df2.columns)):
+        if i == 0: # the first panel is missing, impute with the next panel
+            df2[df2.columns[i]] = df2.apply(
+                lambda row: row[df2.columns[i+1]] if np.isnan(row[df2.columns[i]]) else row[df2.columns[i]],
+                axis=1
+            )
+        else: # all other panels impute with previous panels
+            df2[df2.columns[i]] = df2.apply(
+                lambda row: row[df2.columns[i-1]] if np.isnan(row[df2.columns[i]]) else row[df2.columns[i]],
+                axis=1
+            )
+    return df2
+
+
+def appids_that_have_missing_in_any_panels(self, var, consecutive=False):
+    col_list, panel_list = self.select_the_var(var=var, consecutive=consecutive)
+    df2 = self.keep_cols(list_of_col_names=col_list)
+    data = df2[df2.isnull().any(axis=1)]
+    appids = data.index.tolist()
+    return appids, data

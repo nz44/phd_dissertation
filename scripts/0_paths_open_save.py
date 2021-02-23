@@ -102,12 +102,13 @@ class open_files(Linux_Paths):
 class save_files(Linux_Paths):
 
     def __init__(self, initial_panel=None, current_panel=None,
-                 app_details_dict=None, df=None, fig=None):
+                 app_details_dict=None, df=None, fig=None, pickle_obj=None):
         self.initial_panel = initial_panel
         self.current_panel = current_panel
         self.app_details_dict = app_details_dict
         self.df = df
         self.fig = fig
+        self.pickle_obj = pickle_obj
 
     def save_scraped_app_details(self):
         filename = 'TRACKING_' + self.initial_panel + '.pickle'
@@ -119,6 +120,14 @@ class save_files(Linux_Paths):
         q = super().input_path / '__PANELS__' / filename
         pickle.dump(self.df, open(q, 'wb'))
         # self.merged_df.to_pickle(q) # cannot use this
+
+    def save_pickle(self, name, for_all_panels):
+        if for_all_panels is True:
+            filename = name + '.pickle'
+        else:
+            filename = self.initial_panel + '_' + name + '.pickle'
+        q = super().input_path / '__PANELS__' / filename
+        pickle.dump(self.pickle_obj, open(q, 'wb'))
 
     def save_fig(self, fig_name, sub_folder):
         q = super().graph_output / sub_folder / fig_name
