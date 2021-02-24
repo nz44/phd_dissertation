@@ -20,6 +20,7 @@ from tqdm import tqdm
 tqdm.pandas()
 import matplotlib
 import seaborn
+import copy
 #################################################################################################################
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
 class pre_processing():
@@ -383,24 +384,28 @@ class pre_processing():
         df2 = self.keep_cols(list_of_col_names=col)
         df_list = []
         for j in range(len(df2.columns)):
-            if j < adj_panels//2: # the first panel uses the next n panels to impute
-                df = df2.iloc[:, 0:adj_panels+1]
-            elif j >= len(df2.columns)-adj_panels//2: # the last panel uses the previous n panels to impute
-                df = df2.iloc[:, len(df2.columns)-adj_panels-1:len(df2.columns)]
-            else: # all the in-between panels use the n/2 previous panel and n/3 next panels to impute
+            if j <= adj_panels // 2 or j in [0, 1]:
+                df = df2.iloc[:, 0:adj_panels + 1]
+            elif j >= len(df2.columns) - adj_panels // 2 - 1:
+                df = df2.iloc[:, len(df2.columns) - adj_panels - 1:len(df2.columns)]
+            else:
                 if adj_panels == 1:
-                    df = df2.iloc[:, j-1:j+2]
+                    df = df2.iloc[:, j - 1:j + 1]
                 else:
-                    df = df2.iloc[:, j-adj_panels//2:j+adj_panels//2+1]
+                    df = df2.iloc[:, j - adj_panels // 2:j + adj_panels // 2 + 1]
             if method == 'mean':
-                df['mean'] = df.mean(axis=1, skipna=True)
+                df[method] = df.mean(axis=1, skipna=True)
             elif method == 'mode':
-                df['mode'] = df.mode(axis=1, numeric_only=False, dropna=True).iloc[:,0]
-            for col in df.columns:
-                if col != method:
-                    df[col].fillna(df[method], inplace=True)
-            df = df[[df2.columns[j]]]
-            df_list.append(df)
+                df[method] = df.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
+            elif method == 'previous':
+                df[method] = df.iloc[:, 0]
+            else:
+                df[method] = 0
+            dfd = copy.deepcopy(df)
+            for col in dfd.columns:
+                dfd.loc[dfd[col].isnull(), col] = dfd[method]
+            dfd = dfd[[df2.columns[j]]]
+            df_list.append(dfd)
         imputed_df = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
         return imputed_df
 
