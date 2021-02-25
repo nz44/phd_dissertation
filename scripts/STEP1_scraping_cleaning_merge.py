@@ -13,33 +13,39 @@ import re
 import math
 from collections.abc import Iterable
 
-
+#############################################################################################################################
 # get ID list
 # data scraped before 2020 Sep are organized in a list, each dictionary inside the list contains attributes and their values
 # for the data scraped in 2020 Sep and onwards, they are organized in dictionary with key as appid, and then their appdetails,
 # so id_list should just be C.keys()
-def get_id_from_data_before_202009(C):
-    id_list = []
-    for i in C:
-        if 'appId' in i.keys():
-            id_list.append(i['appId'])
-        else:
-            id_list.append(i['app_id'])
-    return(id_list)
+class scrape():
+    def __init__(self, data_before_202009):
+        self.d = data_before_202009
 
+    def get_id_from_data_before_202009(self):
+        id_list = []
+        for i in self.d:
+            if 'appId' in i.keys():
+                id_list.append(i['appId'])
+            else:
+                id_list.append(i['app_id'])
+        print('The number of IDs are:', len(id_list))
+        return id_list
 
-# scraping using google_play_scraper app function
-# the input is from get_id_from_old_data
-def scraping_apps_according_to_id(id_list):
-    app_details = dict.fromkeys(id_list)
-    # print(app_details)
-    for j in tqdm(range(len(id_list)), desc="scraping..."):
-        try:
-            app_details[id_list[j]] = app(id_list[j])
-        except:
-            pass
-    return(app_details)
+    # scraping using google_play_scraper app function
+    # the input is from get_id_from_old_data
+    def scraping_apps_according_to_id(self):
+        id_list = self.get_id_from_data_before_202009()
+        app_details = dict.fromkeys(id_list)
+        for j in tqdm(range(len(id_list)), desc="scraping..."):
+            try:
+                app_details[id_list[j]] = app(id_list[j])
+            except:
+                pass
+        return app_details
 
+#############################################################################################################################
+#############################################################################################################################
 
 class app_detail_dicts():
     # this self is opened from open_files class open_app_details_dict method or open_initial_panel_with_its_tracking_panels method

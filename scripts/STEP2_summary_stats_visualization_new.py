@@ -68,10 +68,10 @@ class pre_processing():
         if consecutive is True:  # only panels scraped in 202009 and onwards are monthly panels
             col_list = [var + '_' + i for i in self.consec_panels]
             panel_list = self.consec_panels
-        elif consecutive is False:
+        else:
             col_list = [var + '_' + i for i in self.all_panels]
             panel_list = self.all_panels
-        elif select_one_panel is not None:
+        if select_one_panel is not None:
             col_list = [var + '_' + select_one_panel]
             panel_list = select_one_panel
         return col_list, panel_list

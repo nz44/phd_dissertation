@@ -36,8 +36,8 @@ class open_files(Linux_Paths):
         self.current_panel = current_panel
         self.all_panels = all_panels
 
-    def open_panel_df(self, type):
-        f_name = self.initial_panel + '_' + type + '.pkl'
+    def open_panel_df(self, name):
+        f_name = self.initial_panel + '_' + name + '.pkl'
         q = super().input_path / '__PANELS__' / f_name
         df = pd.read_pickle(q)
         return df
@@ -115,11 +115,16 @@ class save_files(Linux_Paths):
         q = super().input_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.current_panel / filename
         pickle.dump(self.app_details_dict, open(q, 'wb'))
 
-    def save_panel_df(self, type):
-        filename = self.initial_panel + '_' + type + '.pkl'
+    def save_panel_df(self, name):
+        filename = self.initial_panel + '_' + name + '.pkl'
         q = super().input_path / '__PANELS__' / filename
         pickle.dump(self.df, open(q, 'wb'))
         # self.merged_df.to_pickle(q) # cannot use this
+
+    def save_df_to_csv(self, name):
+        filename = self.initial_panel + '_' + name + '.csv'
+        q = super().input_path / '__PANELS__' / filename
+        self.df.to_csv(q)
 
     def save_pickle(self, name, for_all_panels):
         if for_all_panels is True:
