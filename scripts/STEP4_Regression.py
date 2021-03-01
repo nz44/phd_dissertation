@@ -29,12 +29,17 @@ class combine_dataframes():
         inter_df.reset_index(inplace=True)
         dfd2 = self.dfd.reset_index()
         dfd2 = dfd2[['developer', 'location', 'longitude', 'latitude']]
-        inter_df.rename(columns={'developer_'+self.initial_panel: 'developer'}, inplace=True)
+        inter_df.rename(columns={'developer_'+self.initial_panel: 'developer'}, inplace=True) # here I did not delete apps that changed developer over time
         result_df = inter_df.merge(dfd2, on='developer', how='left', validate='m:1')
+        result_df.set_index('appid', inplace=True)
+        new_count_cols = ['count_'+i for i in self.consec_panels]
+        for i in new_count_cols: # for the purpose of creating dataframes in the groupby count
+            result_df[i] = 0
         return result_df
 
     def convert_to_dev_multiindex(self):
         result_df = self.combine_imputed_deleted_missing_with_text_labels()
+        result_df.reset_index(inplace=True)
         num_apps_df = result_df.groupby('developer')['appid'].nunique().rename('num_apps_owned').to_frame()
         result_df = result_df.merge(num_apps_df, on='developer', how='inner')
         result_df.set_index(['developer', 'appid'], inplace=True)
@@ -82,7 +87,98 @@ class regression_analysis():
             if the_panel in i:
                 print(i)
 
-    def select_vars_contain_text(self, text):
+    def print_unique_value_of_var_panel(self, the_var, the_panel=None):
+        if the_panel is not None:
+            col_name = the_var + '_' + the_panel
+            unique_l = self.df[col_name].unique()
+            print(col_name, 'contains', len(unique_l), 'unique values')
+            print(unique_l)
+            return unique_l
+        else:
+            col_name = [the_var+'_'+i for i in self.consec_panels]
+            d = dict.fromkeys(col_name)
+            for j in d.keys():
+                unique_l = self.df[j].unique()
+                print(j, 'contains', len(unique_l), 'unique values')
+                print(unique_l)
+                d[j]=unique_l
+                print()
+            return d
+
+    def cat_var_count(self, cat_var, the_panel=None):
+        if the_panel is not None:
+            col_name = cat_var + '_' + the_panel
+            rd = self.df.groupby(col_name)['count_'+the_panel].count()
+            rd = rd.sort_values(ascending=False)
+            print(rd)
+            return rd
+        else:
+            col_name = [cat_var+'_'+i for i in self.consec_panels]
+            df_list = []
+            for j in range(len(col_name)):
+                rd = self.df.groupby(col_name[j])['count_'+self.consec_panels[j]].count()
+                rd = rd.sort_values(ascending=False)
+                rd = rd.to_frame()
+                df_list.append(rd)
+            dfn = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+            print(dfn)
+            return dfn
+
+    def df_that_changed_cat_var_over_time(self, cat_var):
+        df2 = self.select_vars(single_var=cat_var)
+        df_time_variant = []
+        for index, row in df2.iterrows():
+            row_time_variant = []
+            for j in range(len(df2.columns) - 1):
+                if row[df2.columns[j]] == row[df2.columns[j + 1]]:
+                    row_time_variant.append(False)
+                else:
+                    row_time_variant.append(True)
+            if all(row_time_variant) is True:
+                df_time_variant.append(True)
+            else:
+                df_time_variant.append(False)
+        time_variant_df = df2[df_time_variant]
+        time_variant_appids = time_variant_df.index.tolist()
+        return time_variant_df, time_variant_appids
+
+    def change_rows_with_time_variant_cat_var_to_last_panel(self, cat_var):
+        time_variant_df, time_variant_appids = self.df_that_changed_cat_var_over_time(cat_var=cat_var)
+        col_names = [cat_var + '_' + i for i in self.consec_panels]
+        for i in time_variant_appids:
+            for j in col_names:
+                self.df.at[i, j] = self.df.at[i, cat_var+'_'+self.consec_panels[-1]] # this one intends to change class attributes
+        return self.df
+
+    def create_new_dummies_from_cat_var(self, cat_var, time_invariant=False):
+        if time_invariant is True:
+            self.df = self.change_rows_with_time_variant_cat_var_to_last_panel(cat_var)
+        else:
+            pass
+        if cat_var == 'genreId':
+            df1 = self.select_vars(single_var=cat_var)
+            for i in self.consec_panels:
+                df1['genreId_game_'+i] = df1['genreId_'+i].apply(lambda x: 1 if 'GAME' in x else 0)
+            dcols = ['genreId_'+ i for i in self.consec_panels]
+            df1.drop(dcols, axis=1, inplace=True)
+            self.df = self.df.join(df1, how='inner')
+        elif cat_var == 'contentRating':
+            df1 = self.select_vars(single_var=cat_var)
+            for i in self.consec_panels:
+                df1['contentRating_everyone_'+i] = df1['contentRating_'+i].apply(lambda x: 1 if 'Everyone' in x else 0)
+            dcols = ['contentRating_'+ i for i in self.consec_panels]
+            df1.drop(dcols, axis=1, inplace=True)
+            self.df = self.df.join(df1, how='inner')
+        else:
+            df1 = self.select_vars(single_var=cat_var)
+            for i in self.consec_panels:
+                df1[cat_var + '_true_' + i] = df1[cat_var + '_' + i].apply(lambda x: 1 if x is True else 0)
+            dcols = [cat_var + '_' + i for i in self.consec_panels]
+            df1.drop(dcols, axis=1, inplace=True)
+            self.df = self.df.join(df1, how='inner')
+        return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
+
+    def select_partial_vars(self, text):
         l1 = []
         for i in self.df.columns:
             if text in i:
@@ -95,8 +191,10 @@ class regression_analysis():
     def select_vars(self, the_panel=None, **kwargs):
         if 'var_list' in kwargs.keys():
             variables = kwargs['var_list']
-        elif 'var_text' in kwargs.keys():
-            variables = self.select_vars_contain_text(text=kwargs['var_text'])
+        elif 'partial_var' in kwargs.keys():
+            variables = self.select_partial_vars(text=kwargs['partial_var'])
+        elif 'single_var' in kwargs.keys():
+            variables = [kwargs['single_var']]
         if the_panel is None:
             selected_cols = []
             for p in self.consec_panels:
@@ -118,44 +216,6 @@ class regression_analysis():
             return df2
         else:
             return df1
-
-    def groupby_count_cat_dummies(self, dummies_list, the_panel):
-        df1 = self.select_vars(var_list=dummies_list, the_panel=the_panel)
-        return df1
-
-    # ------------------------------------------------------------------------------------------
-    def convert_cat_to_dummies(self):
-        everyone_pattern = re.compile(r'(Everyone+)|(10\++)')
-        teen_pattern = re.compile(r'(Teen+)|(Mature+)')
-        adult_pattern = re.compile(r'(Adults+)|(18\++)')
-        def combine_contentRating_into_3_groups(x):
-            if x is not None:
-                if re.search(everyone_pattern, x):
-                    return 'Everyone'
-                elif re.search(teen_pattern, x):
-                    return 'Teen'
-                elif re.search(adult_pattern, x):
-                    return 'Adult'
-            else:
-                return x
-        game_pattern = re.compile(r'(GAME+)|(VIDEO_PLAYERS+)')
-        productivity_pattern = re.compile(
-            r'^(?<!GAME_)(TOOLS+)|(EDUCATION+)|(MEDICAL+)|(LIBRARIES+)|(PARENTING+)|(AUTO_AND_VEHICLES+)|(WEATHER+)|(FINANCE+)|(TRAVEL+)|(BUSINESS+)')
-        social_entertainment_pattern = re.compile(
-            r'^(?<!GAME_)(ENTERTAINMENT+)|(LIFESTYLE+)|(EVENTS+)|(COMICS+)|(DATING+)|(ART_AND_DESIGN+)|(BEAUTY+)|(SOCIAL+)|(MUSIC_AND_AUDIO+)|(SHOPPING+)|(MAPS_AND_NAVIGATION+)|(PERSONALIZATION+)')
-        def combine_genreId_into_3_groups(x):
-            if x is not None:
-                if re.search(game_pattern, x):
-                    return 'Game'
-                elif re.search(productivity_pattern, x):
-                    return 'Productivity'
-                elif re.search(social_entertainment_pattern, x):
-                    return 'Entertainment'
-            else:
-                return x
-        df['contentRating'] = df['contentRating'].apply(unlist_a_col_containing_list_of_strings)
-        df['contentRating'] = df['contentRating'].apply(combine_contentRating_into_3_groups)
-        df['genreId'] = df['genreId'].apply(combine_genreId_into_3_groups)
 
     # ------------------------------------------------------------------------------------------
     def unlist_a_col_containing_list_of_strings(x):
