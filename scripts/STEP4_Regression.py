@@ -87,15 +87,15 @@ class regression_analysis():
             if the_panel in i:
                 print(i)
 
-    def print_unique_value_of_var_panel(self, the_var, the_panel=None):
+    def print_unique_value_of_var_panel(self, single_var, the_panel=None):
         if the_panel is not None:
-            col_name = the_var + '_' + the_panel
+            col_name = single_var + '_' + the_panel
             unique_l = self.df[col_name].unique()
             print(col_name, 'contains', len(unique_l), 'unique values')
             print(unique_l)
             return unique_l
         else:
-            col_name = [the_var+'_'+i for i in self.consec_panels]
+            col_name = [single_var+'_'+i for i in self.consec_panels]
             d = dict.fromkeys(col_name)
             for j in d.keys():
                 unique_l = self.df[j].unique()
@@ -124,7 +124,11 @@ class regression_analysis():
             print(dfn)
             return dfn
 
-    def df_that_changed_cat_var_over_time(self, cat_var):
+    # The all() function returns True if all items in an iterable are true, otherwise it returns False.
+    # so if all([False, False, False)] is False, it will return False
+    # and if all([False, True, True)] is False, it will return False (INSTEAD of true as expected)
+    # all([]) will only return True is all elements are True
+    def find_time_variant_rows(self, cat_var):
         df2 = self.select_vars(single_var=cat_var)
         df_time_variant = []
         for index, row in df2.iterrows():
@@ -134,7 +138,7 @@ class regression_analysis():
                     row_time_variant.append(False)
                 else:
                     row_time_variant.append(True)
-            if all(row_time_variant) is True:
+            if any(row_time_variant) is True:
                 df_time_variant.append(True)
             else:
                 df_time_variant.append(False)
@@ -142,8 +146,8 @@ class regression_analysis():
         time_variant_appids = time_variant_df.index.tolist()
         return time_variant_df, time_variant_appids
 
-    def change_rows_with_time_variant_cat_var_to_last_panel(self, cat_var):
-        time_variant_df, time_variant_appids = self.df_that_changed_cat_var_over_time(cat_var=cat_var)
+    def change_time_variant_to_invariant(self, cat_var):
+        time_variant_df, time_variant_appids = self.find_time_variant_rows(cat_var=cat_var)
         col_names = [cat_var + '_' + i for i in self.consec_panels]
         for i in time_variant_appids:
             for j in col_names:
@@ -152,7 +156,7 @@ class regression_analysis():
 
     def create_new_dummies_from_cat_var(self, cat_var, time_invariant=False):
         if time_invariant is True:
-            self.df = self.change_rows_with_time_variant_cat_var_to_last_panel(cat_var)
+            self.df = self.change_time_variant_to_invariant(cat_var)
         else:
             pass
         if cat_var == 'genreId':
@@ -177,6 +181,17 @@ class regression_analysis():
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
+
+    def peek_at_missing(self, **kwargs):
+        df1 = self.select_vars(**kwargs)
+        null_data = df1[df1.isnull().any(axis=1)]
+        return null_data
+
+    def replace_literal_true(self, cat_var): # after checking unique value of cat_var, some cat_var has 'True' instead of True
+        cols = [cat_var+'_'+i for i in self.consec_panels]
+        for j in cols:
+            self.df.loc[self.df[j] == 'True', j] = True
+        return self.df
 
     def select_partial_vars(self, text):
         l1 = []
