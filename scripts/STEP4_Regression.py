@@ -2,6 +2,7 @@ import pandas as pd
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
+import statsmodels.api as sm
 from datetime import datetime
 import functools
 today = datetime.today()
@@ -70,18 +71,75 @@ class regression_analysis():
                  df,
                  initial_panel,
                  consec_panels,
-                 dep_var='minInstalls',
-                 h1_ind_vars=None,
-                 h2_ind_vars=None,
-                 h3_ind_vars=None):
+                 dep_var=None,
+                 independent_vars=None):
         self.df = df # df is the output of convert_to_dev_multiiindex
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
         self.dep_var = dep_var
-        self.h1_ivars = h1_ind_vars
-        self.h2_ivars = h2_ind_vars
-        self.h3_ivars = h3_ind_vars
+        self.independent_vars = independent_vars
 
+    def select_partial_vars(self, text):
+        l1 = []
+        for i in self.df.columns:
+            if text in i:
+                x = i.split("_", -1)
+                x = x[:-1]
+                y = '_'.join(x)
+                l1.append(y)
+        return list(set(l1))
+
+    def select_vars(self, the_panel=None, **kwargs):
+        if 'var_list' in kwargs.keys():
+            variables = kwargs['var_list']
+        elif 'partial_var' in kwargs.keys():
+            variables = self.select_partial_vars(text=kwargs['partial_var'])
+        elif 'single_var' in kwargs.keys():
+            variables = [kwargs['single_var']]
+        if the_panel is None:
+            selected_cols = []
+            for p in self.consec_panels:
+                cols = [item + '_' + p for item in variables]
+                selected_cols.extend(cols)
+        else:
+            selected_cols = [item + '_' + the_panel for item in variables]
+        selected_df = self.df[selected_cols]
+        return selected_df
+    # -------------------------- independent var of interest ---------------------------------------------
+    def peek_niche_index(self, var): # the variable here do not have time such as 202102 in its names
+        new_df = self.df[[var]]
+        gdf = self.df.groupby(by=['predicted_labels']).count()
+        gdf = gdf.iloc[:, 0].to_frame()
+        gdf.index.names = ['predicted_labels']
+        gdf.rename(columns={gdf.columns[0]: 'count'}, inplace=True)
+        gdf.sort_values(by='count', ascending=False, inplace=True)
+        return new_df, gdf
+
+    def make_dummies_from_niche_index(self, var, broad_type_label):
+        col_names = ['niche_type_' + i for i in self.consec_panels]
+        for i in col_names:
+            self.df[i] = self.df[var].apply(lambda x: 1 if x != broad_type_label else 0)
+        col_names.append(var)
+        return self.df[col_names]
+
+    # -------------------------- Regression --------------------------------------------------------------
+    def set_target_var(self, dep_var, cross_section=True, the_panel=None):
+        if cross_section is True:
+            self.dep_var = self.select_vars(the_panel=the_panel, single_var=dep_var)
+        return self.dep_var
+
+    def set_independent_vars(self, ind_vars_list, cross_section=True, the_panel=None):
+        if cross_section is True:
+            self.independent_vars = self.select_vars(the_panel=the_panel, var_list=ind_vars_list)
+        return self.independent_vars
+
+    def OLS_reg(self, dep_var, ind_vars_list, cross_section, the_panel):
+        y = self.set_target_var(dep_var=dep_var, cross_section=cross_section, the_panel=the_panel)
+        X = self.set_independent_vars(ind_vars_list=ind_vars_list, cross_section=cross_section, the_panel=the_panel)
+        model = sm.OLS(y, X).fit()
+        predictions = model.predict(X)
+        return model
+    # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
         for i in self.df.columns:
             if the_panel in i:
@@ -192,33 +250,6 @@ class regression_analysis():
         for j in cols:
             self.df.loc[self.df[j] == 'True', j] = True
         return self.df
-
-    def select_partial_vars(self, text):
-        l1 = []
-        for i in self.df.columns:
-            if text in i:
-                x = i.split("_", -1)
-                x = x[:-1]
-                y = '_'.join(x)
-                l1.append(y)
-        return list(set(l1))
-
-    def select_vars(self, the_panel=None, **kwargs):
-        if 'var_list' in kwargs.keys():
-            variables = kwargs['var_list']
-        elif 'partial_var' in kwargs.keys():
-            variables = self.select_partial_vars(text=kwargs['partial_var'])
-        elif 'single_var' in kwargs.keys():
-            variables = [kwargs['single_var']]
-        if the_panel is None:
-            selected_cols = []
-            for p in self.consec_panels:
-                cols = [item + '_' + p for item in variables]
-                selected_cols.extend(cols)
-        else:
-            selected_cols = [item + '_' + the_panel for item in variables]
-        selected_df = self.df[selected_cols]
-        return selected_df
 
     def check_whether_cat_dummies_are_mutually_exclusive(self, the_panel, **kwargs):
         df1 = self.select_vars(the_panel=the_panel, **kwargs)
