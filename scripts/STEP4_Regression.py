@@ -2,7 +2,7 @@ import pandas as pd
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
-import statsmodels.api as sm
+import statsmodels.formula.api as smf
 from datetime import datetime
 import functools
 today = datetime.today()
@@ -117,28 +117,28 @@ class regression_analysis():
 
     def make_dummies_from_niche_index(self, var, broad_type_label):
         col_names = ['niche_type_' + i for i in self.consec_panels]
+        df1 = self.df[[var]]
         for i in col_names:
-            self.df[i] = self.df[var].apply(lambda x: 1 if x != broad_type_label else 0)
-        col_names.append(var)
-        return self.df[col_names]
+            df1[i] = df1[var].apply(lambda x: 1 if x != broad_type_label else 0)
+        df1.drop(var, axis=1, inplace=True)
+        self.df = self.df.join(df1, how='inner')
+        return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
 
     # -------------------------- Regression --------------------------------------------------------------
-    def set_target_var(self, dep_var, cross_section=True, the_panel=None):
+    # http://www.data-analysis-in-python.org/t_statsmodels.html
+    # you must use the returned new class object from make_dummies_from_niche_index to execute this method
+    def regression(self, dep_var, ind_vars_list, cross_section, the_panel, reg_type):
         if cross_section is True:
-            self.dep_var = self.select_vars(the_panel=the_panel, single_var=dep_var)
-        return self.dep_var
-
-    def set_independent_vars(self, ind_vars_list, cross_section=True, the_panel=None):
-        if cross_section is True:
-            self.independent_vars = self.select_vars(the_panel=the_panel, var_list=ind_vars_list)
-        return self.independent_vars
-
-    def OLS_reg(self, dep_var, ind_vars_list, cross_section, the_panel):
-        y = self.set_target_var(dep_var=dep_var, cross_section=cross_section, the_panel=the_panel)
-        X = self.set_independent_vars(ind_vars_list=ind_vars_list, cross_section=cross_section, the_panel=the_panel)
-        model = sm.OLS(y, X).fit()
-        predictions = model.predict(X)
-        return model
+            independents = [i + '_' + the_panel for i in ind_vars_list]
+            s = " + "
+            s = s.join(independents)
+            formula = dep_var+'_'+the_panel + ' ~ ' + s
+        if reg_type == 'OLS':
+            results = smf.ols(formula,
+                              data=self.df).fit()
+            results_robust = results.get_robustcov_results()
+            print(results_robust.summary())
+        return results_robust
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
         for i in self.df.columns:
@@ -167,7 +167,10 @@ class regression_analysis():
         if the_panel is not None:
             col_name = cat_var + '_' + the_panel
             rd = self.df.groupby(col_name)['count_'+the_panel].count()
-            rd = rd.sort_values(ascending=False)
+            if cat_var == 'minInstalls': # minInstalls should not be sorted by the number of apps in each group, rather by index
+                rd = rd.sort_index(ascending=False)
+            else:
+                rd = rd.sort_values(ascending=False)
             print(rd)
             return rd
         else:
@@ -175,7 +178,10 @@ class regression_analysis():
             df_list = []
             for j in range(len(col_name)):
                 rd = self.df.groupby(col_name[j])['count_'+self.consec_panels[j]].count()
-                rd = rd.sort_values(ascending=False)
+                if cat_var == 'minInstalls':
+                    rd = rd.sort_index(ascending=False)
+                else:
+                    rd = rd.sort_values(ascending=False)
                 rd = rd.to_frame()
                 df_list.append(rd)
             dfn = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
@@ -229,6 +235,15 @@ class regression_analysis():
             for i in self.consec_panels:
                 df1['contentRating_everyone_'+i] = df1['contentRating_'+i].apply(lambda x: 1 if 'Everyone' in x else 0)
             dcols = ['contentRating_'+ i for i in self.consec_panels]
+            df1.drop(dcols, axis=1, inplace=True)
+            self.df = self.df.join(df1, how='inner')
+        elif cat_var == 'minInstalls':
+            df1 = self.select_vars(single_var=cat_var)
+            for i in self.consec_panels:
+                df1['minInstalls_top_'+i] = df1['minInstalls_'+i].apply(lambda x: 1 if x >= 1.000000e+07 else 0)
+                df1['minInstalls_middle_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+04 else 0)
+                df1['minInstalls_bottom_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+04 else 0)
+            dcols = ['minInstalls_'+ i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         else:
