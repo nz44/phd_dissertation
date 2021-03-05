@@ -2,7 +2,9 @@ import pandas as pd
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
-import statsmodels.formula.api as smf
+import statsmodels.api as sm
+from linearmodels import PanelOLS
+from linearmodels import RandomEffects
 from datetime import datetime
 import functools
 today = datetime.today()
@@ -30,6 +32,7 @@ class combine_dataframes():
         inter_df.reset_index(inplace=True)
         dfd2 = self.dfd.reset_index()
         dfd2 = dfd2[['developer', 'location', 'longitude', 'latitude']]
+        # ATTENTION: here I used the initial panel developer to conduct m:1 merge for appid index to developer index
         inter_df.rename(columns={'developer_'+self.initial_panel: 'developer'}, inplace=True) # here I did not delete apps that changed developer over time
         result_df = inter_df.merge(dfd2, on='developer', how='left', validate='m:1')
         result_df.set_index('appid', inplace=True)
@@ -72,12 +75,14 @@ class regression_analysis():
                  initial_panel,
                  consec_panels,
                  dep_var=None,
-                 independent_vars=None):
-        self.df = df # df is the output of convert_to_dev_multiiindex
+                 independent_vars=None,
+                 panel_long_df=None):
+        self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
         self.dep_var = dep_var
         self.independent_vars = independent_vars
+        self.panel_long_df = panel_long_df
 
     def select_partial_vars(self, text):
         l1 = []
@@ -105,6 +110,16 @@ class regression_analysis():
             selected_cols = [item + '_' + the_panel for item in variables]
         selected_df = self.df[selected_cols]
         return selected_df
+
+    def select_all_vars_in_select_panels(self, consecutive=True):
+        panel_vars = ['latitude', 'longitude', 'developer', 'location', 'predicted_labels'] # var names that do not contain panel number
+        for i in self.consec_panels:
+            for j in self.df.columns:
+                if i in j:
+                    panel_vars.append(j)
+        new_df = self.df[panel_vars]
+        return new_df
+
     # -------------------------- independent var of interest ---------------------------------------------
     def peek_niche_index(self, var): # the variable here do not have time such as 202102 in its names
         new_df = self.df[[var]]
@@ -124,26 +139,54 @@ class regression_analysis():
         self.df = self.df.join(df1, how='inner')
         return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
 
+    def convert_df_from_wide_to_long(self, consecutive=True):
+        vars_in_each_panel = self.print_col_names(the_panel=self.consec_panels[-1])
+        new = []
+        for i in vars_in_each_panel:
+            stripped = i.split("_", -1)[:-1]
+            new_string = '_'.join(stripped) + '_'
+            new.append(new_string)
+        new_df = self.select_all_vars_in_select_panels(consecutive=consecutive)
+        new_df = new_df.reset_index()
+        new_df = pd.wide_to_long(new_df, stubnames=new, i="appid", j="panel") # here you can add developer for multiindex output
+        new_df = new_df.sort_index()
+        return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   panel_long_df=new_df)
+
     # -------------------------- Regression --------------------------------------------------------------
     # http://www.data-analysis-in-python.org/t_statsmodels.html
+    #
     # you must use the returned new class object from make_dummies_from_niche_index to execute this method
     def regression(self, dep_var, ind_vars_list, cross_section, the_panel, reg_type):
         if cross_section is True:
             independents = [i + '_' + the_panel for i in ind_vars_list]
-            s = " + "
-            s = s.join(independents)
-            formula = dep_var+'_'+the_panel + ' ~ ' + s
+            independents_df = self.df[independents]
+            X = sm.add_constant(independents_df)
+            dep_var = dep_var + '_' + the_panel
+            y = self.df[[dep_var]]
+        else:
+            pass
+            # exog = sm.tools.tools.add_constant(dataset['income'])
+            # endog = dataset[‘violent’]
         if reg_type == 'OLS':
-            results = smf.ols(formula,
-                              data=self.df).fit()
+            model = sm.OLS(y, X)
+            results = model.fit()
             results_robust = results.get_robustcov_results()
             print(results_robust.summary())
+        elif reg_type == 'FE':
+            model_fe = PanelOLS(dependent_df, independents_df, entity_effects=True)
+            fe_res = model_fe.fit()
         return results_robust
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
+        vars_in_a_panel = []
         for i in self.df.columns:
             if the_panel in i:
                 print(i)
+                vars_in_a_panel.append(i)
+        return vars_in_a_panel
 
     def print_unique_value_of_var_panel(self, single_var, the_panel=None):
         if the_panel is not None:
