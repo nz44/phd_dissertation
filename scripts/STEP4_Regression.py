@@ -3,6 +3,7 @@ pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
 import statsmodels.api as sm
+from linearmodels import PooledOLS
 from linearmodels import PanelOLS
 from linearmodels import RandomEffects
 from datetime import datetime
@@ -156,29 +157,48 @@ class regression_analysis():
                                    panel_long_df=new_df)
 
     # -------------------------- Regression --------------------------------------------------------------
+    """
     # http://www.data-analysis-in-python.org/t_statsmodels.html
-    #
-    # you must use the returned new class object from make_dummies_from_niche_index to execute this method
-    def regression(self, dep_var, ind_vars_list, cross_section, the_panel, reg_type):
+    # https://towardsdatascience.com/a-guide-to-panel-data-regression-theoretics-and-implementation-with-python-4c84c5055cf8
+    # https://bashtage.github.io/linearmodels/doc/panel/models.html
+    """
+    def regression(self, dep_var, ind_vars_list, cross_section, reg_type, the_panel=None):
         if cross_section is True:
             independents = [i + '_' + the_panel for i in ind_vars_list]
             independents_df = self.df[independents]
             X = sm.add_constant(independents_df)
             dep_var = dep_var + '_' + the_panel
             y = self.df[[dep_var]]
-        else:
-            pass
-            # exog = sm.tools.tools.add_constant(dataset['income'])
-            # endog = dataset[‘violent’]
-        if reg_type == 'OLS':
-            model = sm.OLS(y, X)
-            results = model.fit()
-            results_robust = results.get_robustcov_results()
-            print(results_robust.summary())
-        elif reg_type == 'FE':
-            model_fe = PanelOLS(dependent_df, independents_df, entity_effects=True)
-            fe_res = model_fe.fit()
-        return results_robust
+            if reg_type == 'OLS':
+                model = sm.OLS(y, X)
+                results = model.fit()
+                results_robust = results.get_robustcov_results()
+                print(results_robust.summary())
+                return results_robust
+        else: # panel regression models
+            independents = [i + '_' for i in ind_vars_list]
+            independents_df = self.panel_long_df[independents]
+            X = sm.add_constant(independents_df)
+            dep_var = dep_var + '_'
+            y = self.panel_long_df[[dep_var]]
+            if reg_type == 'POOLED_OLS':
+                #
+                model = PooledOLS(y, X)
+                results = model.fit()
+                print(results)
+                # results_robust = results.get_robustcov_results()
+                pooledOLS_res = model.fit(cov_type='clustered', cluster_entity=True)
+                # Store values for checking homoskedasticity graphically
+                fittedvals_pooled_OLS = pooledOLS_res.predict().fitted_values
+                residuals_pooled_OLS = pooledOLS_res.resids
+            elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
+                model = PanelOLS(y, X,
+                                 entity_effects=True,
+                                 time_effects=True,
+                                 drop_absorbed=True)
+                results = model.fit()
+                print(results)
+            return results
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
         vars_in_a_panel = []
@@ -287,6 +307,13 @@ class regression_analysis():
                 df1['minInstalls_middle_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+04 else 0)
                 df1['minInstalls_bottom_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+04 else 0)
             dcols = ['minInstalls_'+ i for i in self.consec_panels]
+            df1.drop(dcols, axis=1, inplace=True)
+            self.df = self.df.join(df1, how='inner')
+        elif cat_var == 'free':
+            df1 = self.select_vars(single_var=cat_var)
+            for i in self.consec_panels:
+                df1['paid_true_' + i] = df1['free_' + i].apply(lambda x: 1 if x is False else 0)
+            dcols = ['free_' + i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         else:
