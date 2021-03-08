@@ -37,32 +37,8 @@ class open_files(Linux_Paths):
         self.all_panels = all_panels
 
     def open_panel_df(self, name):
-        f_name = self.initial_panel + '_' + name + '.pkl'
+        f_name = self.initial_panel + '_' + name + '.pickle'
         q = super().input_path / '__PANELS__' / f_name
-        df = pd.read_pickle(q)
-        return df
-
-    def open_token_df(self):
-        folder_name = self.initial_panel + '_PANEL_DF'
-        f_name = 'description_converted_to_spacy_tokens.pkl'
-        q = super().input_path / '__PANELS__' / folder_name / f_name
-        df = pd.read_pickle(q)
-        return df
-
-    def open_topic_df(self):
-        folder_name = self.initial_panel + '_PANEL_DF'
-        f_name = 'description_tokens_converted_to_topics.pkl'
-        q = super().input_path / '__PANELS__' / folder_name / f_name
-        df = pd.read_pickle(q)
-        return df
-
-    def open_cluster_df(self):
-        folder_name = self.initial_panel + '_PANEL_DF'
-        if self.cluster_type == 'k-means':
-            f_name = 'df_with_k_means_labels.pkl'
-        elif self.cluster_type == 'fuzzy-c-means':
-            f_name = 'df_with_fuzzy_c_means_labels.pkl'
-        q = super().input_path / '__PANELS__' / folder_name / f_name
         df = pd.read_pickle(q)
         return df
 
@@ -116,7 +92,7 @@ class save_files(Linux_Paths):
         pickle.dump(self.app_details_dict, open(q, 'wb'))
 
     def save_panel_df(self, name):
-        filename = self.initial_panel + '_' + name + '.pkl'
+        filename = self.initial_panel + '_' + name + '.pickle'
         q = super().input_path / '__PANELS__' / filename
         pickle.dump(self.df, open(q, 'wb'))
         # self.merged_df.to_pickle(q) # cannot use this
