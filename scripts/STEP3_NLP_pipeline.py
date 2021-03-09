@@ -38,16 +38,24 @@ stopwords = list(STOP_WORDS)
 import functools
 
 class nlp_pipeline():
-    # the input dataframe is by default appid index
+    """
+    the input dataframe is by default appid index
+    df is the MERGED dataframe
+    df_labels is the output of self.kmeans_cluster and saved with name 'predicted_kmeans_labels'
+    """
     def __init__(self,
                  df,
                  text_col_name,
                  tokenizer=nlp.Defaults.create_tokenizer(nlp),
+                 df_labels=None,
+                 df_niche_labels=None,
                  initial_panel=None,
                  all_panels=None,
                  consec_panels=None,
                  stoplist = nltk.corpus.stopwords.words('english')):
         self.df = df
+        self.dfl = df_labels
+        self.dfn = df_niche_labels
         self.tcn = text_col_name
         self.tokenizer = tokenizer
         self.initial_panel = initial_panel
@@ -288,3 +296,86 @@ class nlp_pipeline():
                 pure_label_list.append(svd_matrix[[panel_name+'_kmeans_labels']])
             label_df = functools.reduce(lambda a, b: a.join(b, how='inner'), pure_label_list)
             return label_df
+
+    # --------------------------------------------------------------------------------------------------
+    def find_top_count_labels(self, label_name, combine_panels=True):
+        if combine_panels is True:
+            gdf = self.dfl.groupby(by=[label_name]).count()
+            gdf = gdf.iloc[:, 0].to_frame()
+            gdf.index.names = [label_name]
+            gdf.rename(columns={gdf.columns[0]: 'count'}, inplace=True)
+            gdf.sort_values(by='count', ascending=False, inplace=True)
+            return gdf
+        else:
+            df_list = []
+            top_three_labels_dict = {} # the top 3 labels with most apps
+            for i in self.dfl.columns:
+                x = i.split("_", -1)
+                panel = x[0]
+                new_df = self.dfl.copy(deep=True)
+                new_df[panel + '_' + label_name + '_count'] = 0
+                gdf = new_df[[i, panel + '_' + label_name + '_count']].groupby(by=[i]).count()
+                gdf.sort_values(by=panel + '_' + label_name + '_count', ascending=False, inplace=True)
+                gdf.reset_index(inplace=True)
+                df_list.append(gdf)
+                top_three_labels = gdf.iloc[:3, 0].tolist()
+                top_three_labels_dict[panel] = top_three_labels
+            rdf = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+            return rdf, top_three_labels_dict
+
+    def label_broad_niche_apps(self, label_name, combine_panels=True):
+        rdf, top_three_labels_dict = self.find_top_count_labels(label_name=label_name, combine_panels=combine_panels)
+        new_df = self.dfl.copy(deep=True)
+        if combine_panels is True:
+            pass
+        else:
+            niche_app_dfs = []
+            for panel, top_three_labels in top_three_labels_dict.items():
+                pdf = new_df[[panel+'_'+label_name]]
+                pdf[panel+'_niche_app'] = pdf[panel+'_'+label_name].apply(lambda x: 0 if x in top_three_labels else 1)
+                niche_app_dfs.append(pdf)
+            result_df = functools.reduce(lambda a, b: a.join(b, how='inner'), niche_app_dfs)
+            return result_df
+
+    def check_niche_label_is_time_variant(self, consecutive=True):
+        if consecutive is True:
+            cols = [i + '_niche_app' for i in self.consec_panels]
+        else:
+            cols = [i + '_niche_app' for i in self.all_panels]
+        df2 = self.dfn[cols]
+        time_invariant_niche = len(df2.columns)
+        time_invariant_broad = 0
+        df2['sum_niche_labels'] = df2[cols].sum(axis=1)
+        df2['time_invariant_broad_apps'] = df2['sum_niche_labels'].apply(lambda x: 1 if x == time_invariant_broad else 0)
+        df2['time_invariant_niche_apps'] = df2['sum_niche_labels'].apply(
+            lambda x: 1 if x == time_invariant_niche else 0)
+        df2['app_changed_niche_label'] = df2['sum_niche_labels'].apply(
+            lambda x: 1 if x != time_invariant_niche and x != time_invariant_broad else 0)
+        count_df = df2[['time_invariant_broad_apps', 'time_invariant_niche_apps', 'app_changed_niche_label']].sum(axis=0)
+        print(count_df)
+        df3 = df2.loc[df2['app_changed_niche_label']==1]
+        return df2, df3.index.tolist()
+
+    def eyeball_app_changed_niche_label(self, consecutive=True):
+        df_count_label, appid_changed_label = self.check_niche_label_is_time_variant(consecutive=consecutive)
+        df2 = self.select_text_cols(consecutive=consecutive)
+        df3 = df2.loc[appid_changed_label]
+        df4 = df3.sample(5)
+        for index, row in df4.iterrows():
+            print(index)
+            for i in df4.columns:
+                print(i)
+                print(row[i])
+                print()
+            print()
+            print()
+        return df3
+
+# ====================================================================================================================
+"""
+RESEARCH NOTES:
+2021/03/08
+After eyeballing self.eyeball_app_changed_niche_label(), I see that they do not ever change over time, the description. 
+So I decide from now on to combine all panel's description together. 
+"""
+# =====================================================================================================================
