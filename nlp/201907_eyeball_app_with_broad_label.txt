@@ -1,0 +1,1690 @@
+broad label : 7
+count in the label :1094
+com.peterdeelstra.guitar.tuner
+======================================================================================================================================================
+An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).An easy-to-use accurate audio/visual tuner for your guitar. 
+
+Provides a simple interface to visually check whether the pitch for each string is low or high, and lets you "see" the pitch change as you wind/unwind the string tuning machines. Tuning has never been easier. 
+
+Shows exactly how many cents (1/100ths of a semitone) a note is out-of-tune. 
+
+★ Extremely accurate - within 1 cent (1/100th of a semitone) of each note with sub-second response time. 
+★ Developed in Austin, Texas, the "Live Music Capital of the World". 
+★ Use the standard tuning E-A-D-G-B-E or one of many alternate tunings: regular tunings such as Minor Third, special tunings such Drop D, open tunings such Open C, lower tunings, and higher tunings. 
+★ Adjust pitch incrementally from 400 to 480 Hz or up/down a half/full step from A440. (The International Organization for Standardization specifies the frequency for the note A in the treble stave as 440 Hz. ISO 16:1975). 
+★ Tap to hear an accurate note if tuning by ear instead of using visual tuning. 
+★ Enable/disable Auto-string-detect (not recommended for noisy environments).
+
+
+com.mealpass.mealpal
+======================================================================================================================================================
+MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!MealPal gives you access to the best food near you, for just $5.99 per meal.
+
+
+From salads and sushi to spaghetti and sandwiches, choose and pick up delicious meals from hundreds of local restaurants with just a few taps.
+
+
+How does it work?
+
+
+Reserve
+
+Discover new restaurants and select your weekday lunch (or dinner) with easy-to-use filters and a hyper-local map.
+
+
+Pick Up
+
+Arrive at the restaurant and head straight to the cashier - skipping the line never felt so good!
+
+
+Rate
+
+Enjoyed the food?  Lettuce know and we’ll serve up recommendations that we think you’ll love.
+
+
+MealPal is available in Auckland, Austin, Boston, Brooklyn, Chicago, Denver, London, Los Angeles, Manchester, Melbourne, Miami, New York City, Philadelphia, Portland, San Francisco, Seattle, Singapore, Sydney, Toronto, Washington, D.C., and Wellington -- plus, 
+more coming soon!
+
+
+slime.simulator.time.asmr
+======================================================================================================================================================
+Slime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favourite.  You can share slimes on social and play with friends.
+
+Download NowSlime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favourite.  You can share slimes on social and play with friends.
+
+Download Now!Slime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favorite.  You can share slimes on social and play with friends.
+
+Download Now!Slime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favorite.  You can share slimes on social and play with friends.
+
+Download Now!Slime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favorite.  You can share slimes on social and play with friends.
+
+Download Now!Slime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favorite.  You can share slimes on social and play with friends.
+
+Download Now!Slime Simulator Time is a great app for beginner slimers to advanced slimers.  It is also good for people who love ASMR sounds.  The app works like a super real slime that you make it from real ingredients such as clay, glue, borax and much more.  Of course, charms for slime is safe for boys and girls.
+
+Having a hard time create your own slime? Watch many video tutorials but still couldn't make it? This is the app for you.  Not necessary to know how to make slime. It's easy, fun, addictive and FREE!
+
+Features:
+★ Stress & anxiety relief
+★ Beautiful ASMR sounds and noises.  Good for meditation and sleep.
+★ Make your own slime: add different products to achieve new colors and textures such as food coloring, glitter, foam beads, fishbowl beads, foam, fake snow and more!  You can customize them using your imagination!
+★ Many polymer clay canes added: perfect things to add to your slimes!  They can range from simple fruits, balls, jelly, heart to adorable characters!
+★ Name your own slime e.g. clear, crystal, egg, cloud, rainbow, fluffy, butter, super glossy, metallic, galaxy, bubbly slime!
+★ Satisfying slime sounds: different slimes make different ASMR sounds. You can poking, popping, swirling and pressing them!
+★ DIY slime stress ball for squishy and crunchy toy
+★ Decorative slime: player can add glitter, microbeads, mushroom and other additives to make your slime look more interesting.
+★ Make a slime wallpaper!
+
+Slime Simulator Time brings slimes to your mobile phone. We'd call it slime factory! Just follow the instructions. It's time to make your own slime with your own super recipes!  Glow in the dark, unicorn, metallic slimes are my favorite.  You can share slimes on social and play with friends.
+
+Download Now!
+
+
+
+
+
+
+
+broad label : 350
+count in the label :427
+com.colorup.game
+======================================================================================================================================================
+Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!Your newest addiction comes in 3D!
+
+Very easy to play, too hard to master
+
+Do not touch other Colors, that is it!
+
+100+ Levels of limitless fun!
+
+
+com.uplayonline.youtubers
+======================================================================================================================================================
+ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your channel?
+ 
+In this simulator, you will have to manage your time to take care of your daily obligations and upload weekly content to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fandom. Buy the best pcs, consoles, and video games to create the coolest gameplays. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop growing to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your channel?
+ 
+In this simulator, you will have to manage your time to take care of your daily obligations and upload weekly content to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fandom. Buy the best pcs, consoles, and video games to create the coolest gameplays. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop growing to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star and go viral! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your YouTube channel?
+ 
+Youtubers Life combines idle and time management into the ultimate influencer simulator! you will have to manage your time to take care of your daily obligations and upload weekly videos to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, Become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your YouTube channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fans. Buy the best pcs, consoles, and video games to create the coolest videos. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a YouTube simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom and going viral is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop uploading videos to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life idle simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star and go viral! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your YouTube channel?
+ 
+Youtubers Life combines idle and time management into the ultimate influencer simulator! you will have to manage your time to take care of your daily obligations and upload weekly videos to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, Become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your YouTube channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fans. Buy the best pcs, consoles, and video games to create the coolest videos. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a YouTube simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom and going viral is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop uploading videos to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life idle simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star and go viral! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your YouTube channel?
+ 
+Youtubers Life combines idle and time management into the ultimate influencer simulator! you will have to manage your time to take care of your daily obligations and upload weekly videos to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, Become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your YouTube channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fans. Buy the best pcs, consoles, and video games to create the coolest videos. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a YouTube simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom and going viral is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop uploading videos to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life idle simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star and go viral! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your YouTube channel?
+ 
+Youtubers Life combines idle and time management into the ultimate influencer simulator! you will have to manage your time to take care of your daily obligations and upload weekly videos to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, Become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your YouTube channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fans. Buy the best pcs, consoles, and video games to create the coolest videos. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a YouTube simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom and going viral is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop uploading videos to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life idle simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!ATTENTION: This game will need at least 600Mb of free space in your device or you can experience execution problems.
+
+Being a famous creator is everyone's dream! In Youtubers Life you will know how it feels to be a star and go viral! Learn the day-to-day life of famous Youtubers in this simulation game! What will be the theme of your YouTube channel?
+ 
+Youtubers Life combines idle and time management into the ultimate influencer simulator! you will have to manage your time to take care of your daily obligations and upload weekly videos to the channel. At first, it will be difficult to get followers but the more videos you upload, the more they will increase! Do not get affected by the comments of your haters, Become a popular youtuber, and live your life surrounded by luxury!
+ 
+Before building your video channels you must create your own avatar. First decide among a variety of hats, hairstyle, and shirts, make your avatar a fashion victim, and dress them up with the most modern clothes. But be careful, manage your money well, and do not make unnecessary purchases because every coin saved will bring you closer to your goal: To become a millionaire!
+ 
+Once you're ready, the real adventure begins! Choose the theme of your YouTube channel, there are multiple options!
+ 
+• Fashion channel: Design your own clothes, tailor every aspect of your life, and attend fashion events while interviewing the world's top models. If you are lucky enough you will be able to share the runway like a proper model. Are you ready to star in the world's hottest magazines?
+
+• Cooking channel: Play this simulator to become a chef and upload your favorite recipe or teach how to cook a delicious dessert. Do not forget to edit the video to make the food look tastier. Be ready to work at the best restaurants in the world and take some ideas from other influencers!
+ 
+• Gaming channel: Record the best gameplays and other gamers will become your fans. Buy the best pcs, consoles, and video games to create the coolest videos. Search for geek videogames and criticize their gameplay, it will generate debate and foster comments! Be a gamer and manage your money to get as many video games as you can. 
+ 
+• Music channel: Make videos of your favorite artists and cover their best songs. Soon you'll be able to play live in front of thousands of people! Are you ready for this lifestyle?
+ 
+Developing a channel is not easy, so manage your money well and do not run out of resources to be able to go shopping. If you follow any video blog, maybe you can take some tips from him to increase your followers. Make yourself the most popular vlogger but… are you ready for all kinds of comments?
+ 
+Youtubers Life is a YouTube simulator that will teach you how it’s like to be a social media star and live a life like Jacksepticeye! Reaching stardom and going viral is easy, but the responsibilities of being an influencer are very hard. Manage your time and money and do not stop uploading videos to your channel or you can lose some subscribers. You should go shopping from time to time to update your wardrobe!
+ 
+In Youtubers Life idle simulator you will be able to:
+ 
+• Go shopping and customize your avatar so it looks like whoever you want to be!
+• Become a vlogger and show your followers what video games are your favorite ones in your channel. Be the most popular gamer.
+• Manage your channel and edit videos from your studio.
+• Put yourself in the lifestyle of a billionaire, be present in social media! Copy from other blogs
+• Go to exclusive parties with your subscribers! 
+ 
+Join your friends to see who is the most popular celebrity in this simulator game. Do you think you are capable of saving money better than your fellows when they go shopping? Do they build their channel with different decisions and do they reach their goal of becoming a millionaire faster than you? Become more popular than your friends on social media to attract the richest sponsors!
+
+
+com.rac7.DarkEcho
+======================================================================================================================================================
+“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games“Dark Echo is a brilliant, unique, and incredibly tense must-have masterpiece.” 5/5 - TouchArcade
+
+“One of the creepiest and most creative horror games on the App Store.” 4.5/5 - 148Apps
+
+“A masterful execution of minimalist design… play this with headphones, in the dark, alone.” - Indie Game Enthusiast
+
+=======
+
+Trapped in darkness, you must use visualized sound to guide your way through threatening environments. The sounds you create will bounce off obstacles, revealing the shape of the surrounding world. It won't be long before your only way of sensing the world attracts a horrifying evil that devours both sound and souls.
+
+Survive through 80 levels that will make your heart race and leave you with an irrational fear of red lines. A foreboding soundscape, best experienced with headphones, sets the tone for your journey. Explore, solve puzzles, and most importantly - stay alive.
+
+=======
+
+No advertisements, no in-app purchases.
+
+* This game relies on the visualization of sound and cannot be played with audio only. It is not recommended for blind players.
+
+=======
+
+www.darkechogame.com
+
+www.twitter.com/RAC7Games
+
+
+
+
+
+
+
+broad label : 263
+count in the label :199
+com.samsung.android.oneconnect
+======================================================================================================================================================
+With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+
+※ App permissions
+The following permissions are required for the app service. For optional permissions, the default functionality of the service is turned on, but not allowed. 
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.
+ 
+If your system software version is lower than Android 6.0, please update the software to configure App permissions.
+Previously allowed permissions can be reset on Apps menu in device settings after software update.With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+
+※ App permissions
+The following permissions are required for the app service. For optional permissions, the default functionality of the service is turned on, but not allowed. 
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+
+※ App permissions
+The following permissions are required for the app service. For optional permissions, the default functionality of the service is turned on, but not allowed. 
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+- Galaxy : Smart View to support screen mirroring
+
+※ App permissions
+The following permissions are required for the app service. For optional permissions, the default functionality of the service is turned on, but not allowed. 
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+- Galaxy : Smart View to support screen mirroring
+
+※ App permissions
+The following permissions are required for the app service. For optional permissions, the default functionality of the service is turned on, but not allowed. 
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+- Galaxy : Smart View to support screen mirroring
+
+※ App permissions
+The following permissions are required for the app. You can use the app without optional permissions, but some functions may be limited.
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.With SmartThings, you can connect and control multiple devices quicker and easier. No matter where you are, you can monitor and control smart devices, home appliances (refrigerator, wine cellar, washer, dryer, oven range, dishwasher, cooktop, robot vacuum, air conditioner, air purifier and etc.)
+, TVs, and speakers registered on the server.
+
+[Key features]
+- Remotely control and check the status of devices registered through a Wi-Fi AP.
+- Group multiple devices into a Mode and control them simultaneously.
+- Configure your device settings, including the time and operating conditions, and operate them automatically.
+- Invite others to a location where devices are registered to enable shared control.
+- The notification feature allows you to receive status information about your device.
+
+※ SmartThings is optimized for Samsung smartphones. Some features may be limited when used with other vendors' smartphones.
+※ Some features may not be available in all countries.
+
+[App requirements]
+Some mobile devices may not be supported.
+- RAM size : 2GB over
+- Galaxy : Smart View to support screen mirroring
+
+※ App permissions
+The following permissions are required for the app. You can use the app without optional permissions, but some functions may be limited.
+ 
+[Required access permissions]
+• Location: Find nearby devices using Bluetooth or BLE.
+                    Automate actions using GPS. 
+                   (GPS is optional.)
+
+[Optional access permissions]
+• Camera: Scan QR codes.
+• Contacts: Verify user information that will be delivered while transferring files.
+• Microphone: Used to provide voice control function using microphone.
+• Storage: Save and use plugins and app data, and transfer content and files via the app.
+• Phone: Check for app updates, identify the user's country, and transfer content and files via the app.
+
+
+com.hearing.healthcare.siemens.touchcontrol
+======================================================================================================================================================
+Turn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, GermanyTurn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, GermanyTurn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, GermanyTurn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, GermanyTurn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, GermanyTurn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, GermanyTurn your mobile device into a remote control for your Signia hearing aids! The app enhances discretion by hiding the remote control within your mobile device without the need for additional hardware. Full control of your hearing aids looks as subtle as checking for a text message.
+
+The app will only provide all the functions if configured by your hearing health specialist. The app is only compatible with the latest generation of Signia/Siemens 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. Click the Developer Website link at the bottom of this page for all compatible products.
+
+App features:
+• Change hearing programs without the need to touch your hearing aids.
+• Change the volume easily and discreetly.
+• Easily mute and unmute the hearing aids.
+• Adjust bass & treble to balance the quality of sound.
+• Easily manage the volume of your tinnitus program.
+• Adjust the span and direction of the microphones (7px, 5px, 7bx and 5bx devices).
+• Check the battery status of your hearing aids (7px, 5px and 3px devices).
+
+Intended use:
+The touchControl App is a tool whereby the patient can adjust convenience functions of a hearing aid, within a framework given by a hearing health specialist, e.g., ENT doctor, audiologist or acoustician.
+
+Device compatibility:
+The touchControl App is compatible with any Android device running Android 4.0 or higher public release. 
+
+Hearing aid compatibility:
+The touchControl App is only compatible with the latest generation of Signia/Siemens 7px, 5px, 3px, 7bx, 5bx, 3bx, Orion 2, Sirion 2, Teneo and Teneo+ hearing aids. A full list of compatible hearing aids can be found by clicking the 'Visit Website' link at the bottom of this page.
+
+Control signals:
+The touchControl app generates short control signals which are designed to be played through the devices speakers and may be audible.
+
+To ensure correct operation and for safety reasons:
+1. While using the app do not hold the loudspeaker of this device to your ears or the ears of others. 
+2. While using the app do not use the device with headphones, headsets or other audio playback devices.
+
+PLEASE CAREFULLY READ THE MANUAL OF THE HEARING AIDS BEFORE USING THIS APP.
+
+
+Sivantos GmbH, Henri-Dunant-Strasse 100, 91058 Erlangen, Germany
+
+
+jp.snowlife01.android.rotationcontrolpro
+======================================================================================================================================================
+Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".Can force a particular rotation on apps with fixed screen orientation.
+A simple design with functions that are easy to understand and use.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Recommended for people who:
+- Want to use their smartphone home screen in landscape mode
+- Want to use landscape mode games or video apps in portrait mode
+- Want to always use their tablet in landscape mode
+- Want to switch between fixed orientations with one tap via the status bar
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+<b>Features</b>
+
+<b>►Rotation settings</b>
+Can configure the rotation of the screen.
+
+<b>►Notification settings</b>
+Control the rotation of the screen easily from the notification bar.
+
+<b>►Per App rotation settings</b>
+Can configure different rotations for each apps.
+Rotates to your preset screen orientation upon starting the application.
+Returns to the original screen orientation on closing the application.
+
+<b>►Special case settings</b>
+Detects when chargers or earphones are connected and rotates to your preset screen orientation.
+Returns to the original screen orientation when they are removed.
+
+
+You can check this app's functions and operations with a free trial.
+<b>Please check the functions and operations by free trial before you buy.</b>
+https://play.google.com/store/apps/details?id=jp.snowlife01.android.rotationcontrol
+
+
+<b>Rotation</b>
+
+Automatic : the screen rotates based on a sensor.
+Landscape : the screen is fixed to a horizontal orientation.
+Landscape (Reverse) : the screen is fixed horizontal upside down.
+Landscape (Auto) : rotates automatically to a horizontal orientation based on a sensor.
+Portrait : the screen is fixed to a vertical orientation.
+Portrait (Reverse) : the screen is fixed vertical upside down.
+Portrait (Auto) : rotates automatically to a vertical orientation based on a sensor.
+
+* Some of the direction of rotation may not correspond depending on device specifications. This is not an issue with the app.
+
+
+<b>This app uses accessibility service.</b>
+This is used to detect when an app is launched or closed and allows you to change the rotation actions for each app.
+This information is not stored or shared.
+
+
+<b>【For OPPO users】</b>
+This app needs to run a service in the background to detect which app has started.
+<font color="red">OPPO devices require special settings to operate app services in the background due to their unique specifications.</font> (If you do not do this, services running in the background will be forcibly terminated, and the app will not operate properly.)
+Please drag this app a little down from the recent apps history and lock it.
+If you do not know how to set, please search for "OPPO task lock".
+
+
+
+
+
+
+
