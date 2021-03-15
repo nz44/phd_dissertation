@@ -1,8 +1,13 @@
 import pandas as pd
+import copy
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
+import seaborn as sb
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
 import statsmodels.api as sm
+# https://www.statsmodels.org/stable/api.html
 from linearmodels import PooledOLS
 from linearmodels import PanelOLS
 from linearmodels import RandomEffects
@@ -50,19 +55,6 @@ class combine_dataframes():
         result_df.set_index(['developer', 'appid'], inplace=True)
         return result_df
 
-    def eyeball_labels_by_group(self, label):
-        # get a count df
-        result_df = self.convert_to_dev_multiindex()
-        gdf = result_df.groupby(by=['predicted_labels']).count()
-        gdf = gdf.iloc[:, 0].to_frame()
-        gdf.index.names = ['predicted_labels']
-        gdf.rename(columns={gdf.columns[0]: 'count'}, inplace=True)
-        gdf.sort_values(by='count', ascending=False, inplace=True)
-        # display on a specific label
-        sdf = result_df.loc[result_df['predicted_labels'] == label,
-                            ['summary_202102', 'description_202102', 'predicted_labels']]
-        return gdf, sdf
-
 #########################################################################################
 #######   REGRESSION   ##################################################################
 #########################################################################################
@@ -89,10 +81,14 @@ class regression_analysis():
         l1 = []
         for i in self.df.columns:
             if text in i:
-                x = i.split("_", -1)
-                x = x[:-1]
-                y = '_'.join(x)
-                l1.append(y)
+                contains_digit = any(map(str.isdigit, i))
+                if contains_digit is True: # seperate the panel information from the variable sub-string
+                    x = i.split("_", -1)
+                    x = x[:-1]
+                    y = '_'.join(x)
+                    l1.append(y)
+                else: # the string column name does not contain panel informaiton (time-invariant variables)
+                    l1.append(i)
         return list(set(l1))
 
     def select_vars(self, the_panel=None, **kwargs):
@@ -112,49 +108,40 @@ class regression_analysis():
         selected_df = self.df[selected_cols]
         return selected_df
 
-    def select_all_vars_in_select_panels(self, consecutive=True):
-        panel_vars = ['latitude', 'longitude', 'developer', 'location', 'predicted_labels'] # var names that do not contain panel number
-        for i in self.consec_panels:
-            for j in self.df.columns:
-                if i in j:
-                    panel_vars.append(j)
-        new_df = self.df[panel_vars]
+    def select_panel_vars(self, time_invariant_vars, time_variant_vars, dep_vars):
+        vars = ['latitude',
+                'longitude',
+                'developer',
+                'location',
+                'combined_panels_kmeans_labels',
+                'combined_panels_kmeans_labels_count']
+        vars.extend(time_invariant_vars)
+        vars_2 = []
+        for i in time_variant_vars:
+            vars_2.extend([i + '_' + panel for panel in self.consec_panels])
+        for i in dep_vars:
+            vars_2.extend([i + '_' + panel for panel in self.consec_panels])
+        vars.extend(vars_2)
+        new_df = self.df[vars]
         return new_df
 
     # -------------------------- independent var of interest ---------------------------------------------
-    def peek_niche_index(self, var): # the variable here do not have time such as 202102 in its names
-        new_df = self.df[[var]]
-        gdf = self.df.groupby(by=['predicted_labels']).count()
-        gdf = gdf.iloc[:, 0].to_frame()
-        gdf.index.names = ['predicted_labels']
-        gdf.rename(columns={gdf.columns[0]: 'count'}, inplace=True)
-        gdf.sort_values(by='count', ascending=False, inplace=True)
-        return new_df, gdf
-
-    def make_dummies_from_niche_index(self, var, broad_type_label):
-        col_names = ['niche_type_' + i for i in self.consec_panels]
-        df1 = self.df[[var]]
-        for i in col_names:
-            df1[i] = df1[var].apply(lambda x: 1 if x != broad_type_label else 0)
-        df1.drop(var, axis=1, inplace=True)
-        self.df = self.df.join(df1, how='inner')
-        return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
-
-    def convert_df_from_wide_to_long(self, consecutive=True):
-        vars_in_each_panel = self.print_col_names(the_panel=self.consec_panels[-1])
-        new = []
-        for i in vars_in_each_panel:
-            stripped = i.split("_", -1)[:-1]
-            new_string = '_'.join(stripped) + '_'
-            new.append(new_string)
-        new_df = self.select_all_vars_in_select_panels(consecutive=consecutive)
+    def convert_df_from_wide_to_long(self, time_variant_vars, time_invariant_vars, dep_vars):
+        new_df = self.select_panel_vars(time_invariant_vars, time_variant_vars, dep_vars)
         new_df = new_df.reset_index()
-        new_df = pd.wide_to_long(new_df, stubnames=new, i="appid", j="panel") # here you can add developer for multiindex output
+        stub_names = copy.deepcopy(time_variant_vars)
+        stub_names.extend(dep_vars)
+        new_df = pd.wide_to_long(new_df, stubnames=stub_names, i="index", j="panel", sep='_') # here you can add developer for multiindex output
         new_df = new_df.sort_index()
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
                                    panel_long_df=new_df)
+    # -------------------------- Model Selection ---------------------------------------------------------
+    """
+    https://www.statsmodels.org/stable/generated/statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman.html#statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman
+    Whether to use fixed effect or random effects, you have to run hausman test. 
+    """
 
     # -------------------------- Regression --------------------------------------------------------------
     """
@@ -162,43 +149,82 @@ class regression_analysis():
     # https://towardsdatascience.com/a-guide-to-panel-data-regression-theoretics-and-implementation-with-python-4c84c5055cf8
     # https://bashtage.github.io/linearmodels/doc/panel/models.html
     """
-    def regression(self, dep_var, ind_vars_list, cross_section, reg_type, the_panel=None):
+    def correlation_matrix(self, dep_vars, time_variant_vars, time_invariant_vars, the_panel):
+        """
+        This is for the purpose of checking multicolinearity between independent variables
+        """
+        vars = []
+        vars.extend([i + '_' + the_panel for i in time_variant_vars])
+        vars.extend(time_invariant_vars)
+        vars.extend([i + '_' + the_panel for i in dep_vars])
+        new_df = self.df.copy(deep=True)
+        hdf = new_df[vars]
+        df_corr = hdf.corr()
+        return df_corr
+
+    def regression(self, dep_var, time_variant_vars, time_invariant_vars,
+                   cross_section, reg_type, the_panel=None):
+        """
+        run convert_df_from_wide_to_long first and get self.panel_long_df updated, then run this method
+        """
         if cross_section is True:
-            independents = [i + '_' + the_panel for i in ind_vars_list]
-            independents_df = self.df[independents]
+            x_vars = [i + '_' + the_panel for i in time_variant_vars]
+            x_vars.extend(time_invariant_vars)
+            new_df = self.df.copy(deep=True)
+            independents_df = new_df[x_vars]
             X = sm.add_constant(independents_df)
             dep_var = dep_var + '_' + the_panel
-            y = self.df[[dep_var]]
+            y = new_df[[dep_var]]
             if reg_type == 'OLS':
                 model = sm.OLS(y, X)
                 results = model.fit()
                 results_robust = results.get_robustcov_results()
                 print(results_robust.summary())
                 return results_robust
-        else: # panel regression models
-            independents = [i + '_' for i in ind_vars_list]
-            independents_df = self.panel_long_df[independents]
-            X = sm.add_constant(independents_df)
-            dep_var = dep_var + '_'
-            y = self.panel_long_df[[dep_var]]
-            if reg_type == 'POOLED_OLS':
-                #
-                model = PooledOLS(y, X)
+            elif reg_type == 'logit':
+                model = sm.Logit(y, X)
                 results = model.fit()
-                print(results)
+                print(results.summary())
+                return results
+            elif reg_type == 'probit':
+                model = sm.Probit(y, X)
+                results = model.fit()
+                print(results.summary())
+                return results
+        else: # panel regression models
+            x_vars = []
+            x_vars.extend(time_variant_vars)
+            x_vars.extend(time_invariant_vars)
+            new_df = self.panel_long_df.copy(deep=True)
+            independents_df = new_df[x_vars]
+            X = sm.add_constant(independents_df)
+            y = new_df[[dep_var]]
+            if reg_type == 'POOLED_OLS':
+                model = PooledOLS(y, X)
                 # results_robust = results.get_robustcov_results()
-                pooledOLS_res = model.fit(cov_type='clustered', cluster_entity=True)
+                # pooledOLS_res = model.fit(cov_type='clustered', cluster_entity=True)
                 # Store values for checking homoskedasticity graphically
-                fittedvals_pooled_OLS = pooledOLS_res.predict().fitted_values
-                residuals_pooled_OLS = pooledOLS_res.resids
+                # fittedvals_pooled_OLS = pooledOLS_res.predict().fitted_values
+                # residuals_pooled_OLS = pooledOLS_res.resids
             elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
                 model = PanelOLS(y, X,
                                  entity_effects=True,
                                  time_effects=True,
                                  drop_absorbed=True)
-                results = model.fit()
-                print(results)
+            elif reg_type == 'RE':
+                model = RandomEffects(y, X,)
+            results = model.fit()
+            print(results)
             return results
+
+    def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars,
+                   cross_section, reg_type, the_panel=None):
+        results_dict = dict.fromkeys(dep_vars)
+        for dep_var in dep_vars:
+            result = self.regression(dep_var, time_variant_vars, time_invariant_vars,
+                   cross_section, reg_type, the_panel)
+            results_dict[dep_var] = result
+        return results_dict
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
         vars_in_a_panel = []
@@ -274,11 +300,14 @@ class regression_analysis():
         return time_variant_df, time_variant_appids
 
     def change_time_variant_to_invariant(self, cat_var):
+        """
+        use the last panel as the standard value for time-invariant variables
+        """
         time_variant_df, time_variant_appids = self.find_time_variant_rows(cat_var=cat_var)
         col_names = [cat_var + '_' + i for i in self.consec_panels]
         for i in time_variant_appids:
             for j in col_names:
-                self.df.at[i, j] = self.df.at[i, cat_var+'_'+self.consec_panels[-1]] # this one intends to change class attributes
+                self.df.at[i, j] = self.df.at[i, cat_var+'_' + self.consec_panels[-1]] # this one intends to change class attributes
         return self.df
 
     def create_new_dummies_from_cat_var(self, cat_var, time_invariant=False):
@@ -288,41 +317,72 @@ class regression_analysis():
             pass
         if cat_var == 'genreId':
             df1 = self.select_vars(single_var=cat_var)
-            for i in self.consec_panels:
-                df1['genreId_game_'+i] = df1['genreId_'+i].apply(lambda x: 1 if 'GAME' in x else 0)
+            if time_invariant is True:
+                df1['genreIdGame'] = df1['genreId_' + self.consec_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
+            else:
+                for i in self.consec_panels:
+                    df1['genreIdGame_'+i] = df1['genreId_'+i].apply(lambda x: 1 if 'GAME' in x else 0)
             dcols = ['genreId_'+ i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         elif cat_var == 'contentRating':
             df1 = self.select_vars(single_var=cat_var)
-            for i in self.consec_panels:
-                df1['contentRating_everyone_'+i] = df1['contentRating_'+i].apply(lambda x: 1 if 'Everyone' in x else 0)
+            if time_invariant is True:
+                df1['contentRatingEveryone'] = df1['contentRating_' + self.consec_panels[-1]].apply(
+                    lambda x: 1 if 'Everyone' in x else 0)
+            else:
+                for i in self.consec_panels:
+                    df1['contentRatingEveryone_'+i] = df1['contentRating_'+i].apply(lambda x: 1 if 'Everyone' in x else 0)
             dcols = ['contentRating_'+ i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         elif cat_var == 'minInstalls':
             df1 = self.select_vars(single_var=cat_var)
             for i in self.consec_panels:
-                df1['minInstalls_top_'+i] = df1['minInstalls_'+i].apply(lambda x: 1 if x >= 1.000000e+07 else 0)
-                df1['minInstalls_middle_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+04 else 0)
-                df1['minInstalls_bottom_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+04 else 0)
+                df1['minInstallsTop_'+i] = df1['minInstalls_'+i].apply(lambda x: 1 if x >= 1.000000e+07 else 0)
+                df1['minInstallsMiddle_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+04 else 0)
+                df1['minInstallsBottom_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+04 else 0)
             dcols = ['minInstalls_'+ i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         elif cat_var == 'free':
             df1 = self.select_vars(single_var=cat_var)
             for i in self.consec_panels:
-                df1['paid_true_' + i] = df1['free_' + i].apply(lambda x: 1 if x is False else 0)
+                df1['paidTrue_' + i] = df1['free_' + i].apply(lambda x: 1 if x is False else 0)
             dcols = ['free_' + i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         else:
             df1 = self.select_vars(single_var=cat_var)
             for i in self.consec_panels:
-                df1[cat_var + '_true_' + i] = df1[cat_var + '_' + i].apply(lambda x: 1 if x is True else 0)
+                df1[cat_var + 'True_' + i] = df1[cat_var + '_' + i].apply(lambda x: 1 if x is True else 0)
             dcols = [cat_var + '_' + i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
+        return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
+
+    def standardize_continuous_vars(self, con_var, method):
+        vars = [con_var + '_' + i for i in self.consec_panels]
+        new_df = self.df.copy(deep=True)
+        df2 = new_df[vars]
+        print('before standardization:')
+        for i in df2.columns:
+            print(i)
+            print(df2[i].describe())
+            print()
+        if method == 'zscore':
+            scaler = preprocessing.StandardScaler()
+            df3 = scaler.fit_transform(df2)
+            df3 = pd.DataFrame(df3)
+            scaled_col_names = ['ZSCORE' + i for i in vars]
+            df3.columns = scaled_col_names
+            df3.index = df2.index.tolist()
+        print('after standardization:')
+        for i in df3.columns:
+            print(i)
+            print(df3[i].describe())
+            print()
+        self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
 
     def peek_at_missing(self, **kwargs):
