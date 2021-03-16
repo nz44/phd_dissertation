@@ -1,5 +1,7 @@
 import pandas as pd
 import copy
+from pathlib import Path
+import pickle
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
@@ -62,6 +64,8 @@ class combine_dataframes():
 class regression_analysis():
     """by default, regression analysis will either use cross sectional data or panel data with CONSECUTIVE panels,
     this is because we can calculate t-1 easily."""
+    reg_table_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/reg_results_tables')
 
     def __init__(self,
                  df,
@@ -177,20 +181,10 @@ class regression_analysis():
             y = new_df[[dep_var]]
             if reg_type == 'OLS':
                 model = sm.OLS(y, X)
-                results = model.fit()
-                results_robust = results.get_robustcov_results()
-                print(results_robust.summary())
-                return results_robust
             elif reg_type == 'logit':
                 model = sm.Logit(y, X)
-                results = model.fit()
-                print(results.summary())
-                return results
             elif reg_type == 'probit':
                 model = sm.Probit(y, X)
-                results = model.fit()
-                print(results.summary())
-                return results
         else: # panel regression models
             x_vars = []
             x_vars.extend(time_variant_vars)
@@ -201,11 +195,6 @@ class regression_analysis():
             y = new_df[[dep_var]]
             if reg_type == 'POOLED_OLS':
                 model = PooledOLS(y, X)
-                # results_robust = results.get_robustcov_results()
-                # pooledOLS_res = model.fit(cov_type='clustered', cluster_entity=True)
-                # Store values for checking homoskedasticity graphically
-                # fittedvals_pooled_OLS = pooledOLS_res.predict().fitted_values
-                # residuals_pooled_OLS = pooledOLS_res.resids
             elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
                 model = PanelOLS(y, X,
                                  entity_effects=True,
@@ -213,18 +202,53 @@ class regression_analysis():
                                  drop_absorbed=True)
             elif reg_type == 'RE':
                 model = RandomEffects(y, X,)
-            results = model.fit()
-            print(results)
-            return results
+        results = model.fit()
+        if reg_type == 'OLS':
+            results = results.get_robustcov_results()
+        print(results.summary())
+        return results
 
-    def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars,
-                   cross_section, reg_type, the_panel=None):
-        results_dict = dict.fromkeys(dep_vars)
-        for dep_var in dep_vars:
-            result = self.regression(dep_var, time_variant_vars, time_invariant_vars,
-                   cross_section, reg_type, the_panel)
-            results_dict[dep_var] = result
+    def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars, cross_section, reg_types, the_panel=None):
+        results_dict = dict.fromkeys(reg_types)
+        for reg_type in reg_types:
+            results_dict_sub = dict.fromkeys(dep_vars)
+            for dep_var in dep_vars:
+                result = self.regression(
+                    dep_var,
+                    time_variant_vars,
+                    time_invariant_vars,
+                    cross_section,
+                    reg_type,
+                    the_panel)
+                results_dict_sub[dep_var] = result
+            results_dict[reg_type] = results_dict_sub
         return results_dict
+
+    def compile_several_reg_results_into_pandas(self, results_dict, time_variant_vars, time_invariant_vars, cross_section, the_panel=None):
+        """
+        :param results_dict: is the output of self.several_regressions
+        :return:
+        """
+        if cross_section is True:
+            x_vars = [i + '_' + the_panel for i in time_variant_vars]
+            x_vars.extend(time_invariant_vars)
+            x_vars.insert(0, 'const')
+            print('variables list : ', x_vars)
+        df_list = []
+        for reg_type, several_results in results_dict.items():
+            for dep_var, result in several_results.items():
+                coef = result.params
+                if reg_type == 'OLS': # ols param attribute is a horizontal numpy array
+                    coef = pd.Series(coef)
+                    coef.index = x_vars
+                coef.rename(reg_type + '_' + dep_var, inplace=True)
+                coef = coef.to_frame()
+                df_list.append(coef)
+        coef_df = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        filename = self.initial_panel + '_coeff_reg_table.pickle'
+        q = regression_analysis.reg_table_path / filename
+        pickle.dump(coef_df, open(q, 'wb'))
+        return coef_df
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
         vars_in_a_panel = []

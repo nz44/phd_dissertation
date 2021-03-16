@@ -42,7 +42,7 @@ class nlp_pipeline():
     """
     the input dataframe is by default appid index
     df is the MERGED dataframe
-    df_labels is the output of self.kmeans_cluster and saved with name 'predicted_kmeans_labels'
+    df_labels is the output of self.kmeans_cluster and saved with name 'predicted_kmeans_labels
     """
     def __init__(self,
                  df,
