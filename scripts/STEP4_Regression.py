@@ -66,6 +66,8 @@ class regression_analysis():
     this is because we can calculate t-1 easily."""
     reg_table_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/reg_results_tables')
+    descriptive_stats_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats')
 
     def __init__(self,
                  df,
@@ -73,13 +75,15 @@ class regression_analysis():
                  consec_panels,
                  dep_var=None,
                  independent_vars=None,
-                 panel_long_df=None):
+                 panel_long_df=None,
+                 descriptive_stats_tables=None):
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
         self.dep_var = dep_var
         self.independent_vars = independent_vars
         self.panel_long_df = panel_long_df
+        self.descriptive_stats_tables = descriptive_stats_tables
 
     def select_partial_vars(self, text):
         l1 = []
@@ -109,7 +113,8 @@ class regression_analysis():
                 selected_cols.extend(cols)
         else:
             selected_cols = [item + '_' + the_panel for item in variables]
-        selected_df = self.df[selected_cols]
+        new_df = self.df.copy(deep=True)
+        selected_df = new_df[selected_cols]
         return selected_df
 
     def select_panel_vars(self, time_invariant_vars, time_variant_vars, dep_vars):
@@ -126,7 +131,8 @@ class regression_analysis():
         for i in dep_vars:
             vars_2.extend([i + '_' + panel for panel in self.consec_panels])
         vars.extend(vars_2)
-        new_df = self.df[vars]
+        new_df = self.df.copy(deep=True)
+        new_df = new_df[vars]
         return new_df
 
     # -------------------------- independent var of interest ---------------------------------------------
@@ -166,6 +172,123 @@ class regression_analysis():
         df_corr = hdf.corr()
         return df_corr
 
+    def add_sum_row(self, df):
+        sum_row = df.sum(axis=0)
+        sum_row = sum_row.to_frame().T
+        sum_row.index = ['sum']
+        df = pd.concat([df, sum_row], join="inner")
+        return df
+
+    def add_sum_col(self, df):
+        sum_row = df.sum(axis=1)
+        df['sum'] = sum_row
+        return df
+
+    def descriptive_stats_of_reg_vars_for_single_panel(self,
+                                                       continuous_vars,
+                                                       dummy_vars,
+                                                       cat_vars,
+                                                       time_invar_dum,
+                                                       the_panel,
+                                                       add_sum_row_col=True):
+        """
+        This is must be run after self.create_new_dummies_from_cat_var to get updated self.df
+        """
+        con_vars = [i + '_' + the_panel for i in continuous_vars]
+        dum_vars = [i + '_' + the_panel for i in dummy_vars]
+        cat_vars_all = [i + '_' + the_panel for i in cat_vars]
+
+        dum_vars.extend(time_invar_dum)
+        new_df = self.df.copy(deep=True)
+        con_vars_df = new_df[con_vars]
+        dum_vars_df = new_df[dum_vars]
+        cat_vars_df = new_df[cat_vars_all]
+        # ----- Continuous Variables Summary Stats ---------------------------------------
+        con_vars_sum_stats = con_vars_df.agg(['mean', 'std', 'min', 'median', 'max', 'count'], axis=0)
+        # ----- Dummy Variables Count ----------------------------------------------------
+        dum_stats_dfs = []
+        for i in dum_vars:
+            dum_vars_df['Count'+i] = 0
+            df = dum_vars_df[[i, 'Count'+i]].groupby(i).count()
+            dum_stats_dfs.append(df)
+        dum_vars_sum_stats = functools.reduce(lambda a, b: a.join(b, how='inner'), dum_stats_dfs)
+        if add_sum_row_col is True:
+            dum_vars_sum_stats = self.add_sum_row(dum_vars_sum_stats)
+        # ---- Categorical Variables Count -----------------------------------------------
+        # ----- Dummy by Dummy and Dummy by Category --------------------------------------
+        cat_stats_dict = dict.fromkeys(cat_vars_all)
+        for i in cat_vars_all:
+            cat_vars_df['Count'+i] = 0
+            df = cat_vars_df[[i, 'Count'+i]].groupby(i).count()
+            if 'minInstalls' in i:
+                df.sort_index(inplace=True)
+            else:
+                df.sort_values(by='Count'+i, ascending=False, inplace=True)
+            if add_sum_row_col is True:
+                df = self.add_sum_row(df)
+            cat_stats_dict[i] = df
+        # -------------------------------------------
+        dummy_cat_dfs = []
+        for i in dum_vars:
+            sub_dummy_cat_dfs = []
+            for j in cat_vars_all:
+                df = new_df[[i, j]]
+                df2 = pd.crosstab(df[i], df[j])
+                df2.columns = [str(c) + '_' + the_panel for c in df2.columns]
+                sub_dummy_cat_dfs.append(df2)
+            df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), sub_dummy_cat_dfs)
+            df3.index = [i + '_' + str(j) for j in df3.index]
+            dummy_cat_dfs.append(df3)
+        dummy_cat_cocat_df = functools.reduce(lambda a, b: pd.concat([a,b], join='inner'), dummy_cat_dfs)
+        if add_sum_row_col is True:
+            dummy_cat_cocat_df = self.add_sum_col(dummy_cat_cocat_df)
+        # -------------------------------------------
+        # first two categorical variables cross tab
+        i, j = cat_vars_all[0], cat_vars_all[1]
+        df = new_df[[i, j]]
+        cc_df = pd.crosstab(df[i], df[j])
+        cc_df.columns = [str(c) + '_' + the_panel for c in cc_df.columns]
+        cc_df.index = [str(c) + '_' + the_panel for c in cc_df.index]
+        if add_sum_row_col is True:
+            cc_df = self.add_sum_row(cc_df)
+            cc_df = self.add_sum_col(cc_df)
+        # ----- Continuous Variables by Dummy or Category --------------------------------
+        # -------------------------------------
+        groupby_dummy_dfs = []
+        for i in dum_vars:
+            sub_groupby_dfs = []
+            for j in con_vars:
+                df = new_df[[i, j]]
+                agg_func_math = {j:['mean', 'std', 'min', 'median', 'max', 'count']}
+                df2 = df.groupby([i]).agg(agg_func_math, axis=0)
+                sub_groupby_dfs.append(df2)
+            df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), sub_groupby_dfs)
+            df3.index = [i + '_' + str(j) for j in df3.index]
+            groupby_dummy_dfs.append(df3)
+        dummy_continuous_df = functools.reduce(lambda a, b: pd.concat([a, b], join='inner'), groupby_dummy_dfs)
+        # --------------------------------------
+        groupby_cat_dfs = []
+        for i in cat_vars_all:
+            sub_groupby_dfs = []
+            for j in con_vars:
+                df = new_df[[i, j]]
+                agg_func_math = {j:['mean', 'std', 'min', 'median', 'max', 'count']}
+                df2 = df.groupby([i]).agg(agg_func_math, axis=0)
+                sub_groupby_dfs.append(df2)
+            df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), sub_groupby_dfs)
+            df3.index = [str(c) + '_' + the_panel for c in df3.index]
+            groupby_cat_dfs.append(df3)
+        # ----- Update Instance Attributes ------------------------------------------------
+        self.descriptive_stats_tables = (con_vars_sum_stats, dum_vars_sum_stats, cat_stats_dict,
+                                         dummy_cat_cocat_df, cc_df, dummy_continuous_df, groupby_cat_dfs)
+        return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   descriptive_stats_tables=self.descriptive_stats_tables)
+
+    def descriptive_stats_of_reg_vars_for_consec_panels(self):
+        pass
+    # ###############################################################################################
     def regression(self, dep_var, time_variant_vars, time_invariant_vars,
                    cross_section, reg_type, the_panel=None):
         """
