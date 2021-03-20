@@ -76,7 +76,11 @@ class regression_analysis():
                  dep_var=None,
                  independent_vars=None,
                  panel_long_df=None,
-                 descriptive_stats_tables=None):
+                 descriptive_stats_tables=None,
+                 continuous_vars=None,
+                 dummy_vars=None,
+                 categorical_vars=None,
+                 time_invariant_dummies=None):
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
@@ -84,6 +88,10 @@ class regression_analysis():
         self.independent_vars = independent_vars
         self.panel_long_df = panel_long_df
         self.descriptive_stats_tables = descriptive_stats_tables
+        self.con_vars = continuous_vars
+        self.dum_vars = dummy_vars
+        self.cat_vars = categorical_vars
+        self.tiv_dums = time_invariant_dummies
 
     def select_partial_vars(self, text):
         l1 = []
@@ -196,13 +204,13 @@ class regression_analysis():
         """
         con_vars = [i + '_' + the_panel for i in continuous_vars]
         dum_vars = [i + '_' + the_panel for i in dummy_vars]
-        cat_vars_all = [i + '_' + the_panel for i in cat_vars]
+        cat_vars = [i + '_' + the_panel for i in cat_vars]
 
         dum_vars.extend(time_invar_dum)
         new_df = self.df.copy(deep=True)
         con_vars_df = new_df[con_vars]
         dum_vars_df = new_df[dum_vars]
-        cat_vars_df = new_df[cat_vars_all]
+        cat_vars_df = new_df[cat_vars]
         # ----- Continuous Variables Summary Stats ---------------------------------------
         con_vars_sum_stats = con_vars_df.agg(['mean', 'std', 'min', 'median', 'max', 'count'], axis=0)
         # ----- Dummy Variables Count ----------------------------------------------------
@@ -216,8 +224,8 @@ class regression_analysis():
             dum_vars_sum_stats = self.add_sum_row(dum_vars_sum_stats)
         # ---- Categorical Variables Count -----------------------------------------------
         # ----- Dummy by Dummy and Dummy by Category --------------------------------------
-        cat_stats_dict = dict.fromkeys(cat_vars_all)
-        for i in cat_vars_all:
+        cat_stats_dict = dict.fromkeys(cat_vars)
+        for i in cat_vars:
             cat_vars_df['Count'+i] = 0
             df = cat_vars_df[[i, 'Count'+i]].groupby(i).count()
             if 'minInstalls' in i:
@@ -231,7 +239,7 @@ class regression_analysis():
         dummy_cat_dfs = []
         for i in dum_vars:
             sub_dummy_cat_dfs = []
-            for j in cat_vars_all:
+            for j in cat_vars:
                 df = new_df[[i, j]]
                 df2 = pd.crosstab(df[i], df[j])
                 df2.columns = [str(c) + '_' + the_panel for c in df2.columns]
@@ -244,7 +252,7 @@ class regression_analysis():
             dummy_cat_cocat_df = self.add_sum_col(dummy_cat_cocat_df)
         # -------------------------------------------
         # first two categorical variables cross tab
-        i, j = cat_vars_all[0], cat_vars_all[1]
+        i, j = cat_vars[0], cat_vars[1]
         df = new_df[[i, j]]
         cc_df = pd.crosstab(df[i], df[j])
         cc_df.columns = [str(c) + '_' + the_panel for c in cc_df.columns]
@@ -254,21 +262,21 @@ class regression_analysis():
             cc_df = self.add_sum_col(cc_df)
         # ----- Continuous Variables by Dummy or Category --------------------------------
         # -------------------------------------
-        groupby_dummy_dfs = []
-        for i in dum_vars:
+        continuous_by_dummies = dict.fromkeys(con_vars)
+        for i in con_vars:
             sub_groupby_dfs = []
-            for j in con_vars:
+            for j in dum_vars:
                 df = new_df[[i, j]]
-                agg_func_math = {j:['mean', 'std', 'min', 'median', 'max', 'count']}
-                df2 = df.groupby([i]).agg(agg_func_math, axis=0)
+                agg_func_math = {i:['mean', 'std', 'min', 'median', 'max', 'count']}
+                df2 = df.groupby([j]).agg(agg_func_math, axis=0)
+                df2.columns = ['mean', 'std', 'min', 'median', 'max', 'count']
                 sub_groupby_dfs.append(df2)
-            df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), sub_groupby_dfs)
-            df3.index = [i + '_' + str(j) for j in df3.index]
-            groupby_dummy_dfs.append(df3)
-        dummy_continuous_df = functools.reduce(lambda a, b: pd.concat([a, b], join='inner'), groupby_dummy_dfs)
+            df3 = functools.reduce(lambda a, b: pd.concat([a, b], join='inner'), sub_groupby_dfs)
+            df3.index = [j + '_' + str(z) for z in df3.index]
+            continuous_by_dummies[i] = df3
         # --------------------------------------
-        groupby_cat_dfs = []
-        for i in cat_vars_all:
+        groupby_cat_dfs = dict.fromkeys(cat_vars)
+        for i in cat_vars:
             sub_groupby_dfs = []
             for j in con_vars:
                 df = new_df[[i, j]]
@@ -277,17 +285,82 @@ class regression_analysis():
                 sub_groupby_dfs.append(df2)
             df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), sub_groupby_dfs)
             df3.index = [str(c) + '_' + the_panel for c in df3.index]
-            groupby_cat_dfs.append(df3)
+            groupby_cat_dfs[i] = df3
         # ----- Update Instance Attributes ------------------------------------------------
-        self.descriptive_stats_tables = (con_vars_sum_stats, dum_vars_sum_stats, cat_stats_dict,
-                                         dummy_cat_cocat_df, cc_df, dummy_continuous_df, groupby_cat_dfs)
+        self.descriptive_stats_tables = {'continuous_vars_stats': con_vars_sum_stats,
+                                         'dummy_vars_stats': dum_vars_sum_stats,
+                                         'categorical_vars_count': cat_stats_dict,
+                                         'crosstab_dummy_categorical_vars': dummy_cat_cocat_df,
+                                         'crosstab_two_categorical_vars': cc_df,
+                                         'continuous_vars_by_dummies': continuous_by_dummies,
+                                         'continuous_vars_by_categorical': groupby_cat_dfs}
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
-                                   descriptive_stats_tables=self.descriptive_stats_tables)
+                                   descriptive_stats_tables=self.descriptive_stats_tables,
+                                   continuous_vars=con_vars,
+                                   dummy_vars=dum_vars,
+                                   categorical_vars=cat_vars)
 
-    def descriptive_stats_of_reg_vars_for_consec_panels(self):
-        pass
+    def export_single_descriptive_table_to_latex(self, df, colname_map, key, k2=None):
+        # ------------ change column and row names ------------------
+        df2 = df.copy(deep=True)
+        for varname in colname_map.keys():
+            for col in df2.columns:
+                if col == 'niche_app':
+                    col = 'nicheApp'
+                elif col == 'Countniche_app':
+                    col = 'CountnicheApp'
+                else:
+                    col2 = col.split('_')
+                    col2 = col2[0]
+                if varname == col2:
+                    df2.rename(columns={col: colname_map[varname]}, inplace=True)
+                elif varname in col2:
+                    df2.rename(columns={col: colname_map[varname]}, inplace=True)
+        if k2 is None:
+            filename = key + '_latex.tex'
+        else:
+            filename = key + '_' + k2 + '_latex.tex'
+        df2.to_latex(
+            buf=regression_analysis.descriptive_stats_path / filename,
+            columns=None,
+            col_space=None,
+            header=True,
+            index=True,
+            na_rep='NaN',
+            formatters=None,
+            float_format="%.2f",
+            sparsify=None,
+            index_names=True,
+            bold_rows=False,
+            column_format=None,
+            longtable=None,
+            escape=None,
+            encoding=None,
+            decimal='.',
+            multicolumn=None,
+            multicolumn_format=None,
+            multirow=None,
+            caption=None,
+            label=None,
+            position=None)
+        return df2
+
+    def export_descriptive_stats_to_latex(self, colname_map):
+        stats_dict = copy.deepcopy(self.descriptive_stats_tables)
+        for key, item in stats_dict.items():
+            if isinstance(item, pd.DataFrame):
+                self.export_single_descriptive_table_to_latex(df=item,
+                                                              colname_map=colname_map,
+                                                              key=key)
+            else:
+                for k2, item2 in item.items():
+                    self.export_single_descriptive_table_to_latex(df=item2,
+                                                                  colname_map=colname_map,
+                                                                  key=key,
+                                                                  k2=k2)
+
     # ###############################################################################################
     def regression(self, dep_var, time_variant_vars, time_invariant_vars,
                    cross_section, reg_type, the_panel=None):
@@ -475,11 +548,11 @@ class regression_analysis():
         elif cat_var == 'contentRating':
             df1 = self.select_vars(single_var=cat_var)
             if time_invariant is True:
-                df1['contentRatingEveryone'] = df1['contentRating_' + self.consec_panels[-1]].apply(
-                    lambda x: 1 if 'Everyone' in x else 0)
+                df1['contentRatingAdult'] = df1['contentRating_' + self.consec_panels[-1]].apply(
+                    lambda x: 0 if 'Everyone' in x else 1)
             else:
                 for i in self.consec_panels:
-                    df1['contentRatingEveryone_'+i] = df1['contentRating_'+i].apply(lambda x: 1 if 'Everyone' in x else 0)
+                    df1['contentRatingAdult_'+i] = df1['contentRating_'+i].apply(lambda x: 0 if 'Everyone' in x else 1)
             dcols = ['contentRating_'+ i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
