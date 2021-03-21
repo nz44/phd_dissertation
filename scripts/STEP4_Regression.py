@@ -80,7 +80,8 @@ class regression_analysis():
                  continuous_vars=None,
                  dummy_vars=None,
                  categorical_vars=None,
-                 time_invariant_dummies=None):
+                 time_invariant_dummies=None,
+                 several_reg_results_pandas=None):
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
@@ -92,6 +93,7 @@ class regression_analysis():
         self.dum_vars = dummy_vars
         self.cat_vars = categorical_vars
         self.tiv_dums = time_invariant_dummies
+        self.several_reg_results = several_reg_results_pandas
 
     def select_partial_vars(self, text):
         l1 = []
@@ -366,6 +368,7 @@ class regression_analysis():
                    cross_section, reg_type, the_panel=None):
         """
         run convert_df_from_wide_to_long first and get self.panel_long_df updated, then run this method
+        https://bashtage.github.io/linearmodels/doc/panel/models.html
         """
         if cross_section is True:
             x_vars = [i + '_' + the_panel for i in time_variant_vars]
@@ -377,10 +380,14 @@ class regression_analysis():
             y = new_df[[dep_var]]
             if reg_type == 'OLS':
                 model = sm.OLS(y, X)
+                results = model.fit()
+                results = results.get_robustcov_results()
             elif reg_type == 'logit':
                 model = sm.Logit(y, X)
+                results = model.fit()
             elif reg_type == 'probit':
                 model = sm.Probit(y, X)
+                results = model.fit()
         else: # panel regression models
             x_vars = []
             x_vars.extend(time_variant_vars)
@@ -391,17 +398,16 @@ class regression_analysis():
             y = new_df[[dep_var]]
             if reg_type == 'POOLED_OLS':
                 model = PooledOLS(y, X)
+                results = model.fit(cov_type='clustered', cluster_entity=True)
             elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
                 model = PanelOLS(y, X,
+                                 drop_absorbed=True,
                                  entity_effects=True,
-                                 time_effects=True,
-                                 drop_absorbed=True)
+                                 time_effects=True)
+                results = model.fit(cov_type = 'clustered', cluster_entity = True)
             elif reg_type == 'RE':
                 model = RandomEffects(y, X,)
-        results = model.fit()
-        if reg_type == 'OLS':
-            results = results.get_robustcov_results()
-        print(results.summary())
+                results = model.fit(cov_type = 'clustered', cluster_entity = True)
         return results
 
     def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars, cross_section, reg_types, the_panel=None):
@@ -420,31 +426,41 @@ class regression_analysis():
             results_dict[reg_type] = results_dict_sub
         return results_dict
 
-    def compile_several_reg_results_into_pandas(self, results_dict, time_variant_vars, time_invariant_vars, cross_section, the_panel=None):
+    def compile_single_reg_results_into_pandas(self, results):
         """
-        :param results_dict: is the output of self.several_regressions
-        :return:
+        :param results: is the output of self.regression
         """
-        if cross_section is True:
-            x_vars = [i + '_' + the_panel for i in time_variant_vars]
-            x_vars.extend(time_invariant_vars)
-            x_vars.insert(0, 'const')
-            print('variables list : ', x_vars)
-        df_list = []
-        for reg_type, several_results in results_dict.items():
-            for dep_var, result in several_results.items():
-                coef = result.params
-                if reg_type == 'OLS': # ols param attribute is a horizontal numpy array
-                    coef = pd.Series(coef)
-                    coef.index = x_vars
-                coef.rename(reg_type + '_' + dep_var, inplace=True)
-                coef = coef.to_frame()
-                df_list.append(coef)
-        coef_df = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-        filename = self.initial_panel + '_coeff_reg_table.pickle'
-        q = regression_analysis.reg_table_path / filename
-        pickle.dump(coef_df, open(q, 'wb'))
-        return coef_df
+        if isinstance(results.params, np.ndarray): # for OLS robust results
+            param_df = pd.Series(results.params).rename('coefficients').to_frame()
+        else:
+            param_df = results.params.rename('coefficients').to_frame()
+        return param_df
+
+    def compile_several_reg_results_into_pandas(self, results_dict):
+        res_pd_dict = dict.fromkeys(results_dict.keys())
+        for reg_type, content in results_dict.items():
+            param_dfs = []
+            for dep_var, results in content.items():
+                param_df = self.compile_single_reg_results_into_pandas(results)
+                param_df.rename(columns={param_df.columns[0]: dep_var + '_coef'}, inplace=True)
+                param_dfs.append(param_df)
+            coef_df = functools.reduce(lambda a, b: a.join(b, how='inner'), param_dfs)
+            res_pd_dict[reg_type] = coef_df
+        self.several_reg_results = res_pd_dict
+        return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   several_reg_results_pandas=self.several_reg_results)
+
+    def compile_several_reg_pandas_to_latex(self, cross_section, the_panel):
+        pass
+        # if cross_section is True:
+        #     filename = self.initial_panel + '_' + the_panel + '_' + reg_type + '_coeffs.pickle'
+        # else:
+        #     filename = self.initial_panel + '_panel_' + reg_type + '_coeffs.pickle'
+        # q = regression_analysis.reg_table_path / filename
+        # pickle.dump(coef_df, open(q, 'wb'))
+
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
         vars_in_a_panel = []
