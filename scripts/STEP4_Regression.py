@@ -13,6 +13,7 @@ import statsmodels.api as sm
 from linearmodels import PooledOLS
 from linearmodels import PanelOLS
 from linearmodels import RandomEffects
+from linearmodels.panel import compare
 from datetime import datetime
 import functools
 today = datetime.today()
@@ -76,6 +77,7 @@ class regression_analysis():
                  dep_var=None,
                  independent_vars=None,
                  panel_long_df=None,
+                 individual_dummies_df=None,
                  descriptive_stats_tables=None,
                  continuous_vars=None,
                  dummy_vars=None,
@@ -88,6 +90,7 @@ class regression_analysis():
         self.dep_var = dep_var
         self.independent_vars = independent_vars
         self.panel_long_df = panel_long_df
+        self.i_dummies_df = individual_dummies_df
         self.descriptive_stats_tables = descriptive_stats_tables
         self.con_vars = continuous_vars
         self.dum_vars = dummy_vars
@@ -127,7 +130,7 @@ class regression_analysis():
         selected_df = new_df[selected_cols]
         return selected_df
 
-    def select_panel_vars(self, time_invariant_vars, time_variant_vars, dep_vars):
+    def select_panel_vars(self, time_invariant_vars, time_variant_vars, dep_vars, demaned_time_variant_vars=None):
         vars = ['latitude',
                 'longitude',
                 'developer',
@@ -138,6 +141,9 @@ class regression_analysis():
         vars_2 = []
         for i in time_variant_vars:
             vars_2.extend([i + '_' + panel for panel in self.consec_panels])
+        if demaned_time_variant_vars is not None:
+            for i in demaned_time_variant_vars:
+                vars_2.extend([i + '_' + panel for panel in self.consec_panels])
         for i in dep_vars:
             vars_2.extend([i + '_' + panel for panel in self.consec_panels])
         vars.extend(vars_2)
@@ -146,29 +152,36 @@ class regression_analysis():
         return new_df
 
     # -------------------------- independent var of interest ---------------------------------------------
-    def convert_df_from_wide_to_long(self, time_variant_vars, time_invariant_vars, dep_vars):
-        new_df = self.select_panel_vars(time_invariant_vars, time_variant_vars, dep_vars)
+    def convert_df_from_wide_to_long(self, time_variant_vars, time_invariant_vars, dep_vars, demaned_time_variant_vars=None):
+        new_df = self.select_panel_vars(time_invariant_vars, time_variant_vars, dep_vars, demaned_time_variant_vars)
         new_df = new_df.reset_index()
         stub_names = copy.deepcopy(time_variant_vars)
         stub_names.extend(dep_vars)
+        if demaned_time_variant_vars is not None:
+            stub_names.extend(demaned_time_variant_vars)
         new_df = pd.wide_to_long(new_df, stubnames=stub_names, i="index", j="panel", sep='_') # here you can add developer for multiindex output
         new_df = new_df.sort_index()
+        self.panel_long_df = new_df
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
-                                   panel_long_df=new_df)
-    # -------------------------- Model Selection ---------------------------------------------------------
-    """
-    https://www.statsmodels.org/stable/generated/statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman.html#statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman
-    Whether to use fixed effect or random effects, you have to run hausman test. 
-    """
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df)
 
-    # -------------------------- Regression --------------------------------------------------------------
-    """
-    # http://www.data-analysis-in-python.org/t_statsmodels.html
-    # https://towardsdatascience.com/a-guide-to-panel-data-regression-theoretics-and-implementation-with-python-4c84c5055cf8
-    # https://bashtage.github.io/linearmodels/doc/panel/models.html
-    """
+    def combine_individual_dummies_to_long_panel(self):
+        """
+        run after self.create_individual_app_dummies()
+        """
+        dfl = self.panel_long_df.copy(deep=True)
+        dfr = self.i_dummies_df.copy(deep=True)
+        df = dfl.join(dfr, how='left')
+        self.panel_long_df = df
+        return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df)
+    # ===================== check correlation ===========================================================
     def correlation_matrix(self, dep_vars, time_variant_vars, time_invariant_vars, the_panel):
         """
         This is for the purpose of checking multicolinearity between independent variables
@@ -182,6 +195,21 @@ class regression_analysis():
         df_corr = hdf.corr()
         return df_corr
 
+    # ----------------------------------------------------------------------------------------------------
+    """
+    Mar 21, 2021
+    I decide to find the correlation between a varibale with its lags, since I cannot use FE due to time-invariant niche-app,
+    (even if I demean other variable, I cannot ignore the fact that if you do not demean niche-app, how can you subtract out the 
+    time invariant effect). 
+    https://www.statsmodels.org/stable/generated/statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman.html#statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman
+    Whether to use fixed effect or random effects, you have to run hausman test. 
+    So I might include interval variables in a regular OLS.
+    """
+    def time_series_corr_single_var(self, var):
+        vars = [var + '_' + i for i in self.consec_panels]
+
+
+    # ========================= descriptive statistics ==================================================
     def add_sum_row(self, df):
         sum_row = df.sum(axis=0)
         sum_row = sum_row.to_frame().T
@@ -297,6 +325,7 @@ class regression_analysis():
                                          'continuous_vars_by_dummies': continuous_by_dummies,
                                          'continuous_vars_by_categorical': groupby_cat_dfs}
         return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
                                    descriptive_stats_tables=self.descriptive_stats_tables,
@@ -364,11 +393,25 @@ class regression_analysis():
                                                                   k2=k2)
 
     # ###############################################################################################
+    # -------------------------- Regression --------------------------------------------------------------
+    """
+    # http://www.data-analysis-in-python.org/t_statsmodels.html
+    # https://towardsdatascience.com/a-guide-to-panel-data-regression-theoretics-and-implementation-with-python-4c84c5055cf8
+    # https://bashtage.github.io/linearmodels/doc/panel/models.html
+    """
+
+    # ###############################################################################################
     def regression(self, dep_var, time_variant_vars, time_invariant_vars,
                    cross_section, reg_type, the_panel=None):
         """
         run convert_df_from_wide_to_long first and get self.panel_long_df updated, then run this method
         https://bashtage.github.io/linearmodels/doc/panel/models.html
+        I have observed that using demeaned time variant independent variables in POOLED_OLS generats the same
+        coefficient estimates (for time variant) as the ones from FE model with un-demeaned data.
+        The dependent variable is better to interpret as staying un-demeaned.
+        The coefficient of time invariant variables are then interpreted as when all other time variant variables are
+        set to their group specific means.
+        The weird thing, why does niche_app still get appear in FE model？
         """
         if cross_section is True:
             x_vars = [i + '_' + the_panel for i in time_variant_vars]
@@ -392,11 +435,17 @@ class regression_analysis():
             x_vars = []
             x_vars.extend(time_variant_vars)
             x_vars.extend(time_invariant_vars)
+            if reg_type == 'PPOLED_OLS_with_individual_dummies':
+                x_vars.extend(self.i_dummies_df.columns)
             new_df = self.panel_long_df.copy(deep=True)
             independents_df = new_df[x_vars]
             X = sm.add_constant(independents_df)
             y = new_df[[dep_var]]
+            # https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html
             if reg_type == 'POOLED_OLS':
+                model = PooledOLS(y, X)
+                results = model.fit(cov_type='clustered', cluster_entity=True)
+            elif reg_type == 'PPOLED_OLS_with_individual_dummies':
                 model = PooledOLS(y, X)
                 results = model.fit(cov_type='clustered', cluster_entity=True)
             elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
@@ -411,9 +460,9 @@ class regression_analysis():
         return results
 
     def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars, cross_section, reg_types, the_panel=None):
-        results_dict = dict.fromkeys(reg_types)
+        results_dict_k_reg_type = dict.fromkeys(reg_types, dict.fromkeys(dep_vars))
+        results_dict_k_dep_var = dict.fromkeys(dep_vars, dict.fromkeys(reg_types))
         for reg_type in reg_types:
-            results_dict_sub = dict.fromkeys(dep_vars)
             for dep_var in dep_vars:
                 result = self.regression(
                     dep_var,
@@ -422,35 +471,53 @@ class regression_analysis():
                     cross_section,
                     reg_type,
                     the_panel)
-                results_dict_sub[dep_var] = result
-            results_dict[reg_type] = results_dict_sub
-        return results_dict
+                results_dict_k_reg_type[reg_type][dep_var] = result
+                results_dict_k_dep_var[dep_var][reg_type] = result
+        return results_dict_k_reg_type, results_dict_k_dep_var
 
-    def compile_single_reg_results_into_pandas(self, results):
+    def compare_several_panel_reg_results(self, results_dict):
         """
-        :param results: is the output of self.regression
+        https://bashtage.github.io/linearmodels/panel/examples/examples.html
+        results_dict is the output of several_regressions
         """
-        if isinstance(results.params, np.ndarray): # for OLS robust results
-            param_df = pd.Series(results.params).rename('coefficients').to_frame()
-        else:
-            param_df = results.params.rename('coefficients').to_frame()
-        return param_df
+        panels_compare = {}
+        for dep_var, results in results_dict[1].items():
+            panels_regs = {}
+            for reg_type in results.keys():
+                if reg_type in ['FE', 'RE', 'POOLED_OLS', 'PPOLED_OLS_with_individual_dummies']:
+                    panels_regs[reg_type] = results[reg_type]
+            compared_results = compare(panels_regs)
+            print(compared_results)
+            panels_compare[dep_var] = compared_results
+        return panels_compare
 
-    def compile_several_reg_results_into_pandas(self, results_dict):
-        res_pd_dict = dict.fromkeys(results_dict.keys())
-        for reg_type, content in results_dict.items():
-            param_dfs = []
-            for dep_var, results in content.items():
-                param_df = self.compile_single_reg_results_into_pandas(results)
-                param_df.rename(columns={param_df.columns[0]: dep_var + '_coef'}, inplace=True)
-                param_dfs.append(param_df)
-            coef_df = functools.reduce(lambda a, b: a.join(b, how='inner'), param_dfs)
-            res_pd_dict[reg_type] = coef_df
-        self.several_reg_results = res_pd_dict
-        return regression_analysis(df=self.df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
-                                   several_reg_results_pandas=self.several_reg_results)
+    def compile_several_reg_results_into_pandas(self, panels_compare):
+        """
+        panel_compare is the output of self.compare_several_panel_reg_results(self, results_dict)
+        """
+        def change_index_name(df, end_fix):
+            dfn = df.copy(deep=True)
+            for i in dfn.index:
+                dfn.rename(index={i: i+'_'+end_fix}, inplace=True)
+            return dfn
+        df5 = []
+        for dep_var, compare in panels_compare.items():
+            df_params = change_index_name(compare.params, end_fix='coef')
+            df_tstats = change_index_name(compare.tstats, end_fix='tstats')
+            df_pvalues = change_index_name(compare.pvalues, end_fix='pvalues')
+            df1 = [df_params, df_tstats, df_pvalues]
+            df2 = functools.reduce(lambda a, b: pd.concat([a, b], axis=0), df1)
+            df3 = [df2,
+                   compare.f_statistic.T,
+                   compare.rsquared.to_frame().T,
+                   compare.nobs.to_frame().T,
+                   compare.cov_estimator.to_frame().T]
+            df4 = functools.reduce(lambda a, b: pd.concat([a, b], axis=0), df3)
+            for i in df4.columns:
+                df4.rename(columns={i: dep_var+'_'+i}, inplace=True)
+            df5.append(df4)
+        df6 = functools.reduce(lambda a, b: a.join(b, how='inner'), df5)
+        return df6
 
     def compile_several_reg_pandas_to_latex(self, cross_section, the_panel):
         pass
@@ -595,7 +662,47 @@ class regression_analysis():
             dcols = [cat_var + '_' + i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
-        return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
+
+    def create_individual_app_dummies(self):
+        df = self.df.copy(deep=True)
+        df.reset_index(inplace=True)
+        df['appId'] = df['index']
+        df.set_index('index', inplace=True)
+        dummies = df[['appId']]
+        dummies = pd.get_dummies(dummies, columns=['appId'], drop_first=True)
+        self.i_dummies_df = dummies
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
+
+    def create_demean_time_variant_vars(self, time_variant_vars):
+        """
+        Because individual dummies regression takes too much time, I decide use this for FE, so that I could also include time invariant variables.
+        """
+        df = self.df.copy(deep=True)
+        dfs = []
+        for i in time_variant_vars:
+            ts_i = [i + '_' + p for p in self.consec_panels]
+            sub_df = df[ts_i]
+            sub_df['PanelMean'+i] = sub_df.mean(axis=1)
+            for p in self.consec_panels:
+                sub_df['DeMeaned'+i+'_'+p] = sub_df[i+'_'+p] - sub_df['PanelMean'+i]
+            ts_idm = ['DeMeaned' + i + '_' + p for p in self.consec_panels]
+            dfs.append(sub_df[ts_idm])
+        df_new = functools.reduce(lambda a, b: a.join(b, how='inner'), dfs)
+        self.df = self.df.join(df_new, how='inner')
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
 
     def standardize_continuous_vars(self, con_var, method):
         vars = [con_var + '_' + i for i in self.consec_panels]
@@ -619,7 +726,11 @@ class regression_analysis():
             print(df3[i].describe())
             print()
         self.df = self.df.join(df3, how='inner')
-        return regression_analysis(df=self.df, initial_panel=self.initial_panel, consec_panels=self.consec_panels)
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
 
     def peek_at_missing(self, **kwargs):
         df1 = self.select_vars(**kwargs)
