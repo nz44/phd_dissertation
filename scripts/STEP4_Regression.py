@@ -460,8 +460,7 @@ class regression_analysis():
         return results
 
     def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars, cross_section, reg_types, the_panel=None):
-        results_dict_k_reg_type = dict.fromkeys(reg_types, dict.fromkeys(dep_vars))
-        results_dict_k_dep_var = dict.fromkeys(dep_vars, dict.fromkeys(reg_types))
+        results_dict = dict.fromkeys(reg_types, dict.fromkeys(dep_vars))
         for reg_type in reg_types:
             for dep_var in dep_vars:
                 result = self.regression(
@@ -471,24 +470,23 @@ class regression_analysis():
                     cross_section,
                     reg_type,
                     the_panel)
-                results_dict_k_reg_type[reg_type][dep_var] = result
-                results_dict_k_dep_var[dep_var][reg_type] = result
-        return results_dict_k_reg_type, results_dict_k_dep_var
+                results_dict[reg_type][dep_var] = result
+        return results_dict
 
-    def compare_several_panel_reg_results(self, results_dict):
+    def compare_several_panel_reg_results(self, results_dict, dep_vars):
         """
         https://bashtage.github.io/linearmodels/panel/examples/examples.html
         results_dict is the output of several_regressions
         """
-        panels_compare = {}
-        for dep_var, results in results_dict[1].items():
-            panels_regs = {}
-            for reg_type in results.keys():
-                if reg_type in ['FE', 'RE', 'POOLED_OLS', 'PPOLED_OLS_with_individual_dummies']:
-                    panels_regs[reg_type] = results[reg_type]
-            compared_results = compare(panels_regs)
-            print(compared_results)
-            panels_compare[dep_var] = compared_results
+        panels_results = dict.fromkeys(dep_vars, {})
+        panels_compare = dict.fromkeys(dep_vars)
+        for reg_type, results in results_dict.items():
+            if reg_type in ['FE', 'RE', 'POOLED_OLS', 'PPOLED_OLS_with_individual_dummies']:
+                for dep_var in results.keys():
+                    panels_results[dep_var][reg_type] = results[dep_var]
+                    compared_results = compare(panels_results[dep_var])
+                    print(compared_results)
+                    panels_compare[dep_var] = compared_results
         return panels_compare
 
     def compile_several_reg_results_into_pandas(self, panels_compare):
@@ -517,16 +515,134 @@ class regression_analysis():
                 df4.rename(columns={i: dep_var+'_'+i}, inplace=True)
             df5.append(df4)
         df6 = functools.reduce(lambda a, b: a.join(b, how='inner'), df5)
-        return df6
+        # round the entire dataframe
+        df7 = df6.T
+        for i in df7.columns:
+            if i not in ['_cov_type', 'nobs']:
+                df7[i] = df7[i].astype(float).round(decimals=3)
+            elif i == 'nobs':
+                df7[i] = df7[i].astype(int)
+        df8 = df7.T
+        return df8
 
-    def compile_several_reg_pandas_to_latex(self, cross_section, the_panel):
-        pass
-        # if cross_section is True:
-        #     filename = self.initial_panel + '_' + the_panel + '_' + reg_type + '_coeffs.pickle'
-        # else:
-        #     filename = self.initial_panel + '_panel_' + reg_type + '_coeffs.pickle'
-        # q = regression_analysis.reg_table_path / filename
-        # pickle.dump(coef_df, open(q, 'wb'))
+    def customize_pandas_before_output_latex(self,
+                                             df,
+                                             selective_dep_vars,
+                                             selective_reg_types,
+                                             p_value_as_asterisk=False):
+        """
+        :param df6: the output of self.compile_several_reg_results_into_pandas(panels_compare)
+        :return: df8: the customized version of pandas that will ultimately transformed into latex
+        """
+        cols_to_keep = [i + '_' + j for j in selective_reg_types for i in selective_dep_vars]
+        df7 = df.copy(deep=True)
+        df8 = df7[cols_to_keep]
+        if p_value_as_asterisk is True:
+            df9 = df8.T
+        for j in df9.columns:
+            if '_pvalues' in j:
+                df9[j + '<0.01'] = df9[j].apply(lambda x: '***' if x < 0.01 else 'not sig at 1%')
+                df9[j + '<0.05'] = df9[j].apply(lambda x: '**' if x < 0.05 else 'not sig at 5%')
+                df9[j + '<0.1'] = df9[j].apply(lambda x: '*' if x < 0.1 else 'not sig at 10%')
+        ind_vars_sig_at_1_percent = []
+        ind_vars_sig_at_5_percent = []
+        ind_vars_sig_at_10_percent = []
+        for j in df9.columns:
+            if '***' in df9[j].values:
+                ind_var = j.rstrip('pvalues<0.01').rstrip('_')
+                ind_vars_sig_at_1_percent.append(ind_var)
+            elif '**' in df9[j].values:
+                ind_var = j.rstrip('pvalues<0.05').rstrip('_')
+                ind_vars_sig_at_5_percent.append(ind_var)
+            elif '*' in df9[j].values:
+                ind_var = j.rstrip('pvalues<0.1').rstrip('_')
+                ind_vars_sig_at_10_percent.append(ind_var)
+        for i in ind_vars_sig_at_1_percent:
+            ind_vars_sig_at_5_percent.remove(i)
+            ind_vars_sig_at_10_percent.remove(i)
+            df9[i + '_coef'] = df9.apply(
+                        lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.01'] if row[i + '_pvalues<0.01'] != 'not sig at 1%' else str(row[i + '_coef']),
+                         axis=1)
+        for i in ind_vars_sig_at_5_percent:
+            ind_vars_sig_at_10_percent.remove(i)
+            df9[i + '_coef'] = df9.apply(
+                        lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.05'] if row[i + '_pvalues<0.05'] != 'not sig at 5%' else str(row[i + '_coef']),
+                        axis=1)
+        for i in ind_vars_sig_at_10_percent:
+            df9[i + '_coef'] = df9.apply(
+                        lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.1'] if row[i + '_pvalues<0.1'] != 'not sig at 10%' else str(row[i + '_coef']),
+                        axis=1)
+        cols_to_keep = [i for i in df9.columns if '_coef' in i]
+        cols_to_keep.extend(['F stat', 'P-value', 'rsquared', 'nobs', '_cov_type'])
+        df10 = df9[cols_to_keep]
+        df10 = df10.T
+        return df10
+
+    def output_pandas_to_latex(self, df):
+        """
+        :param df: the output of self.customize_pandas_before_output_latex()
+        :return: df10:
+        """
+        df2 = df.copy(deep=True)
+        # ------------ rename columns ---------------------------------
+        dep_var_map={'paidTrue': 'app is paid',
+                     'offersIAPTrue': 'app offers in-app-purchase',
+                     'containsAdsTrue': 'app contains ads',
+                     'price': 'app price'}
+        for i in df2.columns:
+            for j in dep_var_map.keys():
+                if j in i:
+                    df2.rename(columns={i: dep_var_map[j]}, inplace=True)
+        # ------------ prepare column for multiindex rows ---------------
+        df2 = df2.reset_index()
+        def set_row_level_0(x):
+            if x in ['niche_app_coef']:
+                return 'niche app indicators'
+            elif x in ['const_coef','genreIdGame_coef','contentRatingAdult_coef','days_since_released_coef']:
+                return 'time-invariant variables'
+            elif x in ['DeMeanedscore_coef','DeMeanedZSCOREreviews_coef','DeMeanedminInstallsTop_coef','DeMeanedminInstallsMiddle_coef']:
+                return 'demeaned time-variant variables'
+            else:
+                return 'regression statistics'
+        df2['Variable Groups'] = df2['index'].apply(lambda x: set_row_level_0(x))
+        row_map={'const': 'constant',
+                     'DeMeanedscore': 'app rating (1-5) demeaned',
+                     'DeMeanedZSCOREreviews': 'number of consumer reviews (z-score)',
+                     'DeMeanedminInstallsTop': 'app has minimum installs above 10,000,000',
+                     'DeMeanedminInstallsMiddle': 'app has minimum installs between 10,000 and 10,000,000',
+                     'niche_app': 'app is niche',
+                     'genreIdGame': 'app is hedonic',
+                     'contentRatingAdult': 'app contains age restrictive contents',
+                     'days_since_released': 'number of days since app was released',
+                     'F stat': 'F statistic',
+                     'P-value': 'P Value',
+                     'rsquared': 'R Squared',
+                     'nobs': 'number of observations',
+                     '_cov_type': 'covariance type'}
+        def set_row_level_1(x):
+            for i in row_map.keys():
+                if i in x:
+                    return row_map[i]
+        df2['Independent Variables'] = df2['index'].apply(lambda x: set_row_level_1(x))
+        # manually set the order of rows you want to present in final latex table
+        def set_row_order_level_0(x):
+            if x == 'niche app indicators':
+                return 0
+            elif x == 'time-invariant variables':
+                return 1
+            elif x == 'demeaned time-variant variables':
+                return 2
+            elif x == 'regression statistics':
+                return 3
+        df2['row_order_level_0'] = df2['Variable Groups'].apply(lambda x: set_row_order_level_0(x))
+        df2.sort_values(by='row_order_level_0', inplace=True)
+        df2.set_index(['Variable Groups', 'Independent Variables'], inplace=True)
+        df2.drop(['index', 'row_order_level_0'], axis=1, inplace=True)
+        df2.columns = pd.MultiIndex.from_product([['pooled OLS with demeaned time-variant variables'],
+                                                  df2.columns.tolist()])
+        filename = self.initial_panel + '_POOLED_OLS_demeaned.tex'
+        df3 = df2.to_latex(buf=regression_analysis.reg_table_path / filename)
+        return df2
 
     # ----------------------------------------------------------------------------------------------------
     def print_col_names(self, the_panel):
@@ -698,6 +814,24 @@ class regression_analysis():
             dfs.append(sub_df[ts_idm])
         df_new = functools.reduce(lambda a, b: a.join(b, how='inner'), dfs)
         self.df = self.df.join(df_new, how='inner')
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
+
+    def count_number_of_days_since(self, var):
+        """
+        :param var: time invariant independent variables, could either be released or updated
+        :return: a new variable which is the number of days between today() and the datetime
+        """
+        df2 = self.select_vars(single_var=var)
+        if var == 'released':
+            df2 = df2[df2.columns[0]] # since released is time-invariant variable, so just pick a single column
+            df2 = df2.rename('released').to_frame()
+            df2['days_since_released'] = pd.Timestamp.now().normalize() - df2['released']
+            df2['days_since_released'] = df2['days_since_released'].apply(lambda x: int(x.days))
+        self.df = self.df.join(df2, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
                                    individual_dummies_df=self.i_dummies_df,
