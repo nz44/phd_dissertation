@@ -5,6 +5,7 @@ import pickle
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
+import math
 import seaborn as sb
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
@@ -18,6 +19,12 @@ from datetime import datetime
 import functools
 today = datetime.today()
 yearmonth = today.strftime("%Y%m")
+
+# *********************************************************************************************
+# *********************************************************************************************
+# ******************* COMBINE DATAFRAMES ******************************************************
+# *********************************************************************************************
+# *********************************************************************************************
 
 class combine_dataframes():
 
@@ -58,9 +65,11 @@ class combine_dataframes():
         result_df.set_index(['developer', 'appid'], inplace=True)
         return result_df
 
-#########################################################################################
-#######   REGRESSION   ##################################################################
-#########################################################################################
+# *********************************************************************************************
+# *********************************************************************************************
+# ******************* REGRESSION CLASS ********************************************************
+# *********************************************************************************************
+# *********************************************************************************************
 
 class regression_analysis():
     """by default, regression analysis will either use cross sectional data or panel data with CONSECUTIVE panels,
@@ -70,33 +79,111 @@ class regression_analysis():
     descriptive_stats_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats')
 
+    var_latex_map = {
+               'const': 'Constant',
+               'score': '\makecell[l]{Rating \\\ (1-5)}',
+               'DeMeanedscore': '\makecell[l]{Rating (1-5) \\\ (demeaned)}',
+               'reviews': '\makecell[l]{Number of \\\ reviews}',
+               'ZSCOREreviews': '\makecell[l]{Number of \\\ reviews (z-score)}',
+               'DeMeanedZSCOREreviews': '\makecell[l]{Number of reviews \\\ (demeaned z-score)}',
+               'minInstallsTop': '\makecell[l]{Min installs \\\ above 10,000,000}',
+               'DeMeanedminInstallsTop': '\makecell[l]{Min installs \\\ above 10,000,000 \\\ (demeaned)}',
+               'minInstallsMiddle': '\makecell[l]{Min installs between \\\ 10,000 and 10,000,000}',
+               'DeMeanedminInstallsMiddle': '\makecell[l]{Min installs between \\\ 10,000 and 10,000,000 \\\ (demeaned)}',
+               'minInstallsBottom': '\makecell[l]{Min installs \\\ below 10,000}',
+               'DeMeanedminInstallsBottom': '\makecell[l]{Min installs \\\ below 10,000 \\\ (demeaned)}',
+               'niche_app': 'Niche app',
+               'genreIdGame': 'Hedonic app',
+               'contentRatingAdult': '\makecell[l]{Contains age \\\ restrictive contents}',
+               'days_since_released': '\makecell[l]{Days \\\ since released}',
+               'paidTrue': 'Paid',
+               'offersIAPTrue': 'Offers IAP',
+               'containsAdsTrue': 'Contains ads',
+               'price': 'Price',
+               'F stat': 'F statistic',
+               'P-value': 'P Value',
+               'rsquared': 'R Squared',
+               'nobs': '\makecell[l]{number of \\\ observations}',
+               '_cov_type': 'Covariance Type'}
+
+    descriptive_stats_table_row_order = {
+        'niche_app': 0,
+        'price': 1,
+        'paidTrue': 2,
+        'offersIAPTrue': 3,
+        'containsAdsTrue': 4,
+        'genreIdGame': 5,
+        'contentRatingAdult': 6,
+        'days_since_released': 7,
+        'minInstallsTop': 8,
+        'DeMeanedminInstallsTop': 9,
+        'minInstallsMiddle': 10,
+        'DeMeanedminInstallsMiddle': 11,
+        'minInstallsBottom': 12,
+        'DeMeanedminInstallsBottom': 13,
+        'score': 14,
+        'DeMeanedscore': 15,
+        'reviews': 16,
+        'ZSCOREreviews': 17,
+        'DeMeanedZSCOREreviews': 18,
+    }
+
+    descriptive_stats_table_column_map = {
+        'mean': 'Mean',
+        'median': 'Median',
+        'std': '\makecell[l]{Standard \\\ Deviation}',
+        'min': 'Min',
+        'max': 'Max',
+        'count': '\makecell[l]{Total \\\ Observations}',
+        '0_Count': '\makecell[l]{False \\\ Observations}',
+        '1_Count': '\makecell[l]{True \\\ Observations}',
+    }
+
     def __init__(self,
                  df,
                  initial_panel,
                  consec_panels,
-                 dep_var=None,
-                 independent_vars=None,
                  panel_long_df=None,
                  individual_dummies_df=None,
                  descriptive_stats_tables=None,
-                 continuous_vars=None,
-                 dummy_vars=None,
-                 categorical_vars=None,
-                 time_invariant_dummies=None,
                  several_reg_results_pandas=None):
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
-        self.dep_var = dep_var
-        self.independent_vars = independent_vars
         self.panel_long_df = panel_long_df
         self.i_dummies_df = individual_dummies_df
         self.descriptive_stats_tables = descriptive_stats_tables
-        self.con_vars = continuous_vars
-        self.dum_vars = dummy_vars
-        self.cat_vars = categorical_vars
-        self.tiv_dums = time_invariant_dummies
         self.several_reg_results = several_reg_results_pandas
+
+# *********************************************************************************************
+# ******************* BASIC FUNCTIONS *********************************************************
+# *********************************************************************************************
+
+    def print_col_names(self, the_panel):
+        vars_in_a_panel = []
+        for i in self.df.columns:
+            if the_panel in i:
+                print(i)
+                vars_in_a_panel.append(i)
+        return vars_in_a_panel
+
+    def print_unique_value_of_var_panel(self, single_var, the_panel=None):
+        if the_panel is not None:
+            col_name = single_var + '_' + the_panel
+            unique_l = self.df[col_name].unique()
+            print(col_name, 'contains', len(unique_l), 'unique values')
+            print(unique_l)
+            return unique_l
+        else:
+            col_name = [single_var+'_'+i for i in self.consec_panels]
+            d = dict.fromkeys(col_name)
+            for j in d.keys():
+                unique_l = self.df[j].unique()
+                print(j, 'contains', len(unique_l), 'unique values')
+                print(unique_l)
+                d[j]=unique_l
+                print()
+            return d
 
     def select_partial_vars(self, text):
         l1 = []
@@ -151,7 +238,17 @@ class regression_analysis():
         new_df = new_df[vars]
         return new_df
 
-    # -------------------------- independent var of interest ---------------------------------------------
+    def peek_at_missing(self, **kwargs):
+        df1 = self.select_vars(**kwargs)
+        null_data = df1[df1.isnull().any(axis=1)]
+        return null_data
+
+    def replace_literal_true(self, cat_var): # after checking unique value of cat_var, some cat_var has 'True' instead of True
+        cols = [cat_var+'_'+i for i in self.consec_panels]
+        for j in cols:
+            self.df.loc[self.df[j] == 'True', j] = True
+        return self.df
+
     def convert_df_from_wide_to_long(self, time_variant_vars, time_invariant_vars, dep_vars, demaned_time_variant_vars=None):
         new_df = self.select_panel_vars(time_invariant_vars, time_variant_vars, dep_vars, demaned_time_variant_vars)
         new_df = new_df.reset_index()
@@ -181,7 +278,7 @@ class regression_analysis():
                                    consec_panels=self.consec_panels,
                                    panel_long_df=self.panel_long_df,
                                    individual_dummies_df=self.i_dummies_df)
-    # ===================== check correlation ===========================================================
+
     def correlation_matrix(self, dep_vars, time_variant_vars, time_invariant_vars, the_panel):
         """
         This is for the purpose of checking multicolinearity between independent variables
@@ -195,21 +292,10 @@ class regression_analysis():
         df_corr = hdf.corr()
         return df_corr
 
-    # ----------------------------------------------------------------------------------------------------
-    """
-    Mar 21, 2021
-    I decide to find the correlation between a varibale with its lags, since I cannot use FE due to time-invariant niche-app,
-    (even if I demean other variable, I cannot ignore the fact that if you do not demean niche-app, how can you subtract out the 
-    time invariant effect). 
-    https://www.statsmodels.org/stable/generated/statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman.html#statsmodels.sandbox.regression.gmm.IVRegressionResults.spec_hausman
-    Whether to use fixed effect or random effects, you have to run hausman test. 
-    So I might include interval variables in a regular OLS.
-    """
-    def time_series_corr_single_var(self, var):
-        vars = [var + '_' + i for i in self.consec_panels]
+# *********************************************************************************************
+# ******************* Descriptive Statistics **************************************************
+# *********************************************************************************************
 
-
-    # ========================= descriptive statistics ==================================================
     def add_sum_row(self, df):
         sum_row = df.sum(axis=0)
         sum_row = sum_row.to_frame().T
@@ -222,25 +308,31 @@ class regression_analysis():
         df['sum'] = sum_row
         return df
 
-    def descriptive_stats_of_reg_vars_for_single_panel(self,
-                                                       continuous_vars,
-                                                       dummy_vars,
-                                                       cat_vars,
-                                                       time_invar_dum,
-                                                       the_panel,
-                                                       add_sum_row_col=True):
+    def descriptive_stats_for_single_panel(self,
+                                           continuous_vars,
+                                           dummy_vars,
+                                           cat_vars,
+                                           time_invar_dum,
+                                           time_invar_con,
+                                           the_panel,
+                                           add_sum_row_col=True):
         """
         This is must be run after self.create_new_dummies_from_cat_var to get updated self.df
         """
+        # ----- Select Vars --------------------------------------------------------------
         con_vars = [i + '_' + the_panel for i in continuous_vars]
+        con_vars.extend(time_invar_con)
         dum_vars = [i + '_' + the_panel for i in dummy_vars]
-        cat_vars = [i + '_' + the_panel for i in cat_vars]
-
         dum_vars.extend(time_invar_dum)
+        cat_vars = [i + '_' + the_panel for i in cat_vars]
+        con_and_dum_vars = copy.deepcopy(con_vars)
+        con_and_dum_vars.extend(dum_vars)
+        # ----- Select DFs ---------------------------------------------------------------
         new_df = self.df.copy(deep=True)
         con_vars_df = new_df[con_vars]
         dum_vars_df = new_df[dum_vars]
         cat_vars_df = new_df[cat_vars]
+        con_and_dum_df = new_df[con_and_dum_vars]
         # ----- Continuous Variables Summary Stats ---------------------------------------
         con_vars_sum_stats = con_vars_df.agg(['mean', 'std', 'min', 'median', 'max', 'count'], axis=0)
         # ----- Dummy Variables Count ----------------------------------------------------
@@ -252,8 +344,23 @@ class regression_analysis():
         dum_vars_sum_stats = functools.reduce(lambda a, b: a.join(b, how='inner'), dum_stats_dfs)
         if add_sum_row_col is True:
             dum_vars_sum_stats = self.add_sum_row(dum_vars_sum_stats)
+        # ----- Continuous and Dummy Variables Together ----------------------------------
+        con_and_dum_vars_stats = con_and_dum_df.agg(['mean', 'std', 'min', 'median', 'max', 'count'], axis=0)
+        con_and_dum_vars_stats = con_and_dum_vars_stats.T
+        con_and_dum_vars_stats['count'] = con_and_dum_vars_stats['count'].astype(int)
+        dum_stats_dfs = []
+        for i in dum_vars:
+            dum_vars_df['Count_' + i] = 0
+            df = dum_vars_df[[i, 'Count_' + i]].groupby(i).count()
+            dum_stats_dfs.append(df)
+        dum_vars_sum_stats = functools.reduce(lambda a, b: a.join(b, how='inner'), dum_stats_dfs)
+        for i in dum_vars_sum_stats.columns:
+            dum_vars_sum_stats.rename(columns={i: i.lstrip('Count').lstrip('_')}, inplace=True)
+        for i in dum_vars_sum_stats.index:
+            dum_vars_sum_stats.rename(index={i: str(i) + '_Count'}, inplace=True)
+        dum_vars_sum_stats = dum_vars_sum_stats.T
+        cd_sum_stats = con_and_dum_vars_stats.join(dum_vars_sum_stats, how='left')
         # ---- Categorical Variables Count -----------------------------------------------
-        # ----- Dummy by Dummy and Dummy by Category --------------------------------------
         cat_stats_dict = dict.fromkeys(cat_vars)
         for i in cat_vars:
             cat_vars_df['Count'+i] = 0
@@ -265,7 +372,7 @@ class regression_analysis():
             if add_sum_row_col is True:
                 df = self.add_sum_row(df)
             cat_stats_dict[i] = df
-        # -------------------------------------------
+        # ----- Dummy by Dummy and Dummy by Category --------------------------------------
         dummy_cat_dfs = []
         for i in dum_vars:
             sub_dummy_cat_dfs = []
@@ -280,8 +387,7 @@ class regression_analysis():
         dummy_cat_cocat_df = functools.reduce(lambda a, b: pd.concat([a,b], join='inner'), dummy_cat_dfs)
         if add_sum_row_col is True:
             dummy_cat_cocat_df = self.add_sum_col(dummy_cat_cocat_df)
-        # -------------------------------------------
-        # first two categorical variables cross tab
+        # ----- Categorical Var by Categorical Var ----------------------------------------
         i, j = cat_vars[0], cat_vars[1]
         df = new_df[[i, j]]
         cc_df = pd.crosstab(df[i], df[j])
@@ -290,8 +396,7 @@ class regression_analysis():
         if add_sum_row_col is True:
             cc_df = self.add_sum_row(cc_df)
             cc_df = self.add_sum_col(cc_df)
-        # ----- Continuous Variables by Dummy or Category --------------------------------
-        # -------------------------------------
+        # ----- Continuous Variables by Dummy ---------------------------------------------
         continuous_by_dummies = dict.fromkeys(con_vars)
         for i in con_vars:
             sub_groupby_dfs = []
@@ -304,7 +409,7 @@ class regression_analysis():
             df3 = functools.reduce(lambda a, b: pd.concat([a, b], join='inner'), sub_groupby_dfs)
             df3.index = [j + '_' + str(z) for z in df3.index]
             continuous_by_dummies[i] = df3
-        # --------------------------------------
+        # ----- Continuous Variables by Categorical ---------------------------------------
         groupby_cat_dfs = dict.fromkeys(cat_vars)
         for i in cat_vars:
             sub_groupby_dfs = []
@@ -319,6 +424,7 @@ class regression_analysis():
         # ----- Update Instance Attributes ------------------------------------------------
         self.descriptive_stats_tables = {'continuous_vars_stats': con_vars_sum_stats,
                                          'dummy_vars_stats': dum_vars_sum_stats,
+                                         'continuous_and_dummy_vars_stats': cd_sum_stats,
                                          'categorical_vars_count': cat_stats_dict,
                                          'crosstab_dummy_categorical_vars': dummy_cat_cocat_df,
                                          'crosstab_two_categorical_vars': cc_df,
@@ -328,79 +434,72 @@ class regression_analysis():
                                    panel_long_df=self.panel_long_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
-                                   descriptive_stats_tables=self.descriptive_stats_tables,
-                                   continuous_vars=con_vars,
-                                   dummy_vars=dum_vars,
-                                   categorical_vars=cat_vars)
+                                   descriptive_stats_tables=self.descriptive_stats_tables)
 
-    def export_single_descriptive_table_to_latex(self, df, colname_map, key, k2=None):
-        # ------------ change column and row names ------------------
-        df2 = df.copy(deep=True)
-        for varname in colname_map.keys():
-            for col in df2.columns:
-                if col == 'niche_app':
-                    col = 'nicheApp'
-                elif col == 'Countniche_app':
-                    col = 'CountnicheApp'
-                else:
-                    col2 = col.split('_')
-                    col2 = col2[0]
-                if varname == col2:
-                    df2.rename(columns={col: colname_map[varname]}, inplace=True)
-                elif varname in col2:
-                    df2.rename(columns={col: colname_map[varname]}, inplace=True)
-        if k2 is None:
-            filename = key + '_latex.tex'
-        else:
-            filename = key + '_' + k2 + '_latex.tex'
-        df2.to_latex(
-            buf=regression_analysis.descriptive_stats_path / filename,
-            columns=None,
-            col_space=None,
-            header=True,
-            index=True,
-            na_rep='NaN',
-            formatters=None,
-            float_format="%.2f",
-            sparsify=None,
-            index_names=True,
-            bold_rows=False,
-            column_format=None,
-            longtable=None,
-            escape=None,
-            encoding=None,
-            decimal='.',
-            multicolumn=None,
-            multicolumn_format=None,
-            multirow=None,
-            caption=None,
-            label=None,
-            position=None)
+    def customize_and_output_descriptive_stats_pandas_to_latex(self, the_panel):
+        """
+        :param df_dict: self.descriptive_stats_tables, the output of self.descriptive_stats_for_single_panel()
+        since 'continuous_and_dummy_vars_stats' already included all the variables of interest to show their summary stats
+        so I will not select more varibales.
+        :return:
+        """
+        df2 = self.descriptive_stats_tables['continuous_and_dummy_vars_stats'].copy(deep=True)
+        # -------------- round -------------------------------------------------------------
+        for i in df2.columns:
+            if i not in ['1_Count', '0_Count', 'count']:
+                df2[i] = df2[i].astype(float).round(decimals=2)
+        # for i in df2.columns:
+        #     if i in ['days_since_released', 'reviews_'+the_panel]:
+        #         df2[i] = df2[i].apply(lambda x: int(x) if not math.isnan(x) else x)
+        # df2 = df2.T
+        # -------------- adjust the order of rows and columns to display --------------------
+        def set_row_order(x, the_panel):
+            if the_panel in x:
+                x = x.rstrip(the_panel).rstrip('_')
+            for k in regression_analysis.descriptive_stats_table_row_order.keys():
+                if k == x:
+                    return regression_analysis.descriptive_stats_table_row_order[k]
+        df2 = df2.reset_index()
+        df2.rename(columns={'index': 'Variable'}, inplace=True)
+        df2['row_order'] = df2['Variable'].apply(lambda x: set_row_order(x, the_panel))
+        df2.sort_values(by='row_order', inplace=True)
+        df2.set_index('Variable', inplace=True)
+        df2.drop(['row_order'], axis=1, inplace=True)
+        df2 = df2[['mean', 'std', 'min', 'median', 'max', '1_Count', '0_Count', 'count']]
+        # -------------- change row and column names ---------------------------------------
+        for i in df2.columns:
+            for j in regression_analysis.descriptive_stats_table_column_map.keys():
+                if j == i:
+                    df2.rename(columns={i: regression_analysis.descriptive_stats_table_column_map[j]}, inplace=True)
+        def set_row_names(x, the_panel):
+            if the_panel in x:
+                x = x.rstrip(the_panel).rstrip('_')
+            for j in regression_analysis.var_latex_map.keys():
+                if j == x:
+                    return regression_analysis.var_latex_map[j]
+        df2 = df2.reset_index()
+        df2['Variable'] = df2['Variable'].apply(lambda x: set_row_names(x, the_panel))
+        df2 = df2.set_index('Variable')
+        # -------------- convert to latex --------------------------------------------------
+        filename = self.initial_panel + '_descriptive_stats_for_' + the_panel + '.tex'
+        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_path / filename,
+                           multirow=True,
+                           multicolumn=True,
+                           caption=('Descriptive Statistics of Key Variables'),
+                           position='h!',
+                           label='table:1',
+                           na_rep='',
+                           escape=False)
         return df2
 
-    def export_descriptive_stats_to_latex(self, colname_map):
-        stats_dict = copy.deepcopy(self.descriptive_stats_tables)
-        for key, item in stats_dict.items():
-            if isinstance(item, pd.DataFrame):
-                self.export_single_descriptive_table_to_latex(df=item,
-                                                              colname_map=colname_map,
-                                                              key=key)
-            else:
-                for k2, item2 in item.items():
-                    self.export_single_descriptive_table_to_latex(df=item2,
-                                                                  colname_map=colname_map,
-                                                                  key=key,
-                                                                  k2=k2)
-
-    # ###############################################################################################
-    # -------------------------- Regression --------------------------------------------------------------
+# *********************************************************************************************
+# ****************************** Regression ***************************************************
+# *********************************************************************************************
     """
     # http://www.data-analysis-in-python.org/t_statsmodels.html
     # https://towardsdatascience.com/a-guide-to-panel-data-regression-theoretics-and-implementation-with-python-4c84c5055cf8
     # https://bashtage.github.io/linearmodels/doc/panel/models.html
     """
-
-    # ###############################################################################################
     def regression(self, dep_var, time_variant_vars, time_invariant_vars,
                    cross_section, reg_type, the_panel=None):
         """
@@ -525,7 +624,7 @@ class regression_analysis():
         df8 = df7.T
         return df8
 
-    def customize_pandas_before_output_latex(self,
+    def customize_reg_results_pandas_before_output_latex(self,
                                              df,
                                              selective_dep_vars,
                                              selective_reg_types,
@@ -578,61 +677,47 @@ class regression_analysis():
         df10 = df10.T
         return df10
 
-    def output_pandas_to_latex(self, df):
+    def output_reg_results_pandas_to_latex(self, df, the_reg_type):
         """
         :param df: the output of self.customize_pandas_before_output_latex()
         :return: df10:
         """
         df2 = df.copy(deep=True)
-        # ------------ rename columns ---------------------------------
-        dep_var_map={'paidTrue': 'app is paid',
-                     'offersIAPTrue': 'app offers in-app-purchase',
-                     'containsAdsTrue': 'app contains ads',
-                     'price': 'app price'}
+        # ------------ rename columns ---------------------------------------------
         for i in df2.columns:
-            for j in dep_var_map.keys():
-                if j in i:
-                    df2.rename(columns={i: dep_var_map[j]}, inplace=True)
-        # ------------ prepare column for multiindex rows ---------------
+            z = i.rstrip(the_reg_type).rstrip('_')
+            for j in regression_analysis.var_latex_map.keys():
+                if j == z:
+                    df2.rename(columns={i: regression_analysis.var_latex_map[j]}, inplace=True)
+        # ------------ prepare column for multiindex rows --------------------------
         df2 = df2.reset_index()
         def set_row_level_0(x):
             if x in ['niche_app_coef']:
-                return 'niche app indicators'
-            elif x in ['const_coef','genreIdGame_coef','contentRatingAdult_coef','days_since_released_coef']:
-                return 'time-invariant variables'
-            elif x in ['DeMeanedscore_coef','DeMeanedZSCOREreviews_coef','DeMeanedminInstallsTop_coef','DeMeanedminInstallsMiddle_coef']:
-                return 'demeaned time-variant variables'
+                return '\makecell[l]{Niche \\\ Indicators}'
+            elif x in ['const_coef', 'genreIdGame_coef', 'contentRatingAdult_coef', 'days_since_released_coef']:
+                return '\makecell[l]{Time-invariant \\\ Variables}'
+            elif x in ['DeMeanedscore_coef', 'DeMeanedZSCOREreviews_coef', 'DeMeanedminInstallsTop_coef', 'DeMeanedminInstallsMiddle_coef']:
+                return '\makecell[l]{Time-variant \\\ Variables}'
             else:
-                return 'regression statistics'
+                return '\makecell[l]{Regression \\\ Statistics}'
         df2['Variable Groups'] = df2['index'].apply(lambda x: set_row_level_0(x))
-        row_map={'const': 'constant',
-                     'DeMeanedscore': 'app rating (1-5) demeaned',
-                     'DeMeanedZSCOREreviews': 'number of consumer reviews (z-score)',
-                     'DeMeanedminInstallsTop': 'app has minimum installs above 10,000,000',
-                     'DeMeanedminInstallsMiddle': 'app has minimum installs between 10,000 and 10,000,000',
-                     'niche_app': 'app is niche',
-                     'genreIdGame': 'app is hedonic',
-                     'contentRatingAdult': 'app contains age restrictive contents',
-                     'days_since_released': 'number of days since app was released',
-                     'F stat': 'F statistic',
-                     'P-value': 'P Value',
-                     'rsquared': 'R Squared',
-                     'nobs': 'number of observations',
-                     '_cov_type': 'covariance type'}
+        # ------------ rename rows -------------------------------------------------
         def set_row_level_1(x):
-            for i in row_map.keys():
-                if i in x:
-                    return row_map[i]
+            if '_coef' in x:
+                x = x.rstrip('coef').rstrip('_')
+            for i in regression_analysis.var_latex_map.keys():
+                if i == x:
+                    return regression_analysis.var_latex_map[i]
         df2['Independent Variables'] = df2['index'].apply(lambda x: set_row_level_1(x))
         # manually set the order of rows you want to present in final latex table
         def set_row_order_level_0(x):
-            if x == 'niche app indicators':
+            if x == '\makecell[l]{Niche \\\ Indicators}':
                 return 0
-            elif x == 'time-invariant variables':
+            elif x == '\makecell[l]{Time-invariant \\\ Variables}':
                 return 1
-            elif x == 'demeaned time-variant variables':
+            elif x == '\makecell[l]{Time-variant \\\ Variables}':
                 return 2
-            elif x == 'regression statistics':
+            elif x == '\makecell[l]{Regression \\\ Statistics}':
                 return 3
         df2['row_order_level_0'] = df2['Variable Groups'].apply(lambda x: set_row_order_level_0(x))
         df2.sort_values(by='row_order_level_0', inplace=True)
@@ -640,36 +725,20 @@ class regression_analysis():
         df2.drop(['index', 'row_order_level_0'], axis=1, inplace=True)
         df2.columns = pd.MultiIndex.from_product([['pooled OLS with demeaned time-variant variables'],
                                                   df2.columns.tolist()])
+        # -------------------- save and output to latex -------------------------------
         filename = self.initial_panel + '_POOLED_OLS_demeaned.tex'
-        df3 = df2.to_latex(buf=regression_analysis.reg_table_path / filename)
+        df3 = df2.to_latex(buf=regression_analysis.reg_table_path / filename,
+                           multirow=True,
+                           multicolumn=True,
+                           caption=('Regression Results'),
+                           position='h!',
+                           label='table:2',
+                           escape=False)
         return df2
 
-    # ----------------------------------------------------------------------------------------------------
-    def print_col_names(self, the_panel):
-        vars_in_a_panel = []
-        for i in self.df.columns:
-            if the_panel in i:
-                print(i)
-                vars_in_a_panel.append(i)
-        return vars_in_a_panel
-
-    def print_unique_value_of_var_panel(self, single_var, the_panel=None):
-        if the_panel is not None:
-            col_name = single_var + '_' + the_panel
-            unique_l = self.df[col_name].unique()
-            print(col_name, 'contains', len(unique_l), 'unique values')
-            print(unique_l)
-            return unique_l
-        else:
-            col_name = [single_var+'_'+i for i in self.consec_panels]
-            d = dict.fromkeys(col_name)
-            for j in d.keys():
-                unique_l = self.df[j].unique()
-                print(j, 'contains', len(unique_l), 'unique values')
-                print(unique_l)
-                d[j]=unique_l
-                print()
-            return d
+# *********************************************************************************************
+# *********** create categorical variables and time-invariant variables ***********************
+# *********************************************************************************************
 
     def cat_var_count(self, cat_var, the_panel=None):
         if the_panel is not None:
@@ -696,10 +765,6 @@ class regression_analysis():
             print(dfn)
             return dfn
 
-    # The all() function returns True if all items in an iterable are true, otherwise it returns False.
-    # so if all([False, False, False)] is False, it will return False
-    # and if all([False, True, True)] is False, it will return False (INSTEAD of true as expected)
-    # all([]) will only return True is all elements are True
     def find_time_variant_rows(self, cat_var):
         df2 = self.select_vars(single_var=cat_var)
         df_time_variant = []
@@ -866,17 +931,6 @@ class regression_analysis():
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
 
-    def peek_at_missing(self, **kwargs):
-        df1 = self.select_vars(**kwargs)
-        null_data = df1[df1.isnull().any(axis=1)]
-        return null_data
-
-    def replace_literal_true(self, cat_var): # after checking unique value of cat_var, some cat_var has 'True' instead of True
-        cols = [cat_var+'_'+i for i in self.consec_panels]
-        for j in cols:
-            self.df.loc[self.df[j] == 'True', j] = True
-        return self.df
-
     def check_whether_cat_dummies_are_mutually_exclusive(self, the_panel, **kwargs):
         df1 = self.select_vars(the_panel=the_panel, **kwargs)
         df1['sum_dummies'] = df1.sum(axis=1)
@@ -888,19 +942,6 @@ class regression_analysis():
             return df2
         else:
             return df1
-
-    # ------------------------------------------------------------------------------------------
-    def unlist_a_col_containing_list_of_strings(x):
-        if x is not None and re.search(r'\[\]+', x):
-            s = eval(x)
-            if isinstance(s, list):
-                s2 = ', '.join(str(ele) for ele in s)
-                return s2
-        else:
-            return x
-
-    def select_vars_for_reg_df(self, cross_section=True):
-        pass
 
 
 
