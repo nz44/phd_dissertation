@@ -81,21 +81,21 @@ class regression_analysis():
 
     var_latex_map = {
                'const': 'Constant',
-               'score': '\makecell[l]{Rating \\\ (1-5)}',
-               'DeMeanedscore': '\makecell[l]{Rating (1-5) \\\ (demeaned)}',
-               'reviews': '\makecell[l]{Number of \\\ reviews}',
-               'ZSCOREreviews': '\makecell[l]{Number of \\\ reviews (z-score)}',
-               'DeMeanedZSCOREreviews': '\makecell[l]{Number of reviews \\\ (demeaned z-score)}',
-               'minInstallsTop': '\makecell[l]{Min installs \\\ above 10,000,000}',
-               'DeMeanedminInstallsTop': '\makecell[l]{Min installs \\\ above 10,000,000 \\\ (demeaned)}',
-               'minInstallsMiddle': '\makecell[l]{Min installs between \\\ 10,000 and 10,000,000}',
-               'DeMeanedminInstallsMiddle': '\makecell[l]{Min installs between \\\ 10,000 and 10,000,000 \\\ (demeaned)}',
-               'minInstallsBottom': '\makecell[l]{Min installs \\\ below 10,000}',
-               'DeMeanedminInstallsBottom': '\makecell[l]{Min installs \\\ below 10,000 \\\ (demeaned)}',
-               'niche_app': 'Niche app',
-               'genreIdGame': 'Hedonic app',
-               'contentRatingAdult': '\makecell[l]{Contains age \\\ restrictive contents}',
-               'days_since_released': '\makecell[l]{Days \\\ since released}',
+               'score': 'Rating',
+               'DeMeanedscore': 'Demeaned Rating',
+               'reviews': 'Reviews',
+               'ZSCOREreviews': 'Z Score Reviews',
+               'DeMeanedZSCOREreviews': 'Demeaned Z Score Reviews',
+               'minInstallsTop': '\makecell[l]{High Level \\\ Minimum Installs}',
+               'DeMeanedminInstallsTop': '\makecell[l]{Demeaned High Level \\\ Minimum Installs}',
+               'minInstallsMiddle': '\makecell[l]{Medium Level \\\ Minimum Installs}',
+               'DeMeanedminInstallsMiddle': '\makecell[l]{Demeaned Medium Level \\\ Minimum Installs}',
+               'minInstallsBottom': '\makecell[l]{Low Level \\\ Minimum Installs}',
+               'DeMeanedminInstallsBottom': '\makecell[l]{Demeaned Low Level \\\ Minimum Installs}',
+               'niche_app': 'Niche',
+               'genreIdGame': 'Hedonic',
+               'contentRatingAdult': 'Age Restrictive',
+               'days_since_released': 'Released',
                'paidTrue': 'Paid',
                'offersIAPTrue': 'Offers IAP',
                'containsAdsTrue': 'Contains ads',
@@ -105,6 +105,27 @@ class regression_analysis():
                'rsquared': 'R Squared',
                'nobs': '\makecell[l]{number of \\\ observations}',
                '_cov_type': 'Covariance Type'}
+
+    var_definition = {
+            'Rating_{i,t}': '\makecell[l]{Weighted average (from 1 to 5) of \\\ cumulative consumer ratings of app $i$ \\\ between its release and period $t$}',
+            'Demeaned Rating_{i,t}': '\makecell[l]{Time demean Rating_{i,t} by subtracting \\\ the mean of 7 consecutive monthly periods (2020 Sep - 2021 Mar)}',
+            'Reviews_{i,t}': '\makecell[l]{Number of cumulative consumer reviews \\\ for the app $i$ between its release and period $t$}',
+            'Z Score Reviews_{i,t}': 'Normalize number of reviews for App $i$ in period $t$ using Z-Score',
+            'Demeaned Z Score Reviews_{i,t}': '\makecell[l]{Time demeaned z-score reviews \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            '\makecell[l]{High Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the minimum cumulative installs of the app $i$ in \\\ period $t$ is above 10,000,000, otherwise 0.}',
+            '\makecell[l]{Demeaned High Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean High Level Minimum Installs_{i,t} \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            '\makecell[l]{Medium Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the minimum cumulative installs of the app $i$ \\\ in period $t$ is between 10,000 and 10,000,000, otherwise 0.}',
+            '\makecell[l]{Demeaned Medium Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean Medium Level Minimum Installs_{i,t} \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            '\makecell[l]{Low Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the minimum cumulative installs of the app $i$ \\\ in period $t$ is below 10,000, otherwise 0.}',
+            '\makecell[l]{Demeaned Low Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean Low Level Minimum Installs_{i,t} \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            'Niche_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ is niche \\\ (determined by text clustering algorithm), otherwise 0}',
+            'Hedonic_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ is in the category GAME, otherwise 0}',
+            'Age Restrictive_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ contains mature (17+) \\\ or adult (18+) content, otherwise 0}',
+            'Released_{i}': '\makecell[l]{The number of days \\\ since App $i$ was released}',
+            'Paid_{i,t}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the App $i$ is paid in period $t$}',
+            'Offers IAP_{i,t}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the App $i$ offers within app purchases (IAP)}',
+            'Contains ads_{i,t}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the App $i$ contains advertisement in period $t$}',
+            'Price_{i,t}': 'Price of App $i$ in period $t$'}
 
     descriptive_stats_table_row_order = {
         'niche_app': 0,
@@ -295,6 +316,21 @@ class regression_analysis():
 # *********************************************************************************************
 # ******************* Descriptive Statistics **************************************************
 # *********************************************************************************************
+    def key_var_definition(self):
+        df = pd.Series(regression_analysis.var_definition).to_frame().reset_index()
+        df.columns = ['Variable', 'Definition']
+        df.set_index('Variable', inplace=True)
+        # -------------- convert to latex --------------------------------------------------
+        filename = self.initial_panel + '_variable_definition.tex'
+        df2 = df.to_latex(buf=regression_analysis.descriptive_stats_path / filename,
+                           multirow=True,
+                           multicolumn=True,
+                           caption=('Descriptive Statistics of Key Variables'),
+                           position='h!',
+                           label='table:1',
+                           na_rep='',
+                           escape=False)
+        return df
 
     def add_sum_row(self, df):
         sum_row = df.sum(axis=0)
@@ -487,7 +523,7 @@ class regression_analysis():
                            multicolumn=True,
                            caption=('Descriptive Statistics of Key Variables'),
                            position='h!',
-                           label='table:1',
+                           label='table:2',
                            na_rep='',
                            escape=False)
         return df2
