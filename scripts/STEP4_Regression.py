@@ -107,18 +107,18 @@ class regression_analysis():
                '_cov_type': 'Covariance Type'}
 
     var_definition = {
-            'Rating_{i,t}': '\makecell[l]{Weighted average (from 1 to 5) of \\\ cumulative consumer ratings of app $i$ \\\ between its release and period $t$}',
-            'Demeaned Rating_{i,t}': '\makecell[l]{Time demean Rating_{i,t} by subtracting \\\ the mean of 7 consecutive monthly periods (2020 Sep - 2021 Mar)}',
+            'Rating_{i,t}': '\makecell[l]{Weighted average (from 1 to 5) of cumulative consumer ratings of app $i$}',
+            'Demeaned Rating_{i,t}': '\makecell[l]{Time demean $Rating_{i,t}$ by subtracting \\\ the mean of 7 consecutive monthly periods}',
             'Reviews_{i,t}': '\makecell[l]{Number of cumulative consumer reviews \\\ for the app $i$ between its release and period $t$}',
             'Z Score Reviews_{i,t}': 'Normalize number of reviews for App $i$ in period $t$ using Z-Score',
-            'Demeaned Z Score Reviews_{i,t}': '\makecell[l]{Time demeaned z-score reviews \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            'Demeaned Z Score Reviews_{i,t}': '\makecell[l]{Time demeaned z-score reviews \\\ by subtracting the mean from 7 consecutive periods}',
             '\makecell[l]{High Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the minimum cumulative installs of the app $i$ in \\\ period $t$ is above 10,000,000, otherwise 0.}',
-            '\makecell[l]{Demeaned High Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean High Level Minimum Installs_{i,t} \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            '\makecell[l]{Demeaned High Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean High Level Minimum $Installs_{i,t}$ \\\ by subtracting the mean from 7 consecutive periods}',
             '\makecell[l]{Medium Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the minimum cumulative installs of the app $i$ \\\ in period $t$ is between 10,000 and 10,000,000, otherwise 0.}',
-            '\makecell[l]{Demeaned Medium Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean Medium Level Minimum Installs_{i,t} \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
+            '\makecell[l]{Demeaned Medium Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean Medium Level Minimum $Installs_{i,t}$ \\\ by subtracting the mean from 7 consecutive periods}',
             '\makecell[l]{Low Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Dummy variable, which equals to 1 if \\\ the minimum cumulative installs of the app $i$ \\\ in period $t$ is below 10,000, otherwise 0.}',
-            '\makecell[l]{Demeaned Low Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean Low Level Minimum Installs_{i,t} \\\ by subtracting the mean from 7 consecutive \\\ monthly periods (2020 Sep - 2021 Mar)}',
-            'Niche_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ is niche \\\ (determined by text clustering algorithm), otherwise 0}',
+            '\makecell[l]{Demeaned Low Level \\\ Minimum Installs_{i,t}}': '\makecell[l]{Time demean Low Level Minimum $Installs_{i,t}$ \\\ by subtracting the mean from 7 consecutive periods}',
+            'Niche_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ is niche, otherwise 0}',
             'Hedonic_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ is in the category GAME, otherwise 0}',
             'Age Restrictive_{i}': '\makecell[l]{Time invariant dummy variable which \\\ equals to 1 if App $i$ contains mature (17+) \\\ or adult (18+) content, otherwise 0}',
             'Released_{i}': '\makecell[l]{The number of days \\\ since App $i$ was released}',
@@ -316,6 +316,24 @@ class regression_analysis():
 # *********************************************************************************************
 # ******************* Descriptive Statistics **************************************************
 # *********************************************************************************************
+    def text_cluster_group_count(self):
+        df2 = self.df.copy(deep=True)
+        df2 = df2[['combined_panels_kmeans_labels', 'niche_app', 'combined_panels_kmeans_labels_count']]
+        df2 = df2.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
+        df2.rename('\makecell[l]{number of apps}', inplace=True)
+        df2.rename_axis('\makecell[l]{cluster labels}', inplace=True)
+        # Only show the top 60 groups
+        df2 = df2.iloc[:40,]
+        filename = self.initial_panel + '_text_cluster_label_group.tex'
+        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_path / filename,
+                                       multirow=True,
+                                       multicolumn=True,
+                                       caption=('Number of Apps In Top 40 Text Cluster Groups'),
+                                       position='h!',
+                                       label='table:3',
+                                       escape=False)
+        return df2
+
     def key_var_definition(self):
         df = pd.Series(regression_analysis.var_definition).to_frame().reset_index()
         df.columns = ['Variable', 'Definition']
