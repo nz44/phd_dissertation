@@ -8,6 +8,7 @@ import numpy as np
 import math
 import seaborn as sb
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from sklearn import preprocessing
 import statsmodels.api as sm
 # https://www.statsmodels.org/stable/api.html
@@ -76,9 +77,10 @@ class regression_analysis():
     this is because we can calculate t-1 easily."""
     reg_table_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/reg_results_tables')
-    descriptive_stats_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats')
-
+    descriptive_stats_tables = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
+    descriptive_stats_graphs = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/graphs')
     var_latex_map = {
                'const': 'Constant',
                'score': 'Rating',
@@ -95,7 +97,7 @@ class regression_analysis():
                'niche_app': 'Niche',
                'genreIdGame': 'Hedonic',
                'contentRatingAdult': 'Age Restrictive',
-               'days_since_released': 'Released',
+               'DaysSinceReleased': 'Released',
                'paidTrue': 'Paid',
                'offersIAPTrue': 'Offers IAP',
                'containsAdsTrue': 'Contains ads',
@@ -135,7 +137,7 @@ class regression_analysis():
         'containsAdsTrue': 4,
         'genreIdGame': 5,
         'contentRatingAdult': 6,
-        'days_since_released': 7,
+        'DaysSinceReleased': 7,
         'minInstallsTop': 8,
         'DeMeanedminInstallsTop': 9,
         'minInstallsMiddle': 10,
@@ -323,16 +325,102 @@ class regression_analysis():
         df2.rename('\makecell[l]{number of apps}', inplace=True)
         df2.rename_axis('\makecell[l]{cluster labels}', inplace=True)
         # Only show the top 60 groups
-        df2 = df2.iloc[:40,]
+        df2 = df2.iloc[:30,]
         filename = self.initial_panel + '_text_cluster_label_group.tex'
-        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_path / filename,
+        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_tables / filename,
                                        multirow=True,
                                        multicolumn=True,
-                                       caption=('Number of Apps In Top 40 Text Cluster Groups'),
+                                       caption=('Number of Apps In Top 30 Text Cluster Groups'),
                                        position='h!',
                                        label='table:3',
                                        escape=False)
         return df2
+
+    def text_cluster_bar_chart(self, top_n):
+        df2 = self.df.copy(deep=True)
+        df2 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
+        df2 = df2.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
+        df2 = df2.to_frame()
+        df2.reset_index(inplace=True)
+        df2.columns = ['text cluster group labels', 'number of apps in each group']
+        # -------------- plot ----------------------------------------------------------------
+        fig, ax = plt.subplots()
+        # color the top_n bars
+        color = ['red'] * top_n
+        rest = len(df2.index) - top_n
+        color.extend(['blue'] * rest)
+        ax = df2.plot.bar(x='text cluster group labels',
+                          y='number of apps in each group',
+                          ax=ax,
+                          color=color)
+        # customize legend
+        BRA = mpatches.Patch(color='red', label='broad apps')
+        NIA = mpatches.Patch(color='blue', label='niche apps')
+        ax.legend(handles=[BRA, NIA], loc='upper right')
+        ax.axes.xaxis.set_ticks([])
+        ax.yaxis.set_ticks_position('right')
+        ax.spines['left'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.grid(True)
+        # label the top n clusters
+        df3 = df2.iloc[:top_n, ]
+        for index, row in df3.iterrows():
+            value = row['number of apps in each group']
+            ax.annotate(value,
+                        (index, value),
+                        xytext=(0, 0.1), # 2 points to the right and 15 points to the top of the point I annotate
+                        textcoords='offset points')
+        ax.set_xlabel("400 Text Clusters")
+        ax.set_ylabel("Number of Apps in Each Text Cluster")
+        ax.set_title(self.initial_panel + ' Dataset Text Cluster Bar Chart')
+        filename = self.initial_panel + '_text_cluster_bar_chart.png'
+        fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
+                    facecolor='white',
+                    dpi=300)
+        return df2
+
+    def text_cluster_relationship_to_keyvars(self, the_panel, top_n_as_niche):
+        df2 = self.df.copy(deep=True)
+        # ----------------- create nicheDummy --------------------------------------------------
+        df3 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
+        df3 = df3.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
+        df3 = df3.iloc[:top_n_as_niche, ]
+        broad_labels = list(df3.index.values)
+        # ----------------- select relationship with key variables -----------------------------
+        key_vars = ['score', 'ratings', 'reviews', 'minInstalls', 'price', 'paidTrue', 'containsAds', 'offersIAP']
+        kvars = [i + '_' + the_panel for i in key_vars]
+        kvars.extend(['combined_panels_kmeans_labels',
+                     'combined_panels_kmeans_labels_count',
+                     'genreIdGame',
+                     'contentRatingAdult',
+                     'DaysSinceReleased'])
+        df4 = df2[kvars]
+        df4['nicheDummy'] = df4['combined_panels_kmeans_labels'].apply(lambda x: 0 if x in broad_labels else 1)
+        # ----------------- tabulate nicheDummy vs paidTrue -----------------------------
+        df5 = df4.groupby(['nicheDummy', 'paidTrue_202103']).size()
+        fig, ax = plt.subplots()
+        ax = df5.unstack().plot.bar(stacked=True, ax=ax)
+        total_1 = 0
+        total_2 = 0
+        for p in ax.patches:
+            if p.xy[0] == -0.25:
+                total_1 += p.get_height()
+            elif p.xy[0] == 0.75:
+                total_2 += p.get_height()
+        for p in ax.patches:
+            if p.xy[0] == -0.25:
+                percentage = '{:.1f}%'.format(100 * p.get_height() / total_1)
+            elif p.xy[0] == 0.75:
+                percentage = '{:.1f}%'.format(100 * p.get_height() / total_2)
+            x = p.get_x() + p.get_width() + 0.02
+            y = p.get_y() + p.get_height() / 2
+            ax.annotate(percentage, (x, y))
+        ax.set_title(self.initial_panel + ' niche dummy against paid true')
+        filename = self.initial_panel + '_nicheDummy_paidTrue.png'
+        fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
+                    facecolor='white',
+                    dpi=300)
+        return df5
 
     def key_var_definition(self):
         df = pd.Series(regression_analysis.var_definition).to_frame().reset_index()
@@ -340,7 +428,7 @@ class regression_analysis():
         df.set_index('Variable', inplace=True)
         # -------------- convert to latex --------------------------------------------------
         filename = self.initial_panel + '_variable_definition.tex'
-        df2 = df.to_latex(buf=regression_analysis.descriptive_stats_path / filename,
+        df2 = df.to_latex(buf=regression_analysis.descriptive_stats_tables / filename,
                            multirow=True,
                            multicolumn=True,
                            caption=('Descriptive Statistics of Key Variables'),
@@ -503,7 +591,7 @@ class regression_analysis():
             if i not in ['1_Count', '0_Count', 'count']:
                 df2[i] = df2[i].astype(float).round(decimals=2)
         # for i in df2.columns:
-        #     if i in ['days_since_released', 'reviews_'+the_panel]:
+        #     if i in ['DaysSinceReleased', 'reviews_'+the_panel]:
         #         df2[i] = df2[i].apply(lambda x: int(x) if not math.isnan(x) else x)
         # df2 = df2.T
         # -------------- adjust the order of rows and columns to display --------------------
@@ -536,7 +624,7 @@ class regression_analysis():
         df2 = df2.set_index('Variable')
         # -------------- convert to latex --------------------------------------------------
         filename = self.initial_panel + '_descriptive_stats_for_' + the_panel + '.tex'
-        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_path / filename,
+        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_tables / filename,
                            multirow=True,
                            multicolumn=True,
                            caption=('Descriptive Statistics of Key Variables'),
@@ -748,7 +836,7 @@ class regression_analysis():
         def set_row_level_0(x):
             if x in ['niche_app_coef']:
                 return '\makecell[l]{Niche \\\ Indicators}'
-            elif x in ['const_coef', 'genreIdGame_coef', 'contentRatingAdult_coef', 'days_since_released_coef']:
+            elif x in ['const_coef', 'genreIdGame_coef', 'contentRatingAdult_coef', 'DaysSinceReleased_coef']:
                 return '\makecell[l]{Time-invariant \\\ Variables}'
             elif x in ['DeMeanedscore_coef', 'DeMeanedZSCOREreviews_coef', 'DeMeanedminInstallsTop_coef', 'DeMeanedminInstallsMiddle_coef']:
                 return '\makecell[l]{Time-variant \\\ Variables}'
@@ -948,8 +1036,8 @@ class regression_analysis():
         if var == 'released':
             df2 = df2[df2.columns[0]] # since released is time-invariant variable, so just pick a single column
             df2 = df2.rename('released').to_frame()
-            df2['days_since_released'] = pd.Timestamp.now().normalize() - df2['released']
-            df2['days_since_released'] = df2['days_since_released'].apply(lambda x: int(x.days))
+            df2['DaysSinceReleased'] = pd.Timestamp.now().normalize() - df2['released']
+            df2['DaysSinceReleased'] = df2['DaysSinceReleased'].apply(lambda x: int(x.days))
         self.df = self.df.join(df2, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
