@@ -6,7 +6,7 @@ pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 import numpy as np
 import math
-import seaborn as sb
+import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from sklearn import preprocessing
@@ -379,27 +379,10 @@ class regression_analysis():
                     dpi=300)
         return df2
 
-    def text_cluster_relationship_to_keyvars(self, the_panel, top_n_as_niche):
-        df2 = self.df.copy(deep=True)
-        # ----------------- create nicheDummy --------------------------------------------------
-        df3 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
-        df3 = df3.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
-        df3 = df3.iloc[:top_n_as_niche, ]
-        broad_labels = list(df3.index.values)
-        # ----------------- select relationship with key variables -----------------------------
-        key_vars = ['score', 'ratings', 'reviews', 'minInstalls', 'price', 'paidTrue', 'containsAds', 'offersIAP']
-        kvars = [i + '_' + the_panel for i in key_vars]
-        kvars.extend(['combined_panels_kmeans_labels',
-                     'combined_panels_kmeans_labels_count',
-                     'genreIdGame',
-                     'contentRatingAdult',
-                     'DaysSinceReleased'])
-        df4 = df2[kvars]
-        df4['nicheDummy'] = df4['combined_panels_kmeans_labels'].apply(lambda x: 0 if x in broad_labels else 1)
-        # ----------------- tabulate nicheDummy vs paidTrue -----------------------------
-        df5 = df4.groupby(['nicheDummy', 'paidTrue_202103']).size()
+    def bar_chart_a_dummy_against_dummy_or_cat(self, df, dummy1, dummy2):
         fig, ax = plt.subplots()
-        ax = df5.unstack().plot.bar(stacked=True, ax=ax)
+        df2 = df.groupby([dummy1, dummy2]).size()
+        ax = df2.unstack().plot.bar(stacked=True, ax=ax)
         total_1 = 0
         total_2 = 0
         for p in ax.patches:
@@ -415,12 +398,67 @@ class regression_analysis():
             x = p.get_x() + p.get_width() + 0.02
             y = p.get_y() + p.get_height() / 2
             ax.annotate(percentage, (x, y))
-        ax.set_title(self.initial_panel + ' niche dummy against paid true')
-        filename = self.initial_panel + '_nicheDummy_paidTrue.png'
+        if dummy1 == 'nicheDummy':
+            ax.set_title(self.initial_panel + ' Dataset' + ' Niche Dummy against ' + dummy2)
+        filename = self.initial_panel + '_' + dummy1 + '_' + dummy2 + '.png'
         fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
                     facecolor='white',
                     dpi=300)
-        return df5
+        return ax
+
+    def kde_plot_by_dummy(self, df, dummy1, continuous1):
+        fig, ax = plt.subplots()
+        ax = sns.kdeplot(data=df, x=continuous1, hue=dummy1,
+                         fill=True, common_norm=False,
+                         # palette="crest", remove palette because the color contrast is too low
+                         alpha=.4, linewidth=0, ax=ax)
+        if dummy1 == 'nicheDummy':
+            ax.set_title(self.initial_panel + ' Dataset' + ' Niche Dummy against ' + continuous1)
+        filename = self.initial_panel + '_' + dummy1 + '_' + continuous1 + '.png'
+        fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
+                    facecolor='white',
+                    dpi=300)
+        return ax
+
+    def nicheDummy_relationship_to_keyvars(self, the_panel, n_niche_scale_dummies):
+        """
+        make sure you run self.create_nicheDummy and create_n_nichedummies before running this
+        """
+        # ----------------- select relationship with key variables -----------------------------
+        df2 = self.df.copy(deep=True)
+        key_vars = ['score',
+                    'ratings',
+                    'reviews',
+                    'minInstalls',
+                    'minInstallsTop',
+                    'minInstallsMiddle',
+                    'minInstallsBottom',
+                    'CategoricalminInstalls',
+                    'price',
+                    'paidTrue',
+                    'containsAdsTrue',
+                    'offersIAPTrue']
+        kvars = [i + '_' + the_panel for i in key_vars]
+        kvars.extend(['combined_panels_kmeans_labels',
+                     'combined_panels_kmeans_labels_count',
+                     'genreIdGame',
+                     'contentRatingAdult',
+                     'DaysSinceReleased',
+                     'nicheDummy'])
+        nicheScaleDummies = ['nicheScaleDummy' + str(i) for i in range(n_niche_scale_dummies)]
+        kvars.extend(nicheScaleDummies)
+        df4 = df2[kvars]
+        # ---------------------------------------------------------------------------------------
+        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'paidTrue_'+the_panel)
+        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'offersIAPTrue_'+the_panel)
+        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'containsAdsTrue_'+the_panel)
+        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'CategoricalminInstalls_'+the_panel)
+        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'genreIdGame')
+        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'contentRatingAdult')
+        ax = self.kde_plot_by_dummy(df4, 'nicheDummy', 'score_'+the_panel)
+        ax = self.kde_plot_by_dummy(df4, 'nicheDummy', 'ratings_'+the_panel)
+        ax = self.kde_plot_by_dummy(df4, 'nicheDummy', 'reviews_'+the_panel)
+        return ax
 
     def key_var_definition(self):
         df = pd.Series(regression_analysis.var_definition).to_frame().reset_index()
@@ -985,6 +1023,64 @@ class regression_analysis():
             dcols = [cat_var + '_' + i for i in self.consec_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
+
+    def create_categorical_from_exhaustive_dummies(self, me_dummys):
+        me_dummys_p = [i + '_' + p for p in self.consec_panels for i in me_dummys]
+        df2 = self.df.copy(deep=True)
+        df3 = df2[me_dummys_p]
+        if me_dummys == ['minInstallsTop', 'minInstallsMiddle', 'minInstallsBottom']:
+            for p in self.consec_panels:
+                df3.loc[df3['minInstallsTop'+'_'+p] == 1, 'CategoricalminInstalls'+'_'+p] = 'Top'
+                df3.loc[df3['minInstallsMiddle'+'_'+p] == 1, 'CategoricalminInstalls'+'_'+p] = 'Middle'
+                df3.loc[df3['minInstallsBottom'+'_'+p] == 1, 'CategoricalminInstalls'+'_'+p] = 'Bottom'
+        df3.drop(me_dummys_p, axis=1, inplace=True)
+        self.df = self.df.join(df3, how='inner')
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
+
+    def create_nicheDummy(self, top_n):
+        df2 = self.df.copy(deep=True)
+        df3 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
+        df4 = df3.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
+        df4 = df4.iloc[:top_n, ]
+        broad_labels = list(df4.index.values)
+        df3['nicheDummy'] = df3['combined_panels_kmeans_labels'].apply(lambda x: 0 if x in broad_labels else 1)
+        df3.drop(['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count'], axis=1, inplace=True)
+        self.df = self.df.join(df3, how='inner')
+        return regression_analysis(df=self.df,
+                                   panel_long_df=self.panel_long_df,
+                                   individual_dummies_df=self.i_dummies_df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels)
+
+    def create_n_nicheDummies(self, n):
+        """
+        note that here 1 does not necessarily means being niche, and 0 means being broad.
+        In the create nicheDummy, 1 indeed means being niche and 0 means being broad because I defined the top 3 largest labels as broad.
+        Here, 1 only means the app belongs to the top nth largest group of labels. So nicheScaleDummy0 == 1 could mean a broad app, while
+        nicheScaleDummy19 == 1 definitely means being a niche app.
+        """
+        df2 = self.df.copy(deep=True)
+        df3 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
+        df4 = df3.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
+        x = round(len(df4) / n)
+        frames = [df4.iloc[i * x:(i + 1) * x].copy() for i in range(n - 1)]
+        last_df = df4.iloc[(n - 1) * x : len(df4)]
+        frames.extend([last_df])
+        labels = [list(dff.index.values) for dff in frames]
+        for i in range(n):
+            df3['nicheScaleDummy' + str(i)] = df3['combined_panels_kmeans_labels'].apply(
+                lambda x: 1 if x in labels[i] else 0)
+        df3.drop(['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count'], axis=1, inplace=True)
+        self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
                                    individual_dummies_df=self.i_dummies_df,
