@@ -167,6 +167,7 @@ class regression_analysis():
                  initial_panel,
                  consec_panels,
                  panel_long_df=None,
+                 panel_long_game_subsamples=None,
                  individual_dummies_df=None,
                  descriptive_stats_tables=None,
                  several_reg_results_pandas=None):
@@ -174,6 +175,7 @@ class regression_analysis():
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
         self.panel_long_df = panel_long_df
+        self.panel_long_game_subsamples = panel_long_game_subsamples
         self.i_dummies_df = individual_dummies_df
         self.descriptive_stats_tables = descriptive_stats_tables
         self.several_reg_results = several_reg_results_pandas
@@ -286,6 +288,7 @@ class regression_analysis():
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples = self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df)
 
     def combine_individual_dummies_to_long_panel(self):
@@ -300,8 +303,31 @@ class regression_analysis():
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples = self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df)
 
+    def create_long_df_game_subsamples(self):
+        """
+        run this at the very last step (after creating all the dummies,
+        because I do not want to revise all other functions with this subsamples)
+        even after converted from wide to long
+        """
+        df2 = self.panel_long_df.copy(deep=True)
+        df_game = df2.loc[df2['genreIdGame'] == 1]
+        df_nongame = df2.loc[df2['genreIdGame'] == 0]
+        game_subsamples = {'game': df_game,
+                           'none_game': df_nongame}
+        self.panel_long_game_subsamples = game_subsamples
+        return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
+                                   individual_dummies_df=self.i_dummies_df)
+
+# *********************************************************************************************
+# ******************* Descriptive Statistics **************************************************
+# *********************************************************************************************
     def correlation_matrix(self, dep_vars, time_variant_vars, time_invariant_vars, the_panel):
         """
         This is for the purpose of checking multicolinearity between independent variables
@@ -315,9 +341,6 @@ class regression_analysis():
         df_corr = hdf.corr()
         return df_corr
 
-# *********************************************************************************************
-# ******************* Descriptive Statistics **************************************************
-# *********************************************************************************************
     def text_cluster_group_count(self):
         df2 = self.df.copy(deep=True)
         df2 = df2[['combined_panels_kmeans_labels', 'niche_app', 'combined_panels_kmeans_labels_count']]
@@ -420,9 +443,10 @@ class regression_analysis():
                     dpi=300)
         return ax
 
-    def nicheDummy_relationship_to_keyvars(self, the_panel, n_niche_scale_dummies):
+    def ONEDummy_relationship_to_keyvars(self, ONEDummy, the_panel, n_niche_scale_dummies):
         """
         make sure you run self.create_nicheDummy and create_n_nichedummies before running this
+        The ONEDummy is usually time-invariant, for example, nicheDummy or genreIdGame
         """
         # ----------------- select relationship with key variables -----------------------------
         df2 = self.df.copy(deep=True)
@@ -439,25 +463,27 @@ class regression_analysis():
                     'containsAdsTrue',
                     'offersIAPTrue']
         kvars = [i + '_' + the_panel for i in key_vars]
-        kvars.extend(['combined_panels_kmeans_labels',
+        time_invariants_vars = ['combined_panels_kmeans_labels',
                      'combined_panels_kmeans_labels_count',
                      'genreIdGame',
+                     'nicheDummy',
                      'contentRatingAdult',
-                     'DaysSinceReleased',
-                     'nicheDummy'])
+                     'DaysSinceReleased']
+        kvars.extend(time_invariants_vars)
         nicheScaleDummies = ['nicheScaleDummy' + str(i) for i in range(n_niche_scale_dummies)]
         kvars.extend(nicheScaleDummies)
         df4 = df2[kvars]
         # ---------------------------------------------------------------------------------------
-        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'paidTrue_'+the_panel)
-        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'offersIAPTrue_'+the_panel)
-        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'containsAdsTrue_'+the_panel)
-        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'CategoricalminInstalls_'+the_panel)
-        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'genreIdGame')
-        ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, 'nicheDummy', 'contentRatingAdult')
-        ax = self.kde_plot_by_dummy(df4, 'nicheDummy', 'score_'+the_panel)
-        ax = self.kde_plot_by_dummy(df4, 'nicheDummy', 'ratings_'+the_panel)
-        ax = self.kde_plot_by_dummy(df4, 'nicheDummy', 'reviews_'+the_panel)
+        compare_against1 = ['nicheDummy', 'genreIdGame', 'contentRatingAdult',
+                           'paidTrue_'+the_panel, 'offersIAPTrue_'+the_panel, 'containsAdsTrue_'+the_panel,
+                           'CategoricalminInstalls_'+the_panel]
+        compare_against1.remove(ONEDummy)
+        for i in compare_against1:
+            print(i)
+            ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, ONEDummy, i)
+        compare_against2 = ['score_'+the_panel, 'ratings_'+the_panel, 'reviews_'+the_panel]
+        for i in compare_against2:
+            ax = self.kde_plot_by_dummy(df4, ONEDummy, i)
         return ax
 
     def key_var_definition(self):
@@ -612,6 +638,7 @@ class regression_analysis():
                                          'continuous_vars_by_categorical': groupby_cat_dfs}
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
                                    descriptive_stats_tables=self.descriptive_stats_tables)
@@ -982,6 +1009,7 @@ class regression_analysis():
         if cat_var == 'genreId':
             df1 = self.select_vars(single_var=cat_var)
             if time_invariant is True:
+                # use the most recent panel's game app status for all panels game app category determination
                 df1['genreIdGame'] = df1['genreId_' + self.consec_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
             else:
                 for i in self.consec_panels:
@@ -1025,6 +1053,7 @@ class regression_analysis():
             self.df = self.df.join(df1, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1042,6 +1071,7 @@ class regression_analysis():
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1057,6 +1087,7 @@ class regression_analysis():
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1083,6 +1114,7 @@ class regression_analysis():
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1097,6 +1129,7 @@ class regression_analysis():
         self.i_dummies_df = dummies
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1119,6 +1152,7 @@ class regression_analysis():
         self.df = self.df.join(df_new, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1137,6 +1171,7 @@ class regression_analysis():
         self.df = self.df.join(df2, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
@@ -1165,6 +1200,7 @@ class regression_analysis():
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels)
