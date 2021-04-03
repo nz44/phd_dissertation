@@ -41,7 +41,7 @@ class combine_dataframes():
         self.consec_panels = consec_panels
         self.dfa = appid_imputed_and_deleted_missing_df
         self.dfd = dev_index_gecoded_df
-        self.dfl = appid_text_cluster_labeled_df
+        self.dfl = appid_text_cluster_labeled_df # this is ALSO stored in nlp_pipline.output_labels
 
     def combine_imputed_deleted_missing_with_text_labels(self):
         inter_df = self.dfa.join(self.dfl, how='inner')
@@ -1006,18 +1006,7 @@ class regression_analysis():
             self.df = self.change_time_variant_to_invariant(cat_var)
         else:
             pass
-        if cat_var == 'genreId':
-            df1 = self.select_vars(single_var=cat_var)
-            if time_invariant is True:
-                # use the most recent panel's game app status for all panels game app category determination
-                df1['genreIdGame'] = df1['genreId_' + self.consec_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
-            else:
-                for i in self.consec_panels:
-                    df1['genreIdGame_'+i] = df1['genreId_'+i].apply(lambda x: 1 if 'GAME' in x else 0)
-            dcols = ['genreId_'+ i for i in self.consec_panels]
-            df1.drop(dcols, axis=1, inplace=True)
-            self.df = self.df.join(df1, how='inner')
-        elif cat_var == 'contentRating':
+        if cat_var == 'contentRating':
             df1 = self.select_vars(single_var=cat_var)
             if time_invariant is True:
                 df1['contentRatingAdult'] = df1['contentRating_' + self.consec_panels[-1]].apply(
