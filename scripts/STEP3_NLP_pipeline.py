@@ -261,7 +261,7 @@ class nlp_pipeline():
                 explained.append(svd.explained_variance_ratio_.sum())
                 print("Number of components = %r and explained variance = %r" % (x, svd.explained_variance_ratio_.sum()))
             fig, ax = plt.subplots()
-            plt.plot(n_comp, explained, ax=ax)
+            ax.plot(n_comp, explained)
             ax.grid()
             plt.xlabel('Number of components')
             plt.ylabel("Explained Variance")
@@ -303,10 +303,11 @@ class nlp_pipeline():
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
-    def find_optimal_cluster_plot(self, n_cluster_list):
+    def find_optimal_cluster_plot(self):
         """
         https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f
         """
+        n_cluster_list = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400]
         for sample, matrix in self.svd_matrices.items():
             Sum_of_squared_distances = []
             for k in n_cluster_list:
@@ -314,7 +315,7 @@ class nlp_pipeline():
                 km = km.fit(matrix)
                 Sum_of_squared_distances.append(km.inertia_)
             fig, ax = plt.subplots()
-            plt.plot(n_cluster_list, Sum_of_squared_distances, 'bx-', ax=ax)
+            ax.plot(n_cluster_list, Sum_of_squared_distances, 'bx-')
             ax.grid()
             plt.xlabel('k')
             plt.ylabel('Sum_of_squared_distances')
@@ -334,20 +335,20 @@ class nlp_pipeline():
                  output_labels=self.output_labels)
 
     def kmeans_cluster(self,
-                       n_clusters,
+                       n_clusters_dict,
                        init,
                        random_state):
         labels_dict = {}
         for sample, matrix in self.svd_matrices.items():
-            kmeans = KMeans(n_clusters=n_clusters, init=init, random_state=random_state)
+            kmeans = KMeans(n_clusters=n_clusters_dict[sample], init=init, random_state=random_state)
             y_kmeans = kmeans.fit_predict(matrix)  # put matrix_transformed_df here would generate same result as put matrix_transformed
-            matrix['all_panels_kmeans_labels'] = y_kmeans
-            label_single = matrix[['all_panels_kmeans_labels']]
-            filename = self.initial_panel + '_' + sample + '_predicted_text_cluster_labels.pickle'
-            q = nlp_pipeline.label_df_path / filename
-            pickle.dump(label_single, open(q, 'wb'))
+            matrix[sample + '_kmeans_labels'] = y_kmeans
+            label_single = matrix[[sample + '_kmeans_labels']]
             labels_dict[sample]=label_single
         self.output_labels = labels_dict
+        filename = self.initial_panel + '_predicted_labels_dict.pickle'
+        q = nlp_pipeline.label_df_path / filename
+        pickle.dump(labels_dict, open(q, 'wb'))
         return nlp_pipeline(
                  df=self.df,
                  tcn=self.tcn,

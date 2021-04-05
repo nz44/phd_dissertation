@@ -38,8 +38,12 @@ class open_files(Linux_Paths):
 
     def open_panel_df(self, name):
         f_name = self.initial_panel + '_' + name + '.pickle'
-        q = super().input_path / '__PANELS__' / f_name
-        df = pd.read_pickle(q)
+        if name == 'dataframe_with_labels':
+            q = super().input_path / '__PANELS__' / 'combined_with_labels' / f_name
+        else:
+            q = super().input_path / '__PANELS__' / f_name
+        with open(q, 'rb') as f:
+            df = pickle.load(f)
         return df
 
     def open_df_to_id_for_scraping(self):
@@ -97,11 +101,6 @@ class save_files(Linux_Paths):
         pickle.dump(self.df, open(q, 'wb'))
         # self.merged_df.to_pickle(q) # cannot use this
 
-    def save_df_to_csv(self, name):
-        filename = self.initial_panel + '_' + name + '.csv'
-        q = super().input_path / '__PANELS__' / filename
-        self.df.to_csv(q)
-
     def save_pickle(self, name, for_all_panels):
         if for_all_panels is True:
             filename = name + '.pickle'
@@ -109,8 +108,3 @@ class save_files(Linux_Paths):
             filename = self.initial_panel + '_' + name + '.pickle'
         q = super().input_path / '__PANELS__' / filename
         pickle.dump(self.pickle_obj, open(q, 'wb'))
-
-    def save_fig(self, fig_name, sub_folder):
-        q = super().graph_output / sub_folder / fig_name
-        self.fig.savefig(fname=q, facecolor=self.fig.get_facecolor())
-

@@ -1,3 +1,5 @@
+from pathlib import Path
+import pickle
 import pandas as pd
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
@@ -24,6 +26,9 @@ import copy
 #################################################################################################################
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
 class pre_processing():
+
+    missing_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/missing_counts')
 
     def __init__(self,
                  df,
@@ -262,13 +267,19 @@ class pre_processing():
     # IMPUTE MISSING and DELETING MISSING that cannot be imputed
     ###############################################################################################################################
     # need to delete those apps with missing in developer before finding out which apps have changed developers over time
-    def count_missing(self, var_list, consecutive=False, select_one_panel=None, group_by=None):
-        dfs = self.select_dfs_from_var_list(var_list=var_list, consecutive=consecutive, select_one_panel=select_one_panel)
+    def count_missing(self, var_list, name, consecutive=False, select_one_panel=None, group_by=None):
+        dfs = self.select_dfs_from_var_list(var_list=var_list,
+                                            consecutive=consecutive,
+                                            select_one_panel=select_one_panel)
         summary_dfs = []
         for df in dfs:
             df3 = df.isnull().sum().rename('count missing').to_frame()
             summary_dfs.append(df3)
         combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
+        filename = self.initial_panel + '_' + name + '.csv'
+        q = pre_processing.missing_path / filename
+        combined_df.to_csv(q)
+        print(combined_df)
         return combined_df
 
     def cols_missing_ratio(self):

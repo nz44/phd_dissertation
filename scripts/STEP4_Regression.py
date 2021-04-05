@@ -28,6 +28,8 @@ yearmonth = today.strftime("%Y%m")
 # *********************************************************************************************
 
 class combine_dataframes():
+    combined_df_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/combined_with_labels')
 
     def __init__(self,
                  initial_panel,
@@ -35,36 +37,51 @@ class combine_dataframes():
                  consec_panels,
                  appid_imputed_and_deleted_missing_df,
                  dev_index_gecoded_df,
-                 appid_text_cluster_labeled_df):
+                 predicted_labels,
+                 dataframe_with_labels=None):
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.consec_panels = consec_panels
         self.dfa = appid_imputed_and_deleted_missing_df
         self.dfd = dev_index_gecoded_df
-        self.dfl = appid_text_cluster_labeled_df # this is ALSO stored in nlp_pipline.output_labels
+        self.pl = predicted_labels
+        self.dfl = dataframe_with_labels
 
-    def combine_imputed_deleted_missing_with_text_labels(self):
-        inter_df = self.dfa.join(self.dfl, how='inner')
-        inter_df.index.names = ['appid']
-        inter_df.reset_index(inplace=True)
-        dfd2 = self.dfd.reset_index()
-        dfd2 = dfd2[['developer', 'location', 'longitude', 'latitude']]
-        # ATTENTION: here I used the initial panel developer to conduct m:1 merge for appid index to developer index
-        inter_df.rename(columns={'developer_'+self.initial_panel: 'developer'}, inplace=True) # here I did not delete apps that changed developer over time
-        result_df = inter_df.merge(dfd2, on='developer', how='left', validate='m:1')
-        result_df.set_index('appid', inplace=True)
-        new_count_cols = ['count_'+i for i in self.consec_panels]
-        for i in new_count_cols: # for the purpose of creating dataframes in the groupby count
-            result_df[i] = 0
-        return result_df
-
-    def convert_to_dev_multiindex(self):
-        result_df = self.combine_imputed_deleted_missing_with_text_labels()
-        result_df.reset_index(inplace=True)
-        num_apps_df = result_df.groupby('developer')['appid'].nunique().rename('num_apps_owned').to_frame()
-        result_df = result_df.merge(num_apps_df, on='developer', how='inner')
-        result_df.set_index(['developer', 'appid'], inplace=True)
-        return result_df
+    def combine_subsamples_with_predicted_labels(self):
+        """
+        run tnis after self.prepare_text_col and self.impute_text_cols and self.find_appids_to_remove_before_imputing
+        """
+        self.dfa['genreIdGame'] = self.dfa['genreId_' + self.all_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
+        dfl = self.dfa.copy(deep=True)
+        dfl = dfl.join(self.pl['full'], how='inner')
+        dfl = dfl.join(self.pl['game'], how='left')
+        dfl = dfl.join(self.pl['nongame'], how='left')
+        # ------------------------------------------------------------------------------
+        print(self.initial_panel, ' check number of non-missing rows in each label columns: ')
+        print('full dataframe dimension : ', dfl.shape)
+        dff = dfl[dfl['full_kmeans_labels'].notnull()]
+        print('full sample non-missing rows : ', dff.shape)
+        dfg = dfl[dfl['genreIdGame']==1]
+        print('game dataframe dimension : ', dfg.shape)
+        dfg = dfl[dfl['game_kmeans_labels'].notnull()]
+        print('game subsample non-missing rows : ', dfg.shape)
+        dfn = dfl[dfl['genreIdGame'] == 0]
+        print('nongame dataframe dimension : ', dfn.shape)
+        dfn = dfl[dfl['nongame_kmeans_labels'].notnull()]
+        print('nongame subsample non-missing rows : ', dfn.shape)
+        self.dfl = dfl
+        # ------------------------------------------------------------------------------
+        f_name = self.initial_panel + '_dataframe_with_labels.pickle'
+        q = combine_dataframes.combined_df_path / f_name
+        pickle.dump(self.dfl, open(q, 'wb'))
+        return combine_dataframes(
+                    initial_panel=self.initial_panel,
+                    all_panels=self.all_panels,
+                    consec_panels=self.consec_panels,
+                    appid_imputed_and_deleted_missing_df=self.dfa,
+                    dev_index_gecoded_df=self.dfd,
+                    predicted_labels=self.pl,
+                    dataframe_with_labels=self.dfl)
 
 # *********************************************************************************************
 # *********************************************************************************************
@@ -166,6 +183,8 @@ class regression_analysis():
                  df,
                  initial_panel,
                  consec_panels,
+                 subsample_names,
+                 text_label_count_df=None,
                  panel_long_df=None,
                  panel_long_game_subsamples=None,
                  individual_dummies_df=None,
@@ -174,6 +193,8 @@ class regression_analysis():
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
         self.consec_panels = consec_panels
+        self.ssnames = subsample_names
+        self.tlc_df = text_label_count_df
         self.panel_long_df = panel_long_df
         self.panel_long_game_subsamples = panel_long_game_subsamples
         self.i_dummies_df = individual_dummies_df
@@ -243,12 +264,9 @@ class regression_analysis():
         return selected_df
 
     def select_panel_vars(self, time_invariant_vars, time_variant_vars, dep_vars, demaned_time_variant_vars=None):
-        vars = ['latitude',
-                'longitude',
-                'developer',
-                'location',
-                'combined_panels_kmeans_labels',
-                'combined_panels_kmeans_labels_count']
+        vars = ['full_kmeans_labels',
+                'game_kmeans_labels',
+                'nongame_kmeans_labels']
         vars.extend(time_invariant_vars)
         vars_2 = []
         for i in time_variant_vars:
@@ -287,8 +305,10 @@ class regression_analysis():
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
-                                   panel_long_game_subsamples = self.panel_long_game_subsamples,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df)
 
     def combine_individual_dummies_to_long_panel(self):
@@ -302,8 +322,10 @@ class regression_analysis():
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
-                                   panel_long_game_subsamples = self.panel_long_game_subsamples,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df)
 
     def create_long_df_game_subsamples(self):
@@ -321,6 +343,8 @@ class regression_analysis():
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df)
@@ -343,63 +367,78 @@ class regression_analysis():
 
     def text_cluster_group_count(self):
         df2 = self.df.copy(deep=True)
-        df2 = df2[['combined_panels_kmeans_labels', 'niche_app', 'combined_panels_kmeans_labels_count']]
-        df2 = df2.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
-        df2.rename('\makecell[l]{number of apps}', inplace=True)
-        df2.rename_axis('\makecell[l]{cluster labels}', inplace=True)
-        # Only show the top 60 groups
-        df2 = df2.iloc[:30,]
+        label_cols = [i + '_kmeans_labels' for i in self.ssnames]
+        df2 = df2[label_cols]
+        count_series = []
+        for i in label_cols:
+            c = df2.groupby([i]).size().sort_values(ascending=False)
+            count_series.append(c)
+        df3 = pd.concat(count_series, axis=1)
+        df3.columns = self.ssnames
+        # # Only show the top 60 groups
+        df4 = df3.copy(deep=True)
+        df4 = df4.iloc[:30,]
+        df4.columns = ['\makecell[l]{all apps}',
+                       '\makecell[l]{hedonic apps}',
+                       '\makecell[l]{none \\\ hedonic apps}']
         filename = self.initial_panel + '_text_cluster_label_group.tex'
-        df3 = df2.to_latex(buf=regression_analysis.descriptive_stats_tables / filename,
-                                       multirow=True,
-                                       multicolumn=True,
-                                       caption=('Number of Apps In Top 30 Text Cluster Groups'),
-                                       position='h!',
-                                       label='table:3',
-                                       escape=False)
-        return df2
+        df4.to_latex(buf=regression_analysis.descriptive_stats_tables / filename,
+                       multirow=True,
+                       multicolumn=True,
+                       caption=('Number of Apps In Top 30 Text Cluster Groups for Three Subsamples'),
+                       position='h!',
+                       label='table:3',
+                       escape=False)
+        self.tlc_df = df3
+        return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
+                                   panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
+                                   individual_dummies_df=self.i_dummies_df)
 
     def text_cluster_bar_chart(self, top_n):
-        df2 = self.df.copy(deep=True)
-        df2 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
-        df2 = df2.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
-        df2 = df2.to_frame()
-        df2.reset_index(inplace=True)
-        df2.columns = ['text cluster group labels', 'number of apps in each group']
-        # -------------- plot ----------------------------------------------------------------
-        fig, ax = plt.subplots()
-        # color the top_n bars
-        color = ['red'] * top_n
-        rest = len(df2.index) - top_n
-        color.extend(['blue'] * rest)
-        ax = df2.plot.bar(x='text cluster group labels',
-                          y='number of apps in each group',
-                          ax=ax,
-                          color=color)
-        # customize legend
-        BRA = mpatches.Patch(color='red', label='broad apps')
-        NIA = mpatches.Patch(color='blue', label='niche apps')
-        ax.legend(handles=[BRA, NIA], loc='upper right')
-        ax.axes.xaxis.set_ticks([])
-        ax.yaxis.set_ticks_position('right')
-        ax.spines['left'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.grid(True)
-        # label the top n clusters
-        df3 = df2.iloc[:top_n, ]
-        for index, row in df3.iterrows():
-            value = row['number of apps in each group']
-            ax.annotate(value,
-                        (index, value),
-                        xytext=(0, 0.1), # 2 points to the right and 15 points to the top of the point I annotate
-                        textcoords='offset points')
-        ax.set_xlabel("400 Text Clusters")
-        ax.set_ylabel("Number of Apps in Each Text Cluster")
-        ax.set_title(self.initial_panel + ' Dataset Text Cluster Bar Chart')
-        filename = self.initial_panel + '_text_cluster_bar_chart.png'
-        fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
-                    facecolor='white',
-                    dpi=300)
+        df2 = self.tlc_df.copy(deep=True)
+        for i in self.ssnames:
+            df3 = df2[[i]].sort_values(i, ascending=False)
+            df3.reset_index(inplace=True)
+            df3.columns = [i+' text clusters', 'number of apps']
+            # -------------- plot ----------------------------------------------------------------
+            fig, ax = plt.subplots()
+            # color the top_n bars
+            color = ['red'] * top_n
+            rest = len(df3.index) - top_n
+            color.extend(['blue'] * rest)
+            ax = df3.plot.bar(x=i+' text clusters',
+                              y='number of apps',
+                              ax=ax,
+                              color=color)
+            # customize legend
+            BRA = mpatches.Patch(color='red', label='broad apps')
+            NIA = mpatches.Patch(color='blue', label='niche apps')
+            ax.legend(handles=[BRA, NIA], loc='upper right')
+            ax.axes.xaxis.set_ticks([])
+            ax.yaxis.set_ticks_position('right')
+            ax.spines['left'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.grid(True)
+            # label the top n clusters
+            df4 = df3.iloc[:top_n, ]
+            for index, row in df4.iterrows():
+                value = row['number of apps']
+                ax.annotate(value,
+                            (index, value),
+                            xytext=(0, 0.1), # 2 points to the right and 15 points to the top of the point I annotate
+                            textcoords='offset points')
+            ax.set_xlabel("350 Text Clusters")
+            ax.set_ylabel("Number of Apps")
+            ax.set_title(self.initial_panel + ' ' + i + ' Text Cluster Bar Graph')
+            filename = self.initial_panel + '_' + i + '_text_cluster_bar.png'
+            fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
+                        facecolor='white',
+                        dpi=300)
         return df2
 
     def bar_chart_a_dummy_against_dummy_or_cat(self, df, dummy1, dummy2):
@@ -463,7 +502,8 @@ class regression_analysis():
                     'containsAdsTrue',
                     'offersIAPTrue']
         kvars = [i + '_' + the_panel for i in key_vars]
-        time_invariants_vars = ['combined_panels_kmeans_labels',
+        time_invariants_vars = [
+                     'combined_panels_kmeans_labels',
                      'combined_panels_kmeans_labels_count',
                      'genreIdGame',
                      'nicheDummy',
@@ -637,11 +677,13 @@ class regression_analysis():
                                          'continuous_vars_by_dummies': continuous_by_dummies,
                                          'continuous_vars_by_categorical': groupby_cat_dfs}
         return regression_analysis(df=self.df,
-                                   panel_long_df=self.panel_long_df,
-                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    initial_panel=self.initial_panel,
                                    consec_panels=self.consec_panels,
-                                   descriptive_stats_tables=self.descriptive_stats_tables)
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
+                                   panel_long_df=self.panel_long_df,
+                                   panel_long_game_subsamples=self.panel_long_game_subsamples,
+                                   individual_dummies_df=self.i_dummies_df)
 
     def customize_and_output_descriptive_stats_pandas_to_latex(self, the_panel):
         """
@@ -1059,54 +1101,61 @@ class regression_analysis():
         df3.drop(me_dummys_p, axis=1, inplace=True)
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
-    def create_nicheDummy(self, top_n):
-        df2 = self.df.copy(deep=True)
-        df3 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
-        df4 = df3.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
-        df4 = df4.iloc[:top_n, ]
-        broad_labels = list(df4.index.values)
-        df3['nicheDummy'] = df3['combined_panels_kmeans_labels'].apply(lambda x: 0 if x in broad_labels else 1)
-        df3.drop(['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count'], axis=1, inplace=True)
-        self.df = self.df.join(df3, how='inner')
+    def create_NicheDummy(self, top_n):
+        """
+        make sure to run this after self.text_cluster_group_count()
+        """
+        df2 = self.tlc_df.copy(deep=True)
+        broad_labels_dict = dict.fromkeys(self.ssnames)
+        for i in self.ssnames:
+            df3 = df2[[i]].sort_values(i, ascending=False)
+            top = df3.iloc[:top_n, ]
+            broad_labels_dict[i] = list(top.index.values)
+        for i in self.ssnames:
+            self.df[i+'NicheDummy'] = self.df[i+'_kmeans_labels'].apply(lambda x: 0 if x in broad_labels_dict[i] else 1)
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
-    def create_n_nicheDummies(self, n):
+    def create_n_NicheDummies(self, n):
         """
         note that here 1 does not necessarily means being niche, and 0 means being broad.
         In the create nicheDummy, 1 indeed means being niche and 0 means being broad because I defined the top 3 largest labels as broad.
         Here, 1 only means the app belongs to the top nth largest group of labels. So nicheScaleDummy0 == 1 could mean a broad app, while
         nicheScaleDummy19 == 1 definitely means being a niche app.
         """
-        df2 = self.df.copy(deep=True)
-        df3 = df2[['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count']]
-        df4 = df3.groupby(['combined_panels_kmeans_labels']).size().sort_values(ascending=False)
-        x = round(len(df4) / n)
-        frames = [df4.iloc[i * x:(i + 1) * x].copy() for i in range(n - 1)]
-        last_df = df4.iloc[(n - 1) * x : len(df4)]
-        frames.extend([last_df])
-        labels = [list(dff.index.values) for dff in frames]
-        for i in range(n):
-            df3['nicheScaleDummy' + str(i)] = df3['combined_panels_kmeans_labels'].apply(
-                lambda x: 1 if x in labels[i] else 0)
-        df3.drop(['combined_panels_kmeans_labels', 'combined_panels_kmeans_labels_count'], axis=1, inplace=True)
-        self.df = self.df.join(df3, how='inner')
+        df2 = self.tlc_df.copy(deep=True)
+        for i in self.ssnames:
+            df3 = df2[[i]].sort_values(i, ascending=False)
+            x = round(len(df3) / n)
+            frames = [df3.iloc[j * x:(j + 1) * x].copy() for j in range(n - 1)]
+            last_df = df3.iloc[(n - 1) * x : len(df3)]
+            frames.extend([last_df])
+            labels = [list(dff.index.values) for dff in frames]
+            for z in range(n):
+                self.df[i + 'NicheScaleDummy' + str(z)] = self.df[i+'_kmeans_labels'].apply(
+                    lambda x: 1 if x in labels[z] else 0)
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
     def create_individual_app_dummies(self):
         df = self.df.copy(deep=True)
@@ -1117,11 +1166,13 @@ class regression_analysis():
         dummies = pd.get_dummies(dummies, columns=['appId'], drop_first=True)
         self.i_dummies_df = dummies
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
     def create_demean_time_variant_vars(self, time_variant_vars):
         """
@@ -1140,11 +1191,13 @@ class regression_analysis():
         df_new = functools.reduce(lambda a, b: a.join(b, how='inner'), dfs)
         self.df = self.df.join(df_new, how='inner')
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
     def count_number_of_days_since(self, var):
         """
@@ -1159,11 +1212,13 @@ class regression_analysis():
             df2['DaysSinceReleased'] = df2['DaysSinceReleased'].apply(lambda x: int(x.days))
         self.df = self.df.join(df2, how='inner')
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
     def standardize_continuous_vars(self, con_var, method):
         vars = [con_var + '_' + i for i in self.consec_panels]
@@ -1188,11 +1243,13 @@ class regression_analysis():
             print()
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   consec_panels=self.consec_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
     def check_whether_cat_dummies_are_mutually_exclusive(self, the_panel, **kwargs):
         df1 = self.select_vars(the_panel=the_panel, **kwargs)
