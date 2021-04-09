@@ -182,7 +182,7 @@ class regression_analysis():
     def __init__(self,
                  df,
                  initial_panel,
-                 consec_panels,
+                 all_panels,
                  subsample_names,
                  text_label_count_df=None,
                  panel_long_df=None,
@@ -192,7 +192,7 @@ class regression_analysis():
                  several_reg_results_pandas=None):
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.initial_panel = initial_panel
-        self.consec_panels = consec_panels
+        self.all_panels = all_panels
         self.ssnames = subsample_names
         self.tlc_df = text_label_count_df
         self.panel_long_df = panel_long_df
@@ -221,7 +221,7 @@ class regression_analysis():
             print(unique_l)
             return unique_l
         else:
-            col_name = [single_var+'_'+i for i in self.consec_panels]
+            col_name = [single_var+'_'+i for i in self.all_panels]
             d = dict.fromkeys(col_name)
             for j in d.keys():
                 unique_l = self.df[j].unique()
@@ -254,7 +254,7 @@ class regression_analysis():
             variables = [kwargs['single_var']]
         if the_panel is None:
             selected_cols = []
-            for p in self.consec_panels:
+            for p in self.all_panels:
                 cols = [item + '_' + p for item in variables]
                 selected_cols.extend(cols)
         else:
@@ -270,12 +270,12 @@ class regression_analysis():
         vars.extend(time_invariant_vars)
         vars_2 = []
         for i in time_variant_vars:
-            vars_2.extend([i + '_' + panel for panel in self.consec_panels])
+            vars_2.extend([i + '_' + panel for panel in self.all_panels])
         if demaned_time_variant_vars is not None:
             for i in demaned_time_variant_vars:
-                vars_2.extend([i + '_' + panel for panel in self.consec_panels])
+                vars_2.extend([i + '_' + panel for panel in self.all_panels])
         for i in dep_vars:
-            vars_2.extend([i + '_' + panel for panel in self.consec_panels])
+            vars_2.extend([i + '_' + panel for panel in self.all_panels])
         vars.extend(vars_2)
         new_df = self.df.copy(deep=True)
         new_df = new_df[vars]
@@ -287,7 +287,7 @@ class regression_analysis():
         return null_data
 
     def replace_literal_true(self, cat_var): # after checking unique value of cat_var, some cat_var has 'True' instead of True
-        cols = [cat_var+'_'+i for i in self.consec_panels]
+        cols = [cat_var+'_'+i for i in self.all_panels]
         for j in cols:
             self.df.loc[self.df[j] == 'True', j] = True
         return self.df
@@ -304,7 +304,7 @@ class regression_analysis():
         self.panel_long_df = new_df
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -321,7 +321,7 @@ class regression_analysis():
         self.panel_long_df = df
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -342,7 +342,7 @@ class regression_analysis():
         self.panel_long_game_subsamples = game_subsamples
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -392,7 +392,7 @@ class regression_analysis():
         self.tlc_df = df3
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -460,8 +460,6 @@ class regression_analysis():
             x = p.get_x() + p.get_width() + 0.02
             y = p.get_y() + p.get_height() / 2
             ax.annotate(percentage, (x, y))
-        if dummy1 == 'nicheDummy':
-            ax.set_title(self.initial_panel + ' Dataset' + ' Niche Dummy against ' + dummy2)
         filename = self.initial_panel + '_' + dummy1 + '_' + dummy2 + '.png'
         fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
                     facecolor='white',
@@ -474,21 +472,18 @@ class regression_analysis():
                          fill=True, common_norm=False,
                          # palette="crest", remove palette because the color contrast is too low
                          alpha=.4, linewidth=0, ax=ax)
-        if dummy1 == 'nicheDummy':
-            ax.set_title(self.initial_panel + ' Dataset' + ' Niche Dummy against ' + continuous1)
+        ax.set_title(self.initial_panel + ' Dataset' + ' ' + dummy1 + ' against ' + continuous1)
         filename = self.initial_panel + '_' + dummy1 + '_' + continuous1 + '.png'
         fig.savefig(regression_analysis.descriptive_stats_graphs / filename,
                     facecolor='white',
                     dpi=300)
         return ax
 
-    def ONEDummy_relationship_to_keyvars(self, ONEDummy, the_panel, n_niche_scale_dummies):
+    def ONEDummy_relationship_to_keyvars(self, NicheDummy, the_panel):
         """
-        make sure you run self.create_nicheDummy and create_n_nichedummies before running this
-        The ONEDummy is usually time-invariant, for example, nicheDummy or genreIdGame
+        NicheDummy is one of the NicheDummies for different subsamples
         """
         # ----------------- select relationship with key variables -----------------------------
-        df2 = self.df.copy(deep=True)
         key_vars = ['score',
                     'ratings',
                     'reviews',
@@ -503,28 +498,41 @@ class regression_analysis():
                     'offersIAPTrue']
         kvars = [i + '_' + the_panel for i in key_vars]
         time_invariants_vars = [
-                     'combined_panels_kmeans_labels',
-                     'combined_panels_kmeans_labels_count',
                      'genreIdGame',
-                     'nicheDummy',
                      'contentRatingAdult',
                      'DaysSinceReleased']
         kvars.extend(time_invariants_vars)
-        nicheScaleDummies = ['nicheScaleDummy' + str(i) for i in range(n_niche_scale_dummies)]
-        kvars.extend(nicheScaleDummies)
-        df4 = df2[kvars]
-        # ---------------------------------------------------------------------------------------
-        compare_against1 = ['nicheDummy', 'genreIdGame', 'contentRatingAdult',
-                           'paidTrue_'+the_panel, 'offersIAPTrue_'+the_panel, 'containsAdsTrue_'+the_panel,
-                           'CategoricalminInstalls_'+the_panel]
-        compare_against1.remove(ONEDummy)
-        for i in compare_against1:
-            print(i)
-            ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, ONEDummy, i)
-        compare_against2 = ['score_'+the_panel, 'ratings_'+the_panel, 'reviews_'+the_panel]
-        for i in compare_against2:
-            ax = self.kde_plot_by_dummy(df4, ONEDummy, i)
-        return ax
+        nichedummies = [i + 'NicheDummy' for i in self.ssnames]
+        kvars.extend(nichedummies)
+        # we are comparing niche dummies (under different samples) against all other dummies
+        compare_against1 = ['genreIdGame',
+                            'contentRatingAdult',
+                            'paidTrue_' + the_panel,
+                            'offersIAPTrue_' + the_panel,
+                            'containsAdsTrue_' + the_panel,
+                            'CategoricalminInstalls_' + the_panel]
+        compare_against2 = ['score_' + the_panel,
+                            'ratings_' + the_panel,
+                            'reviews_' + the_panel]
+        # --------------- LOOPING THROUGH EACH SUBSAMPLE ---------------------------------
+        # here we are assuming ONEDummy contains sample information
+        for i in self.ssnames:
+            if i == 'full':
+                df2 = self.df.copy(deep=True)
+            elif i == 'game':
+                df2 = self.df.copy(deep=True)
+                df2 = df2.loc[df2['genreIdGame'==1]]
+            elif i == 'nongame':
+                df2 = self.df.copy(deep=True)
+                df2 = df2.loc[df2['genreIdGame'==0]]
+            df4 = df2[kvars]
+            for j in compare_against1:
+                print(j)
+                ax = self.bar_chart_a_dummy_against_dummy_or_cat(df4, NicheDummy, j)
+            for j in compare_against2:
+                print(j)
+                ax = self.kde_plot_by_dummy(df4, NicheDummy, j)
+            return ax
 
     def key_var_definition(self):
         df = pd.Series(regression_analysis.var_definition).to_frame().reset_index()
@@ -678,7 +686,7 @@ class regression_analysis():
                                          'continuous_vars_by_categorical': groupby_cat_dfs}
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -1000,10 +1008,10 @@ class regression_analysis():
             print(rd)
             return rd
         else:
-            col_name = [cat_var+'_'+i for i in self.consec_panels]
+            col_name = [cat_var+'_'+i for i in self.all_panels]
             df_list = []
             for j in range(len(col_name)):
-                rd = self.df.groupby(col_name[j])['count_'+self.consec_panels[j]].count()
+                rd = self.df.groupby(col_name[j])['count_'+self.all_panels[j]].count()
                 if cat_var == 'minInstalls':
                     rd = rd.sort_index(ascending=False)
                 else:
@@ -1037,10 +1045,10 @@ class regression_analysis():
         use the last panel as the standard value for time-invariant variables
         """
         time_variant_df, time_variant_appids = self.find_time_variant_rows(cat_var=cat_var)
-        col_names = [cat_var + '_' + i for i in self.consec_panels]
+        col_names = [cat_var + '_' + i for i in self.all_panels]
         for i in time_variant_appids:
             for j in col_names:
-                self.df.at[i, j] = self.df.at[i, cat_var+'_' + self.consec_panels[-1]] # this one intends to change class attributes
+                self.df.at[i, j] = self.df.at[i, cat_var+'_' + self.all_panels[-1]] # this one intends to change class attributes
         return self.df
 
     def create_new_dummies_from_cat_var(self, cat_var, time_invariant=False):
@@ -1051,50 +1059,52 @@ class regression_analysis():
         if cat_var == 'contentRating':
             df1 = self.select_vars(single_var=cat_var)
             if time_invariant is True:
-                df1['contentRatingAdult'] = df1['contentRating_' + self.consec_panels[-1]].apply(
+                df1['contentRatingAdult'] = df1['contentRating_' + self.all_panels[-1]].apply(
                     lambda x: 0 if 'Everyone' in x else 1)
             else:
-                for i in self.consec_panels:
+                for i in self.all_panels:
                     df1['contentRatingAdult_'+i] = df1['contentRating_'+i].apply(lambda x: 0 if 'Everyone' in x else 1)
-            dcols = ['contentRating_'+ i for i in self.consec_panels]
+            dcols = ['contentRating_'+ i for i in self.all_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         elif cat_var == 'minInstalls':
             df1 = self.select_vars(single_var=cat_var)
-            for i in self.consec_panels:
+            for i in self.all_panels:
                 df1['minInstallsTop_'+i] = df1['minInstalls_'+i].apply(lambda x: 1 if x >= 1.000000e+07 else 0)
                 df1['minInstallsMiddle_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+04 else 0)
                 df1['minInstallsBottom_' + i] = df1['minInstalls_' + i].apply(lambda x: 1 if x < 1.000000e+04 else 0)
-            dcols = ['minInstalls_'+ i for i in self.consec_panels]
+            dcols = ['minInstalls_'+ i for i in self.all_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         elif cat_var == 'free':
             df1 = self.select_vars(single_var=cat_var)
-            for i in self.consec_panels:
+            for i in self.all_panels:
                 df1['paidTrue_' + i] = df1['free_' + i].apply(lambda x: 1 if x is False else 0)
-            dcols = ['free_' + i for i in self.consec_panels]
+            dcols = ['free_' + i for i in self.all_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         else:
             df1 = self.select_vars(single_var=cat_var)
-            for i in self.consec_panels:
+            for i in self.all_panels:
                 df1[cat_var + 'True_' + i] = df1[cat_var + '_' + i].apply(lambda x: 1 if x is True else 0)
-            dcols = [cat_var + '_' + i for i in self.consec_panels]
+            dcols = [cat_var + '_' + i for i in self.all_panels]
             df1.drop(dcols, axis=1, inplace=True)
             self.df = self.df.join(df1, how='inner')
         return regression_analysis(df=self.df,
+                                   initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   subsample_names=self.ssnames,
+                                   text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
-                                   individual_dummies_df=self.i_dummies_df,
-                                   initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels)
+                                   individual_dummies_df=self.i_dummies_df)
 
     def create_categorical_from_exhaustive_dummies(self, me_dummys):
-        me_dummys_p = [i + '_' + p for p in self.consec_panels for i in me_dummys]
+        me_dummys_p = [i + '_' + p for p in self.all_panels for i in me_dummys]
         df2 = self.df.copy(deep=True)
         df3 = df2[me_dummys_p]
         if me_dummys == ['minInstallsTop', 'minInstallsMiddle', 'minInstallsBottom']:
-            for p in self.consec_panels:
+            for p in self.all_panels:
                 df3.loc[df3['minInstallsTop'+'_'+p] == 1, 'CategoricalminInstalls'+'_'+p] = 'Top'
                 df3.loc[df3['minInstallsMiddle'+'_'+p] == 1, 'CategoricalminInstalls'+'_'+p] = 'Middle'
                 df3.loc[df3['minInstallsBottom'+'_'+p] == 1, 'CategoricalminInstalls'+'_'+p] = 'Bottom'
@@ -1102,7 +1112,7 @@ class regression_analysis():
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -1123,7 +1133,7 @@ class regression_analysis():
             self.df[i+'NicheDummy'] = self.df[i+'_kmeans_labels'].apply(lambda x: 0 if x in broad_labels_dict[i] else 1)
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -1150,7 +1160,7 @@ class regression_analysis():
                     lambda x: 1 if x in labels[z] else 0)
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -1167,12 +1177,19 @@ class regression_analysis():
         self.i_dummies_df = dummies
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
                                    panel_long_game_subsamples=self.panel_long_game_subsamples,
                                    individual_dummies_df=self.i_dummies_df)
+
+    def create_DID_dummy(self, time_invariant=False):
+        pre_covid =
+        pass
+
+    def create_dummies_for_missing_unimputed_data(self):
+        pass
 
     def create_demean_time_variant_vars(self, time_variant_vars):
         """
@@ -1181,18 +1198,18 @@ class regression_analysis():
         df = self.df.copy(deep=True)
         dfs = []
         for i in time_variant_vars:
-            ts_i = [i + '_' + p for p in self.consec_panels]
+            ts_i = [i + '_' + p for p in self.all_panels]
             sub_df = df[ts_i]
             sub_df['PanelMean'+i] = sub_df.mean(axis=1)
-            for p in self.consec_panels:
+            for p in self.all_panels:
                 sub_df['DeMeaned'+i+'_'+p] = sub_df[i+'_'+p] - sub_df['PanelMean'+i]
-            ts_idm = ['DeMeaned' + i + '_' + p for p in self.consec_panels]
+            ts_idm = ['DeMeaned' + i + '_' + p for p in self.all_panels]
             dfs.append(sub_df[ts_idm])
         df_new = functools.reduce(lambda a, b: a.join(b, how='inner'), dfs)
         self.df = self.df.join(df_new, how='inner')
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -1213,7 +1230,7 @@ class regression_analysis():
         self.df = self.df.join(df2, how='inner')
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,
@@ -1221,7 +1238,7 @@ class regression_analysis():
                                    individual_dummies_df=self.i_dummies_df)
 
     def standardize_continuous_vars(self, con_var, method):
-        vars = [con_var + '_' + i for i in self.consec_panels]
+        vars = [con_var + '_' + i for i in self.all_panels]
         new_df = self.df.copy(deep=True)
         df2 = new_df[vars]
         print('before standardization:')
@@ -1244,7 +1261,7 @@ class regression_analysis():
         self.df = self.df.join(df3, how='inner')
         return regression_analysis(df=self.df,
                                    initial_panel=self.initial_panel,
-                                   consec_panels=self.consec_panels,
+                                   all_panels=self.all_panels,
                                    subsample_names=self.ssnames,
                                    text_label_count_df=self.tlc_df,
                                    panel_long_df=self.panel_long_df,

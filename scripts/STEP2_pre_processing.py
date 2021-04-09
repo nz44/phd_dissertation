@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import random
-from datetime import datetime as dt
+from datetime import datetime
 from datetime import date
 import collections
 import operator
@@ -30,27 +30,24 @@ class pre_processing():
     missing_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/missing_counts')
 
+    imputed_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+
     def __init__(self,
                  df,
-                 df_index='appid',
-                 df_developer_index=None,
-                 df_developer_index_geocoded=None,
-                 df_multiindex=None,
-                 df_multiindex_geocoded=None,
                  initial_panel=None,
                  all_panels=None,
-                 consec_panels=None):
+                 df_developer_index=None,
+                 df_developer_index_geocoded=None,
+                 df_multiindex=None):
         self.df = df
-        self.df_index = df_index
+        self.initial_panel = initial_panel
+        self.all_panels = all_panels
         self.df_di = df_developer_index
         self.df_dig = df_developer_index_geocoded
         self.df_mi = df_multiindex
-        self.df_mig = df_multiindex_geocoded
-        self.initial_panel = initial_panel
-        self.all_panels = all_panels
-        self.consec_panels = consec_panels
 
-    # SELECTION FUNCTIONS
+    # BASIC FUNCTIONS
     ###############################################################################################################################
     def print_col_names(self, text=None):
         cols = []
@@ -65,67 +62,38 @@ class pre_processing():
                 cols = self.df.columns
         return cols
 
-    def select_the_panel(self, panel):
-        col_list = [i for i in self.df.columns if panel in i]
-        return col_list
-
-    def select_the_var(self, var, consecutive=False, select_one_panel=None):
-        if consecutive is True:  # only panels scraped in 202009 and onwards are monthly panels
-            col_list = [var + '_' + i for i in self.consec_panels]
-        else:
-            col_list = [var + '_' + i for i in self.all_panels]
+    def select_the_var(self, var, select_one_panel=None):
+        col_list = [var + '_' + i for i in self.all_panels]
         if select_one_panel is not None:
             col_list = [var + '_' + select_one_panel]
-        df2 = self.df[col_list]
+        df2 = self.df.copy(deep=True)
+        df2 = df2[col_list]
         return df2
 
-    def select_dfs_from_var_list(self, var_list, consecutive=False, select_one_panel=None):
+    def select_dfs_from_var_list(self, var_list, select_one_panel=None):
         dfs = []
         for var in var_list:
-            df2 = self.select_the_var(var, consecutive, select_one_panel)
+            df2 = self.select_the_var(var, select_one_panel)
             dfs.append(df2)
         return dfs
 
-    def keep_rows(self, list_of_row_labels):
-        if self.df_index == 'appid':
-            new_df = self.df.loc[list_of_row_labels]
-            return new_df
-        elif self.df_index == 'dev_multiindex_geocoded':
-            new_df = self.df[self.df.index.get_level_values('appId').isin(list_of_row_labels)]
-            return new_df
-
     def drop_rows(self, list_of_row_labels):
-        if self.df_index == 'appid':
-            new_df = self.df.drop(index=list_of_row_labels)
-            return pre_processing(df=new_df, initial_panel=self.initial_panel,
-                                  consec_panels=self.consec_panels, all_panels=self.all_panels)
-        elif self.df_index == 'dev_multiindex_geocoded':
-            rows_index_to_drop = self.df.index.get_level_values('appId').isin(list_of_row_labels)
-            rows_index_to_keep = ~rows_index_to_drop
-            new_df = self.df[rows_index_to_keep]
-            return pre_processing(df=new_df, df_index='dev_multiindex_geocoded',
-                                  initial_panel=self.initial_panel, consec_panels=self.consec_panels,
-                                  all_panels=self.all_panels)
+        self.df = self.df.drop(index=list_of_row_labels)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi)
 
     def drop_cols(self, list_of_col_names):
-        new_df = self.df.drop(columns=list_of_col_names)
-        return pre_processing(df=new_df, initial_panel=self.initial_panel, consec_panels=self.consec_panels,
-                              all_panels=self.all_panels)
-
-    def replace_cols_list(self, list_new_cols):
-        combined_cols = functools.reduce(lambda a, b: a.join(b, how='inner'), list_new_cols)
-        col_names = combined_cols.columns.tolist()
-        new_df = self.drop_cols(list_of_col_names=col_names)
-        new_df = new_df.df.join(combined_cols, how='inner')
-        return pre_processing(df=new_df, initial_panel=self.initial_panel, consec_panels=self.consec_panels,
-                              all_panels=self.all_panels)
-
-    def replace_cols(self, new_cols):
-        col_names = new_cols.columns.tolist()
-        new_df = self.drop_cols(list_of_col_names=col_names)
-        new_df = new_df.df.join(new_cols, how='inner')
-        return pre_processing(df=new_df, initial_panel=self.initial_panel, consec_panels=self.consec_panels,
-                              all_panels=self.all_panels)
+        self.df.drop(columns=list_of_col_names, inplace=True)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi)
 
     # STANDARD SINGLE VAR STATS
     ###############################################################################################################################
@@ -145,8 +113,8 @@ class pre_processing():
 
     # REVERT INDEX (FROM APPID to DEVELOPER)
     ###############################################################################################################################
-    def lat_and_long_columns(self, multiindex=False, consecutive=False):
-        dfd = self.convert_appid_to_developer_index(multiindex=multiindex, consecutive=consecutive)
+    def lat_and_long_columns(self, multiindex=False):
+        dfd = self.convert_appid_to_developer_index(multiindex=multiindex)
         # ------------ start geociding ------------------------------------------------------------
         geopy.geocoders.options.default_timeout = 7
         geolocator = AzureMaps(subscription_key='zLTKWFX7Ng5foT0nxB-CD-vgriqXUiNlk4IMhfD-PTQ')
@@ -154,10 +122,15 @@ class pre_processing():
         dfd['longitude'] = dfd['location'].apply(lambda loc: loc.longitude if loc else None)
         dfd['latitude'] = dfd['location'].apply(lambda loc: loc.latitude if loc else None)
         self.df_dig = dfd
-        return dfd
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi)
 
-    def convert_appid_to_developer_index(self, multiindex, consecutive=False):
-        time_invariant_df, time_invariant_appids = self.check_whether_var_varies_across_panels(var='developer', consecutive=consecutive)
+    def convert_appid_to_developer_index(self, multiindex):
+        time_invariant_df, time_invariant_appids = self.check_whether_var_varies_across_panels(var='developer')
         df2 = self.df.loc[time_invariant_appids]
         if multiindex is True:
             df2 = df2.reset_index().set_index(['developer_'+self.initial_panel, 'index'])
@@ -177,7 +150,7 @@ class pre_processing():
             dev_level_vars = ['developer', 'developerId', 'developerEmail', 'developerWebsite', 'developerAddress']
             cols = []
             for v in dev_level_vars:
-                new_df = self.select_the_var(var=v, consecutive=consecutive)
+                new_df = self.select_the_var(var=v)
                 cols.extend(new_df.columns.tolist())
             df2 = df2[cols]
             df2 = df2.reset_index(drop=True).set_index('developer_'+self.initial_panel)
@@ -192,7 +165,12 @@ class pre_processing():
                 if 'developer_' in j:
                     df2.drop(j, axis=1, inplace=True)
             self.df_di = df2
-            return df2
+            return pre_processing(df=self.df,
+                                  initial_panel=self.initial_panel,
+                                  all_panels=self.all_panels,
+                                  df_developer_index_geocoded=self.df_dig,
+                                  df_developer_index=self.df_di,
+                                  df_multiindex=self.df_mi)
 
     # TIME INVARIANT VARIABLE
     ###############################################################################################################################
@@ -212,28 +190,6 @@ class pre_processing():
         else:
             res2 = np.nan
         return res2
-
-    def check_whether_var_varies_across_panels(self, var, consecutive=False):
-        """without dropping missings first, just use this single function to find out time variant rows and delete them"""
-        df2 = self.select_the_var(var=var, consecutive=consecutive)
-        if var == 'developer':
-            for j in df2.columns:
-                df2[j] = df2[j].apply(lambda x: self.format_text_for_developer(x))
-        df_time_invariant_indicators = [] # true, time invariant; false, NOT time invariant
-        for index, row in df2.iterrows():
-            row_time_invariant_indicators = []
-            for j in range(len(df2.columns)-1):
-                if row[df2.columns[j]] == row[df2.columns[j+1]]:
-                    row_time_invariant_indicators.append(True)
-                else:
-                    row_time_invariant_indicators.append(False)
-            if all(row_time_invariant_indicators) is True:
-                df_time_invariant_indicators.append(True)
-            else:
-                df_time_invariant_indicators.append(False)
-        time_invariant_df = df2[df_time_invariant_indicators]
-        time_invariant_appids = time_invariant_df.index.tolist()
-        return time_invariant_df, time_invariant_appids
 
     # DELETE OUTLIERS
     ###############################################################################################################################
@@ -267,9 +223,8 @@ class pre_processing():
     # IMPUTE MISSING and DELETING MISSING that cannot be imputed
     ###############################################################################################################################
     # need to delete those apps with missing in developer before finding out which apps have changed developers over time
-    def count_missing(self, var_list, name, consecutive=False, select_one_panel=None, group_by=None):
+    def count_missing(self, var_list, name, select_one_panel=None):
         dfs = self.select_dfs_from_var_list(var_list=var_list,
-                                            consecutive=consecutive,
                                             select_one_panel=select_one_panel)
         summary_dfs = []
         for df in dfs:
@@ -280,7 +235,14 @@ class pre_processing():
         q = pre_processing.missing_path / filename
         combined_df.to_csv(q)
         print(combined_df)
-        return combined_df
+        print()
+        print()
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi)
 
     def cols_missing_ratio(self):
         num_of_cols_above_missing_threshold = 0
@@ -316,13 +278,13 @@ class pre_processing():
         print(missing_cols_and_missing_ratios)
         return missing_cols_and_missing_ratios, missing_cols
 
-    def check_appids_with_at_least_one_missing(self, var, consecutive=False):
-        df2 = self.select_the_var(var=var, consecutive=consecutive)
+    def check_appids_with_at_least_one_missing(self, var):
+        df2 = self.select_the_var(var=var)
         null_data = df2[df2.isnull().any(axis=1)]
         return list(null_data.index.values), null_data
 
-    def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing, consecutive=False):
-        df2 = self.select_the_var(var=var, consecutive=consecutive)
+    def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing):
+        df2 = self.select_the_var(var=var)
         null_data = df2[df2.isnull().any(axis=1)]
         null_data_t = null_data.T
         appids_with_consec_missing_panels = []
@@ -345,28 +307,21 @@ class pre_processing():
         print('out of', len(df2.index), 'apps.')
         return appids_intend_to_drop, appids_with_consec_missing_panels
 
-    def print_unique_values(self, cat_var, consecutive=False):
-        if consecutive is True:
-            cols = [cat_var+'_'+i for i in self.consec_panels]
-        else:
-            cols = [cat_var + '_' + i for i in self.all_panels]
+    def print_unique_values(self, cat_var):
+        cols = [cat_var + '_' + i for i in self.all_panels]
         for j in cols:
             unique_l = self.df[j].unique()
             print(j, 'contains', len(unique_l), 'unique values')
             print(unique_l)
-        return self.df
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi)
 
-    def replace_literal_true(self, cat_var, consecutive=False): # after checking unique value of cat_var, some cat_var has 'True' instead of True
-        if consecutive is True:
-            cols = [cat_var+'_'+i for i in self.consec_panels]
-        else:
-            cols = [cat_var + '_' + i for i in self.all_panels]
-        for j in cols:
-            self.df.loc[self.df[j] == 'True', j] = True
-        return self.df
-
-    def check_if_col_has_identical_value_except_for_missing(self, var, consecutive=False):
-        df2 = self.select_the_var(var=var, consecutive=consecutive)
+    def check_if_col_has_identical_value_except_for_missing(self, var):
+        df2 = self.select_the_var(var=var)
         null_data = df2[df2.isnull().any(axis=1)]
         null_data_t = null_data.T
         appids_have_same_value_except_missing = []
@@ -379,40 +334,137 @@ class pre_processing():
         dfr = null_data.loc[appids_have_same_value_except_missing]
         return dfr, appids_have_same_value_except_missing
 
-    def impute_missing_using_adj_panels(self, var, consecutive, adj_panels, method):
-        df2 = self.select_the_var(var=var, consecutive=consecutive)
-        df_list = []
-        for j in range(len(df2.columns)):
-            if j <= adj_panels // 2 or j in [0, 1]:
-                df = df2.iloc[:, 0:adj_panels + 1]
-            elif j >= len(df2.columns) - adj_panels // 2 - 1:
-                df = df2.iloc[:, len(df2.columns) - adj_panels - 1:len(df2.columns)]
-            else:
-                if adj_panels == 1:
-                    df = df2.iloc[:, j - 1:j + 1]
-                else:
-                    df = df2.iloc[:, j - adj_panels // 2:j + adj_panels // 2 + 1]
-            if method == 'mean':
-                df[method] = df.mean(axis=1, skipna=True)
-            elif method in ['mode', 'mode if none-missing are all the same']:
-                df['mode'] = df.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
-            elif method == 'previous':
-                df[method] = df.iloc[:, 0]
-            else:
-                df[method] = 0
-            dfd = copy.deepcopy(df)
-            for col in dfd.columns:
-                if method == 'mode if none-missing are all the same':
-                    dfr, appids_have_same_value_except_missing = self.check_if_col_has_identical_value_except_for_missing(
-                        var=var, consecutive=consecutive)
-                    dfd.loc[appids_have_same_value_except_missing, col] = dfd['mode']
-                else:
-                    dfd.loc[dfd[col].isnull(), col] = dfd[method]
-            dfd = dfd[[df2.columns[j]]]
-            df_list.append(dfd)
-        imputed_df = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-        return imputed_df
+    def select_imputation_panels(self, df, method, current_panel):
+        """
+        :param df: input dataframe is a deep copy of self.select_the_var(var=var)
+        :param method: all panels before, all panels before and after
+        :param current_panel: the time where you decide which panel are before and after in self.all_panels
+        :return: the dataframe after selecting the useful panels
+        """
+        the_panel = datetime.strptime(current_panel, "%Y%m")
+        if method == 'all panels before and after':
+            return df
+        elif method == 'all panels before':
+            before_panels = []
+            for i in self.all_panels:
+                panel = datetime.strptime(i, "%Y%m")
+                if panel <= the_panel:
+                    before_panels.append(i)
+            cols_to_keep = []
+            for i in df.columns:
+                z = i.split('_')
+                if z[1] in before_panels:
+                    cols_to_keep.append(i)
+            return df[cols_to_keep]
 
-#################################################################################################################
-# summary stats tables and graphs are in the regression_analysis class, use the imputed and deleted missing data
-# for summary stats
+    def check_if_all_non_missing_are_same_in_a_row(self, df):
+        # https://stackoverflow.com/questions/22701799/pandas-dataframe-find-rows-where-all-columns-equal
+        # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.eq.html
+        # first need to remove none from each ( comparing None to other value will return False)
+        df2 = df.copy(deep=True)
+        ready_to_concat = []
+        for i in range(len(df.index)):
+            df3 = df2.iloc[i, :].to_frame().T
+            df3 = df3.dropna(axis='columns')
+            if df3.empty: # means all columns in this row are None
+                df3['nonmissings_are_same'] = False
+            else:
+                df3['nonmissings_are_same'] = df3.eq(df3.iloc[:, 0], axis=0).all(1)
+            ready_to_concat.append(df3['nonmissings_are_same'])
+        df4 = functools.reduce(lambda a, b: pd.concat([a, b]), ready_to_concat)
+        return df4
+
+    def check_whether_var_varies_across_panels(self, var):
+        """without dropping missings first, just use this single function to find out time variant rows and delete them"""
+        df2 = self.select_the_var(var=var)
+        if var == 'developer':
+            for j in df2.columns:
+                df2[j] = df2[j].apply(lambda x: self.format_text_for_developer(x))
+        nonmissings_are_same = self.check_if_all_non_missing_are_same_in_a_row(df=df2)
+        time_invariant_df = df2.loc[nonmissings_are_same]
+        time_invariant_appids = time_invariant_df.index.tolist()
+        return time_invariant_df, time_invariant_appids
+
+    def implement_imputation_methods(self, df, method):
+        """
+        :param df: The dataframe is the output of self.select_imputation_panels()
+        :return: imputed column (a pandas series), you need to use this column to fill missing in the original columns
+        """
+        df2 = df.copy(deep=True)
+        if method == 'mean':
+            df2[method] = df2.mean(axis=1, skipna=True)
+        elif method == 'mode':
+            df2[method] = df2.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
+        elif method == 'mode if none-missing are all the same':
+            nonmissings_are_same = self.check_if_all_non_missing_are_same_in_a_row(df=df2)
+            df2['mode'] = df2.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
+            df2[method] = None
+            # assign 'mode if none-missing are all the same' to 'mode' when 'nonmissings_are_same' is True
+            df2[method].loc[nonmissings_are_same] = df2['mode']
+        elif method == 'previous':
+            # because you are imputing the last column in 'all panels before' using the second last column
+            reversed_columns = df2.columns[::-1]
+            df2[method] = df2[reversed_columns[0]]
+            # iterratively fill na in df[method] with previous panels, starting from the most recent previous
+            for i in range(1, len(reversed_columns)):
+                df2[method] = df2[method].fillna(df2[reversed_columns[i]])
+        return df2[method]
+
+    def impute_missing(self, var):
+        df3 = self.select_the_var(var=var)
+        cols_to_drop_later = df3.columns.tolist()
+        if var in ['minInstalls', 'price', 'updated', 'free']:
+            for i in self.all_panels:
+                df4 = self.select_imputation_panels(df=df3,
+                                                    method='all panels before',
+                                                    current_panel=i)
+                if var in ['minInstalls', 'price', 'updated']:
+                    the_imputed_panel = self.implement_imputation_methods(df=df4,
+                                                                          method='previous')
+                elif var in ['free']:
+                    the_imputed_panel = self.implement_imputation_methods(df=df4,
+                                                                          method='mode if none-missing are all the same')
+                df3['Imputed' + var + '_' + i] = df3[var + '_' + i]
+                df3['Imputed' + var + '_' + i] = df3['Imputed' + var + '_' + i].fillna(the_imputed_panel)
+        elif var in ['score', 'reviews', 'ratings', 'released', 'contentRating', 'genreId', 'size', 'containsAds', 'offersIAP']:
+            for i in self.all_panels:
+                df4 = self.select_imputation_panels(df=df3,
+                                                    method='all panels before and after',
+                                                    current_panel=i)
+                if var in ['score', 'reviews', 'ratings']:
+                    the_imputed_panel = self.implement_imputation_methods(df=df4,
+                                                                          method='mean')
+                elif var in ['released', 'contentRating', 'genreId', 'size']:
+                    the_imputed_panel = self.implement_imputation_methods(df=df4,
+                                                                          method='mode')
+                elif var in ['containsAds', 'offersIAP']:
+                    the_imputed_panel = self.implement_imputation_methods(df=df4,
+                                                                          method='mode if none-missing are all the same')
+                df3['Imputed' + var + '_' + i] = df3[var + '_' + i]
+                df3['Imputed' + var + '_' + i] = df3['Imputed' + var + '_' + i].fillna(the_imputed_panel)
+        df3.drop(cols_to_drop_later, axis=1, inplace=True)
+        print('finished imputing missing for variable : ', var)
+        return df3
+
+    def impute_list_of_vars(self, list_of_vars):
+        imputed_dfs = []
+        for i in list_of_vars:
+            df3 = self.impute_missing(var=i)
+            imputed_dfs.append(df3)
+        combined_imputed = functools.reduce(lambda a, b: a.join(b, how='inner'), imputed_dfs)
+        self.df = self.df.join(combined_imputed, how='inner')
+        # -------------------- save -----------------------------------
+        filename = self.initial_panel + '_imputed_missing.pickle'
+        q = pre_processing.imputed_path / filename
+        pickle.dump(self.df, open(q, 'wb'))
+        print('finished imputing missing for', self.initial_panel, 'dataset')
+        print()
+        print()
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi)
+
+
