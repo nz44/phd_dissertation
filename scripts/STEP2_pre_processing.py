@@ -34,18 +34,36 @@ class pre_processing():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
 
     def __init__(self,
-                 df,
-                 initial_panel=None,
-                 all_panels=None,
+                 initial_panel,
+                 all_panels,
+                 df=None,
                  df_developer_index=None,
                  df_developer_index_geocoded=None,
-                 df_multiindex=None):
-        self.df = df
+                 df_multiindex=None,
+                 appids_to_remove=None):
         self.initial_panel = initial_panel
         self.all_panels = all_panels
+        self.df = df
         self.df_di = df_developer_index
         self.df_dig = df_developer_index_geocoded
         self.df_mi = df_multiindex
+        self.appids_to_remove = appids_to_remove
+
+    ###############################################################################################################################
+    # Open dataframe to be put into self.df
+    def open_merged_df(self):
+        f_name = self.initial_panel + '_MERGED.pickle'
+        q = pre_processing.imputed_path / f_name
+        with open(q, 'rb') as f:
+            df = pickle.load(f)
+        self.df = df
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
 
     # BASIC FUNCTIONS
     ###############################################################################################################################
@@ -62,6 +80,20 @@ class pre_processing():
                 cols = self.df.columns
         return cols
 
+    def print_unique_values(self, cat_var):
+        cols = [cat_var + '_' + i for i in self.all_panels]
+        for j in cols:
+            unique_l = self.df[j].unique()
+            print(j, 'contains', len(unique_l), 'unique values')
+            print(unique_l)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
+
     def select_the_var(self, var, select_one_panel=None):
         col_list = [var + '_' + i for i in self.all_panels]
         if select_one_panel is not None:
@@ -77,23 +109,23 @@ class pre_processing():
             dfs.append(df2)
         return dfs
 
-    def drop_rows(self, list_of_row_labels):
-        self.df = self.df.drop(index=list_of_row_labels)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              df_developer_index_geocoded=self.df_dig,
-                              df_developer_index=self.df_di,
-                              df_multiindex=self.df_mi)
-
-    def drop_cols(self, list_of_col_names):
-        self.df.drop(columns=list_of_col_names, inplace=True)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              df_developer_index_geocoded=self.df_dig,
-                              df_developer_index=self.df_di,
-                              df_multiindex=self.df_mi)
+    def compare_original_and_imputed_var(self, var):
+        # ----------- open imputed dataframe ----------------------------------
+        f_name = self.initial_panel + '_imputed_missing.pickle'
+        q = pre_processing.imputed_path / f_name
+        with open(q, 'rb') as f:
+            df = pickle.load(f)
+        df2 = df.copy(deep=True)
+        # ----------- take out rows with missing for easy comparison -----------
+        varlist = [var + '_' + i for i in self.all_panels]
+        df3 = df2[varlist]
+        df3 = df3[df3.isna().any(axis=1)]
+        appids = df3.index.tolist()
+        imputed_var = ['Imputed' + var + '_' + i for i in self.all_panels]
+        varlist.extend(imputed_var)
+        df4 = df2[varlist]
+        df4 = df4.loc[appids]
+        return df4
 
     # STANDARD SINGLE VAR STATS
     ###############################################################################################################################
@@ -127,7 +159,8 @@ class pre_processing():
                               all_panels=self.all_panels,
                               df_developer_index_geocoded=self.df_dig,
                               df_developer_index=self.df_di,
-                              df_multiindex=self.df_mi)
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
 
     def convert_appid_to_developer_index(self, multiindex):
         time_invariant_df, time_invariant_appids = self.check_whether_var_varies_across_panels(var='developer')
@@ -170,7 +203,8 @@ class pre_processing():
                                   all_panels=self.all_panels,
                                   df_developer_index_geocoded=self.df_dig,
                                   df_developer_index=self.df_di,
-                                  df_multiindex=self.df_mi)
+                                  df_multiindex=self.df_mi,
+                                  appids_to_remove=self.appids_to_remove)
 
     # TIME INVARIANT VARIABLE
     ###############################################################################################################################
@@ -242,7 +276,8 @@ class pre_processing():
                               all_panels=self.all_panels,
                               df_developer_index_geocoded=self.df_dig,
                               df_developer_index=self.df_di,
-                              df_multiindex=self.df_mi)
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
 
     def cols_missing_ratio(self):
         num_of_cols_above_missing_threshold = 0
@@ -278,10 +313,46 @@ class pre_processing():
         print(missing_cols_and_missing_ratios)
         return missing_cols_and_missing_ratios, missing_cols
 
+    def drop_rows(self):
+        print(self.initial_panel, ' before remove rows : ', self.df.shape)
+        self.df = self.df.drop(index=self.appids_to_remove)
+        print(self.initial_panel, ' after remove rows : ', self.df.shape)
+        print()
+        # -------------------- save -----------------------------------
+        filename = self.initial_panel + '_imputed_and_deleted_missing.pickle'
+        q = pre_processing.imputed_path / filename
+        pickle.dump(self.df, open(q, 'wb'))
+        print('finished deleting missing for', self.initial_panel, 'dataset')
+        print()
+        print()
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
+
+    def collect_appids_to_remove_with_at_least_one_missing(self, varlist):
+        appids_to_remove = []
+        for var in varlist:
+            appids = self.check_appids_with_at_least_one_missing(var=var)
+            appids_to_remove.extend(appids)
+        appids_to_remove = list(set(appids_to_remove))
+        print(self.initial_panel, ' has total ', len(appids_to_remove), 'to remove')
+        self.appids_to_remove = appids_to_remove
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              df_developer_index_geocoded=self.df_dig,
+                              df_developer_index=self.df_di,
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
+
     def check_appids_with_at_least_one_missing(self, var):
         df2 = self.select_the_var(var=var)
         null_data = df2[df2.isnull().any(axis=1)]
-        return list(null_data.index.values), null_data
+        return list(null_data.index.values)
 
     def check_apps_with_consecutive_missing_panels(self, var, number_consec_panels_missing):
         df2 = self.select_the_var(var=var)
@@ -306,19 +377,6 @@ class pre_processing():
         print('number of apps with at least', number_consec_panels_missing, 'consecutive missing panels for', var, 'are', len(appids_with_consec_missing_panels))
         print('out of', len(df2.index), 'apps.')
         return appids_intend_to_drop, appids_with_consec_missing_panels
-
-    def print_unique_values(self, cat_var):
-        cols = [cat_var + '_' + i for i in self.all_panels]
-        for j in cols:
-            unique_l = self.df[j].unique()
-            print(j, 'contains', len(unique_l), 'unique values')
-            print(unique_l)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              df_developer_index_geocoded=self.df_dig,
-                              df_developer_index=self.df_di,
-                              df_multiindex=self.df_mi)
 
     def check_if_col_has_identical_value_except_for_missing(self, var):
         df2 = self.select_the_var(var=var)
@@ -465,6 +523,7 @@ class pre_processing():
                               all_panels=self.all_panels,
                               df_developer_index_geocoded=self.df_dig,
                               df_developer_index=self.df_di,
-                              df_multiindex=self.df_mi)
+                              df_multiindex=self.df_mi,
+                              appids_to_remove=self.appids_to_remove)
 
 

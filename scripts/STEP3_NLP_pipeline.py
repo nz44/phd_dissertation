@@ -75,24 +75,45 @@ class nlp_pipeline():
     tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
     def __init__(self,
-                 df,
                  tcn,
                  initial_panel,
                  all_panels,
+                 df=None,
                  game_subsamples=None,
                  input_text_cols=None,
                  tf_idf_matrices=None,
                  svd_matrices=None,
                  output_labels=None):
-        self.df = df
         self.tcn = tcn
         self.initial_panel = initial_panel
         self.all_panels = all_panels
+        self.df = df
         self.game_subsamples = game_subsamples
         self.input_text_cols = input_text_cols
         self.tf_idf_matrices = tf_idf_matrices
         self.svd_matrices = svd_matrices
         self.output_labels = output_labels
+
+    def open_imputed_missing_df(self):
+        """
+        The reason to use imputed missing dataframe instead of imputed and deleted missing is that everytime you delete different number of rows
+        (depends on the definition of missig), but not every time you need to re-run text clustering (because it is time-consuming),
+        so I will just use the FULL converted data and you could merged this predicted labels to imputed and deleted missing in combine_dataframes class.
+        """
+        f_name = self.initial_panel + '_imputed_missing.pickle'
+        q = nlp_pipeline.label_df_path / f_name
+        with open(q, 'rb') as f:
+            self.df = pickle.load(f)
+        return nlp_pipeline(
+                 tcn=self.tcn,
+                 initial_panel=self.initial_panel,
+                 all_panels=self.all_panels,
+                 df=self.df,
+                 game_subsamples=self.game_subsamples,
+                 input_text_cols = self.input_text_cols,
+                 tf_idf_matrices = self.tf_idf_matrices,
+                 svd_matrices=self.svd_matrices,
+                 output_labels=self.output_labels)
 
     ################## deleting, impute and format text columns for the FULL SAMPLE ####################################
     def find_appids_to_remove_before_imputing(self):
@@ -111,10 +132,10 @@ class nlp_pipeline():
         self.df = self.df.drop(appids_to_remove, axis=0)
         print('after removing rows with all none in text cols, we have', len(self.df.index))
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -138,10 +159,10 @@ class nlp_pipeline():
             print('successfully imputed missing text columns for TEXT COLUMN (combined from all panels) of the dataset', self.initial_panel)
             print('assuming all text columns are time-invariant')
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -167,10 +188,10 @@ class nlp_pipeline():
             lambda x: re.sub(r'[0-9]', '', x)).apply(
             lambda x: self.remove_stopwords(x))
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -182,17 +203,17 @@ class nlp_pipeline():
         """
         run tnis after self.prepare_text_col and self.impute_text_cols and self.find_appids_to_remove_before_imputing
         """
-        self.df['genreIdGame'] = self.df['genreId_' + self.all_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
+        self.df['genreIdGame'] = self.df['ImputedgenreId_' + self.all_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
         df2 = self.df.copy(deep=True)
         df_game = df2.loc[df2['genreIdGame'] == 1]
         df_nongame = df2.loc[df2['genreIdGame'] == 0]
         self.game_subsamples = {'game': df_game,
                                 'nongame': df_nongame}
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -211,10 +232,10 @@ class nlp_pipeline():
                                 'game': game_subsample,
                                 'nongame': nongame_subsample}
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -239,10 +260,10 @@ class nlp_pipeline():
             matrix_df_dict[sample] = matrix_df
         self.tf_idf_matrices = matrix_df_dict
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -270,10 +291,10 @@ class nlp_pipeline():
             fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_svd_comp' / filename, facecolor='white', dpi=300)
             plt.show()
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -293,10 +314,10 @@ class nlp_pipeline():
             matrix_df_dict[sample] = matrix_transformed_df
         self.svd_matrices = matrix_df_dict
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -324,10 +345,10 @@ class nlp_pipeline():
             fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
             plt.show()
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,
@@ -346,14 +367,16 @@ class nlp_pipeline():
             label_single = matrix[[sample + '_kmeans_labels']]
             labels_dict[sample]=label_single
         self.output_labels = labels_dict
+        # --------------------------- save -------------------------------------------------
+        # for this one, you do not need to run text cluster label every month when you scraped new data, because they would more or less stay the same
         filename = self.initial_panel + '_predicted_labels_dict.pickle'
-        q = nlp_pipeline.label_df_path / filename
-        pickle.dump(labels_dict, open(q, 'wb'))
+        q = nlp_pipeline.label_df_path / 'predicted_text_labels' / filename
+        pickle.dump(self.output_labels, open(q, 'wb'))
         return nlp_pipeline(
-                 df=self.df,
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
+                 df=self.df,
                  game_subsamples=self.game_subsamples,
                  input_text_cols = self.input_text_cols,
                  tf_idf_matrices = self.tf_idf_matrices,

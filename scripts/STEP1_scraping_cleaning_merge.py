@@ -1,5 +1,6 @@
 from google_play_scraper import app
 import pandas as pd
+from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import random
@@ -11,6 +12,7 @@ import operator
 import functools
 import re
 import math
+import pickle
 from collections.abc import Iterable
 
 #############################################################################################################################
@@ -19,58 +21,171 @@ from collections.abc import Iterable
 # for the data scraped in 2020 Sep and onwards, they are organized in dictionary with key as appid, and then their appdetails,
 # so id_list should just be C.keys()
 class scrape():
-    def __init__(self, data_before_202009):
-        self.d = data_before_202009
+    initial_dict_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/NEW_ALGORITHM_MONTHLY_SCRAPE')
+    tracking_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
 
-    def get_id_from_data_before_202009(self):
-        id_list = []
-        for i in self.d:
+    def __init__(self,
+                 initial_panel,
+                 current_panel,
+                 initial_panel_data=None,
+                 id_list=None,
+                 scraped_dict=None):
+        self.initial_panel = initial_panel
+        self.current_panel = current_panel
+        self.initial_panel_data = initial_panel_data
+        self.id_list = id_list,
+        self.scraped_dict = scraped_dict
+
+    def open_initial_panel_data(self):
+        filename = "ALL_APP_DETAILS_" + self.initial_panel + '.pickle'
+        q = scrape.initial_dict_path / self.initial_panel / filename
+        self.initial_panel_data = pd.read_pickle(q)
+        return scrape(initial_panel=self.initial_panel,
+                      current_panel=self.current_panel,
+                      initial_panel_data=self.initial_panel_data,
+                      id_list=self.id_list,
+                      scraped_dict=self.scraped_dict)
+
+    def get_appids_from_initial_panel_data(self):
+        self.id_list = []
+        for i in self.initial_panel_data:
             if 'appId' in i.keys():
-                id_list.append(i['appId'])
+                self.id_list.append(i['appId'])
             else:
-                id_list.append(i['app_id'])
-        print('The number of IDs are:', len(id_list))
-        return id_list
+                self.id_list.append(i['app_id'])
+        print(self.initial_panel, ' first panel contains ', len(self.id_list), ' IDs.')
+        return scrape(initial_panel=self.initial_panel,
+                      current_panel=self.current_panel,
+                      initial_panel_data=self.initial_panel_data,
+                      id_list=self.id_list,
+                      scraped_dict=self.scraped_dict)
 
-    # scraping using google_play_scraper app function
-    # the input is from get_id_from_old_data
     def scraping_apps_according_to_id(self):
-        id_list = self.get_id_from_data_before_202009()
-        app_details = dict.fromkeys(id_list)
-        for j in tqdm(range(len(id_list)), desc="scraping..."):
+        """
+        scraping using google_play_scraper app function
+        for unknown reason,, self.id_list in weird tuple, so first turn it into list and flatten it
+        """
+        d2list = list(self.id_list)
+        appids = [i for sublist in d2list for i in sublist]
+        app_details = dict.fromkeys(appids)
+        print('start scraping apps with initial panel', self.initial_panel)
+        for j in tqdm(range(len(appids)), desc="scraping..."):
             try:
-                app_details[id_list[j]] = app(id_list[j])
+                app_details[appids[j]] = app(appids[j])
             except:
                 pass
-        return app_details
+        # ---------------------- save --------------------------------------
+        self.scraped_dict = app_details
+        filename = 'TRACKING_' + self.initial_panel + '.pickle'
+        q = scrape.tracking_path / self.current_panel / filename
+        pickle.dump(self.scraped_dict, open(q, 'wb'))
+        print('Saved scarped app details with initial panel', self.initial_panel)
+        return scrape(initial_panel=self.initial_panel,
+                      current_panel=self.current_panel,
+                      initial_panel_data=self.initial_panel_data,
+                      id_list=self.id_list,
+                      scraped_dict=self.scraped_dict)
 
 #############################################################################################################################
 #############################################################################################################################
 
-class app_detail_dicts():
-    # this self is opened from open_files class open_app_details_dict method or open_initial_panel_with_its_tracking_panels method
-    def __init__(self, d, all_panels):
+class convert():
+
+    initial_dict_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/NEW_ALGORITHM_MONTHLY_SCRAPE')
+    tracking_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
+    imputed_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+    df1_to_combine = ['developerId',
+                      'developerWebsite',
+                      'developerEmail',
+                      'developerAddress',
+                      'offersIAP',
+                      'appId',
+                      'contentRating']
+    df2_to_combine = ['developer_id',
+                      'developer_url',
+                      'developer_email',
+                      'developer_address',
+                      'iap',
+                      'app_id',
+                      'content_rating']
+    all_cols_to_combine = df1_to_combine + df2_to_combine
+    cols_to_rename = {'category': 'genreId',
+                      'iap': 'offersIAP',
+                      'developer_id': 'developerId',
+                      'content_rating': 'contentRating',
+                      'iap_range': 'inAppProductPrice',
+                      'developer_email': 'developerEmail',
+                      'developer_url': 'developerWebsite',
+                      'developer_address': 'developerAddress',
+                      'app_id': 'appId'}
+    cols_to_drop = ['editors_choice',
+                    'interactive_elements',
+                    'description_html',
+                    'descriptionHTML',
+                    'privacyPolicy',
+                    'recentChanges',
+                    'recent_changes',
+                    'summaryHTML',
+                    'androidVersionText',
+                    'icon',
+                    'genre',
+                    'headerImage',
+                    'screenshots',
+                    'video',
+                    'videoImage',
+                    'developerInternalID',
+                    'content_rating',
+                    'contentRatingDescription',
+                    'installs',
+                    'url',
+                    'recentChangesHTML',
+                    'recentChanges',
+                    'category',
+                    'iap_range',
+                    'app_id',
+                    'androidVersionText',
+                    'androidVersion',
+                    'current_version',
+                    'version',
+                    'required_android_version',
+                    'sale',
+                    'saleTime',
+                    'originalPrice',
+                    'saleText']
+
+    def __init__(self,
+                 initial_panel,
+                 all_panels,
+                 d=None,
+                 merged_df=None):
+        self.initial_panel = initial_panel
+        self.all_panels = all_panels
         self.d = d
-        self.all_panels = all_panels # containing the initial panel
-        # for some dataframe, there are two very similar cols and the contents could be combine
-        # first combine, and then rename
-        self.df1_to_combine = ['developerId', 'developerWebsite', 'developerEmail', 'developerAddress', 'offersIAP',
-                          'appId', 'contentRating']
-        self.df2_to_combine = ['developer_id', 'developer_url', 'developer_email', 'developer_address', 'iap',
-                          'app_id', 'content_rating']
-        self.all_cols_to_combine = self.df1_to_combine + self.df2_to_combine
+        self.merged_df = merged_df
 
-        self.cols_to_rename = {"category": "genreId", "iap": "offersIAP", "developer_id": "developerId",
-                          "content_rating": "contentRating", "iap_range": "inAppProductPrice",
-                          "developer_email": "developerEmail", "developer_url": "developerWebsite",
-                          "developer_address": "developerAddress", "app_id": "appId"}
-
-        self.cols_to_drop = ['editors_choice', 'interactive_elements', 'description_html', 'descriptionHTML', 'privacyPolicy',
-                        'recentChanges', 'recent_changes', 'summaryHTML', 'androidVersionText', 'icon', 'genre',
-                        'headerImage', 'screenshots', 'video', 'videoImage', 'developerInternalID', 'content_rating',
-                        'contentRatingDescription', 'installs', 'url', 'recentChangesHTML', 'recentChanges',
-                        'category', 'iap_range', 'app_id', 'androidVersionText', 'androidVersion', 'current_version', 'version',
-                        'required_android_version', 'sale', 'saleTime', 'originalPrice', 'saleText']
+    def open_app_detail_dict(self):
+        dfs = dict.fromkeys(self.all_panels)
+        for i in range(len(self.all_panels)):
+            if i == 0:  # open the initial panel
+                filename = 'ALL_APP_DETAILS_' + self.initial_panel + '.pickle'
+                q = convert.initial_dict_path / "NEW_ALGORITHM_MONTHLY_SCRAPE" / self.initial_panel / filename
+                with open(q, 'rb') as f:
+                    dfs[self.initial_panel] = pickle.load(f)
+            else:
+                filename = 'TRACKING_' + self.initial_panel + '.pickle'
+                q = convert.tracking_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.all_panels[i] / filename
+                with open(q, 'rb') as f:
+                    dfs[self.all_panels[i]] = pickle.load(f)
+        self.d = dfs
+        return convert(initial_panel=self.initial_panel,
+                       all_panels=self.all_panels,
+                       d=self.d,
+                       merged_df=self.merged_df)
 
     def convert_keys_to_datetime(self):
         datetime_list = []
@@ -120,7 +235,16 @@ class app_detail_dicts():
             df = df.add_suffix('_' + panel)
             df_list.append(df)
         merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
-        return merged_df
+        self.merged_df = merged_df
+        # --------------------------- save --------------------------------------
+        filename = self.initial_panel + '_MERGED.pickle'
+        q = convert.imputed_path / filename
+        pickle.dump(self.df, open(q, 'wb'))
+        print('panel data ', self.initial_panel, ' has shape : ', self.merged_df.shape)
+        return convert(initial_panel=self.initial_panel,
+                       all_panels=self.all_panels,
+                       d=self.d,
+                       merged_df=self.merged_df)
 
     def check_for_duplicate_cols(self):
         df_dict = self.format_cols()
@@ -196,14 +320,14 @@ class app_detail_dicts():
         for i, df in old_data.items():
             ## __________________________________________ Combine Similar Cols ___________________________________________________
             # first check whether the dataframe contains BOTH old and new cols, yes then combine, no keep the same
-            if all(x in df.columns for x in self.all_cols_to_combine):
+            if all(x in df.columns for x in convert.all_cols_to_combine):
                 # combine duplicate columns, first take them out as separate dataframes
-                combine_df1 = df[self.df1_to_combine].fillna('').astype(str)
-                combine_df2 = df[self.df2_to_combine].fillna('').astype(str)
-                df.drop(self.all_cols_to_combine, axis=1, inplace=True)
+                combine_df1 = df[convert.df1_to_combine].fillna('').astype(str)
+                combine_df2 = df[convert.df2_to_combine].fillna('').astype(str)
+                df.drop(convert.all_cols_to_combine, axis=1, inplace=True)
 
                 # second, rename the columns in the second dataframe to the same as the first dataframe
-                for old_col_name, new_col_name in self.cols_to_rename.items():
+                for old_col_name, new_col_name in convert.cols_to_rename.items():
                     if old_col_name in combine_df2.columns:
                         combine_df2.rename(columns={old_col_name: new_col_name}, inplace=True)
 
@@ -214,7 +338,7 @@ class app_detail_dicts():
             ## __________________________________________ Drop Extra Cols and Add Panel Suffix ____________________________________
             # drop columns that will not be needed
             # after dropping columns, the only useful col that exist in and after 202009 is inAppProductPrice, which does not existed before
-            df.drop([x for x in df.columns if x in self.cols_to_drop], axis=1, inplace=True)
+            df.drop([x for x in df.columns if x in convert.cols_to_drop], axis=1, inplace=True)
             new_data[i] = df
         return new_data
 
