@@ -69,8 +69,7 @@ class nlp_pipeline():
     """
     nlp_graph_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/nlp/graphs')
-    stoplist = nltk.corpus.stopwords.words('english')
-    label_df_path = Path(
+    panel_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
     tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
@@ -94,99 +93,16 @@ class nlp_pipeline():
         self.svd_matrices = svd_matrices
         self.output_labels = output_labels
 
-    def open_imputed_missing_df(self):
+    def open_divided_df(self):
         """
         The reason to use imputed missing dataframe instead of imputed and deleted missing is that everytime you delete different number of rows
         (depends on the definition of missig), but not every time you need to re-run text clustering (because it is time-consuming),
         so I will just use the FULL converted data and you could merged this predicted labels to imputed and deleted missing in combine_dataframes class.
         """
-        f_name = self.initial_panel + '_imputed_missing.pickle'
-        q = nlp_pipeline.label_df_path / f_name
+        f_name = self.initial_panel + '_divided_sub_samples.pickle'
+        q = nlp_pipeline.panel_path / f_name
         with open(q, 'rb') as f:
             self.df = pickle.load(f)
-        return nlp_pipeline(
-                 tcn=self.tcn,
-                 initial_panel=self.initial_panel,
-                 all_panels=self.all_panels,
-                 df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
-                 svd_matrices=self.svd_matrices,
-                 output_labels=self.output_labels)
-
-    ################## deleting, impute and format text columns for the FULL SAMPLE ####################################
-    def find_appids_to_remove_before_imputing(self):
-        """
-        deleting appids that have all missing values in text col for ALL panels
-        """
-        cols = [self.tcn + '_' + item for item in self.all_panels]
-        text_df = self.df[cols]
-        null_data = text_df[text_df.isnull().any(axis=1)]
-        null_data_t = null_data.T
-        appids_to_remove = []
-        for appid in null_data_t.columns:
-            if null_data_t[appid].isnull().all():
-                appids_to_remove.append(appid)
-        print('before removing rows with all none in text cols, we have', len(self.df.index))
-        self.df = self.df.drop(appids_to_remove, axis=0)
-        print('after removing rows with all none in text cols, we have', len(self.df.index))
-        return nlp_pipeline(
-                 tcn=self.tcn,
-                 initial_panel=self.initial_panel,
-                 all_panels=self.all_panels,
-                 df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
-                 svd_matrices=self.svd_matrices,
-                 output_labels=self.output_labels)
-
-    def impute_text_cols(self):
-        """
-        impute the missing panels using its non-missing panels
-        """
-        cols = [self.tcn + '_' + item for item in self.all_panels]
-        for j in range(len(cols)):
-            self.df[cols[j]] = self.df[cols[j]].fillna('')
-            if j == 0:
-                self.df['all_panel_'+self.tcn] = self.df[cols[j]]
-            else:
-                self.df['all_panel_' + self.tcn] = self.df['all_panel_'+self.tcn] + self.df[cols[j]]
-        all_text_col = self.df['all_panel_' + self.tcn]
-        null_data = all_text_col[all_text_col.isnull()]
-        if len(null_data) == 0:
-            print('successfully imputed missing text columns for TEXT COLUMN (combined from all panels) of the dataset', self.initial_panel)
-            print('assuming all text columns are time-invariant')
-        return nlp_pipeline(
-                 tcn=self.tcn,
-                 initial_panel=self.initial_panel,
-                 all_panels=self.all_panels,
-                 df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
-                 svd_matrices=self.svd_matrices,
-                 output_labels=self.output_labels)
-
-    def remove_stopwords(self, text):
-        text = text.lower()
-        tokens_without_sw = [word for word in text.split() if word not in nlp_pipeline.stoplist]
-        filtered_sentence = (" ").join(tokens_without_sw)
-        return filtered_sentence
-
-    def prepare_text_col(self):  # use take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name)
-        """
-        # _________________ process text __________________________________________________
-        # Adding ^ in []  excludes any character in
-        # the set. Here, [^ab5] it matches characters that are
-        # not a, b, or 5.
-        """
-        self.df['clean_all_panel_' + self.tcn] = self.df['all_panel_' + self.tcn]
-        self.df['clean_all_panel_' + self.tcn] = self.df['clean_all_panel_' + self.tcn].apply(
-            lambda x: re.sub(r'[^\w\s]', '', x)).apply(
-            lambda x: re.sub(r'[0-9]', '', x)).apply(
-            lambda x: self.remove_stopwords(x))
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
@@ -209,28 +125,6 @@ class nlp_pipeline():
         df_nongame = df2.loc[df2['genreIdGame'] == 0]
         self.game_subsamples = {'game': df_game,
                                 'nongame': df_nongame}
-        return nlp_pipeline(
-                 tcn=self.tcn,
-                 initial_panel=self.initial_panel,
-                 all_panels=self.all_panels,
-                 df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
-                 svd_matrices=self.svd_matrices,
-                 output_labels=self.output_labels)
-
-    def generate_save_input_text_col(self):
-        """
-        Purpose of creating this cell is to avoid creating run_subsample switch in each function below.
-        Everytime you run the full sample NLP, you run the sub samples NLP simultaneously, it would take longer, but anyways.
-        """
-        full_sample = self.df['clean_all_panel_' + self.tcn].copy(deep=True)
-        game_subsample = self.game_subsamples['game']['clean_all_panel_' + self.tcn].copy(deep=True)
-        nongame_subsample = self.game_subsamples['nongame']['clean_all_panel_' + self.tcn].copy(deep=True)
-        self.input_text_cols = {'full': full_sample,
-                                'game': game_subsample,
-                                'nongame': nongame_subsample}
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
@@ -370,7 +264,7 @@ class nlp_pipeline():
         # --------------------------- save -------------------------------------------------
         # for this one, you do not need to run text cluster label every month when you scraped new data, because they would more or less stay the same
         filename = self.initial_panel + '_predicted_labels_dict.pickle'
-        q = nlp_pipeline.label_df_path / 'predicted_text_labels' / filename
+        q = nlp_pipeline.panel_path / 'predicted_text_labels' / filename
         pickle.dump(self.output_labels, open(q, 'wb'))
         return nlp_pipeline(
                  tcn=self.tcn,

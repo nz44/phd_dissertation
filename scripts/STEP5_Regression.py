@@ -28,7 +28,7 @@ yearmonth = today.strftime("%Y%m")
 # *********************************************************************************************
 
 class combine_dataframes():
-    panel_df_path = Path(
+    panel_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
 
     def __init__(self,
@@ -47,7 +47,7 @@ class combine_dataframes():
 
     def open_imputed_and_deleted_missing_df(self):
         f_name = self.initial_panel + '_imputed_and_deleted_missing.pickle'
-        q = combine_dataframes.panel_df_path / f_name
+        q = combine_dataframes.panel_path / f_name
         with open(q, 'rb') as f:
             self.df = pickle.load(f)
         return combine_dataframes(
@@ -60,7 +60,7 @@ class combine_dataframes():
 
     def open_predicted_labels_dict(self):
         f_name = self.initial_panel + '_predicted_labels_dict.pickle'
-        q = combine_dataframes.panel_df_path / 'predicted_text_labels' / f_name
+        q = combine_dataframes.panel_path / 'predicted_text_labels' / f_name
         with open(q, 'rb') as f:
             self.pl = pickle.load(f)
         return combine_dataframes(
@@ -96,7 +96,7 @@ class combine_dataframes():
         self.dfl = dfl
         # ------------------------------------------------------------------------------
         f_name = self.initial_panel + '_dataframe_with_labels.pickle'
-        q = combine_dataframes.panel_df_path / 'combined_with_labels' / f_name
+        q = combine_dataframes.panel_path / 'combined_with_labels' / f_name
         pickle.dump(self.dfl, open(q, 'wb'))
         return combine_dataframes(
                     initial_panel=self.initial_panel,
@@ -115,7 +115,7 @@ class combine_dataframes():
 class regression_analysis():
     """by default, regression analysis will either use cross sectional data or panel data with CONSECUTIVE panels,
     this is because we can calculate t-1 easily."""
-    panel_df_path = Path(
+    panel_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
     reg_table_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/reg_results_tables')
@@ -228,7 +228,7 @@ class regression_analysis():
 
     def open_dataframe_with_text_labels(self):
         f_name = self.initial_panel + '_dataframe_with_labels.pickle'
-        q = combine_dataframes.panel_df_path / 'combined_with_labels' / f_name
+        q = combine_dataframes.panel_path / 'combined_with_labels' / f_name
         with open(q, 'rb') as f:
             self.df = pickle.load(f)
         return regression_analysis(initial_panel=self.initial_panel,
