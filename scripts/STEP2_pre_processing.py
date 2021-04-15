@@ -17,8 +17,6 @@ import functools
 import itertools
 import re
 import os
-import geopy
-from geopy.geocoders import AzureMaps
 from tqdm import tqdm
 tqdm.pandas()
 import spacy
@@ -105,21 +103,6 @@ class pre_processing():
         new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
         return new_df
 
-    # def lat_and_long_columns(self, multiindex=False):
-    #     dfd = self.convert_appid_to_developer_index(multiindex=multiindex)
-    #     # ------------ start geociding ------------------------------------------------------------
-    #     geopy.geocoders.options.default_timeout = 7
-    #     geolocator = AzureMaps(subscription_key='zLTKWFX7Ng5foT0nxB-CD-vgriqXUiNlk4IMhfD-PTQ')
-    #     dfd['location'] = dfd['developerAddress_'+self.all_panels[0]].progress_apply(lambda loc: geolocator.geocode(loc) if loc else None)
-    #     dfd['longitude'] = dfd['location'].apply(lambda loc: loc.longitude if loc else None)
-    #     dfd['latitude'] = dfd['location'].apply(lambda loc: loc.latitude if loc else None)
-    #     self.df_dig = dfd
-    #     return pre_processing(df=self.df,
-    #                           initial_panel=self.initial_panel,
-    #                           all_panels=self.all_panels,
-    #                           tcn=self.tcn,
-    #                           appids_to_remove=self.appids_to_remove)
-
     def count_missing(self, var_list, name, select_one_panel=None):
         dfs = self.select_dfs_from_var_list(var_list=var_list,
                                             select_one_panel=select_one_panel)
@@ -142,7 +125,7 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    def remove_rows_with_text_col_missing_in_all_panels(self):
+    def remove_rows_with_missing_in_all_text_cols(self):
         """
         do this before impute_text_col
         """
@@ -161,22 +144,22 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    def impute_text_col(self):
+    def mode_text_col(self):
         """
         impute the missing panels using its non-missing panels
         """
         cols = [self.tcn + '_' + item for item in self.all_panels]
-        for j in range(len(cols)):
-            self.df[cols[j]] = self.df[cols[j]].fillna('')
-            if j == 0:
-                self.df['all_panel_'+self.tcn] = self.df[cols[j]]
-            else:
-                self.df['all_panel_' + self.tcn] = self.df['all_panel_'+self.tcn] + self.df[cols[j]]
-        all_text_col = self.df['all_panel_' + self.tcn]
-        null_data = all_text_col[all_text_col.isnull()]
+        for j in cols:
+            self.df[j] = self.df[j].fillna('')
+        df2 = self.df.copy(deep=True)
+        df3 = df2[cols]
+        df3[self.tcn + 'Mode'] = df3.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
+        text_col = df3[self.tcn + 'Mode']
+        null_data = text_col[text_col.isnull()]
+        print(self.initial_panel, ' IMPUTED ', self.tcn, ' using Mode. ')
         if len(null_data) == 0:
-            print(self.initial_panel, ' successfully imputed missing text columns for TEXT COLUMN (combined from all panels) of the dataset')
-            print('assuming all text columns are time-invariant')
+            print('NO MISSING remaining')
+        self.df = self.df.join(df3[self.tcn + 'Mode'], how='inner')
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -190,20 +173,37 @@ class pre_processing():
         filtered_sentence = (" ").join(tokens_without_sw)
         return filtered_sentence
 
-    def prepare_text_col(self):  # use take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name)
+    def clean_text_col(self):  # use take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name)
         """
         # _________________ process text __________________________________________________
         # Adding ^ in []  excludes any character in
         # the set. Here, [^ab5] it matches characters that are
         # not a, b, or 5.
         """
-        self.df['clean_all_panel_' + self.tcn] = self.df['all_panel_' + self.tcn]
-        self.df['clean_all_panel_' + self.tcn] = self.df['clean_all_panel_' + self.tcn].apply(
+        self.df[self.tcn + 'ModeClean'] = self.df[self.tcn + 'Mode']
+        self.df[self.tcn + 'ModeClean'] = self.df[self.tcn + 'ModeClean'].apply(
             lambda x: re.sub(r'[^\w\s]', '', x)).apply(
             lambda x: re.sub(r'[0-9]', '', x)).apply(
             lambda x: self.remove_stopwords(x))
-        print(self.initial_panel, ' finished cleaning combined text columns. ')
+        print(self.initial_panel, ' finished cleaning ', self.tcn + 'ModeClean')
         print()
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    def check_cleaned_mode_text_col(self):
+        cols = [self.tcn + '_' + item for item in self.all_panels]
+        cols.extend([self.tcn + 'Mode', self.tcn + 'ModeClean'])
+        df2 = self.df.copy(deep=True)
+        df3 = df2[cols]
+        df3 = df3.sample(n=50)
+        # ---------- save ------------------------------------------------------
+        filename = self.initial_panel + '_cleaned_mode_' + self.tcn + '.csv'
+        q = pre_processing.panel_path / 'check_text_cols' / filename
+        df3.to_csv(q)
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
