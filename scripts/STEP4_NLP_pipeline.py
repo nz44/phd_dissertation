@@ -73,13 +73,74 @@ class nlp_pipeline():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
     tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
+    # after examining the optimal svd cluster graphs, I write n_comp_dict here as class attributes for each dataset
+    n_comp_dict_201907 = {
+        'full':
+                       {'full': 1500},
+        'minInstalls':
+                       {'ImputedminInstalls_tier1': 1000,
+                        'ImputedminInstalls_tier2': 1300,
+                        'ImputedminInstalls_tier3': 1300},
+        'genreId':
+                       {'ART_AND_DESIGN': 150,
+                        'COMICS': 50,
+                        'PERSONALIZATION': 150,
+                        'PHOTOGRAPHY': 150,
+                        'AUTO_AND_VEHICLES': 150,
+                        'GAME_ROLE_PLAYING': 200,
+                        'GAME_ACTION': 50,
+                        'GAME_RACING': 150,
+                        'TRAVEL_AND_LOCAL': 150,
+                        'GAME_ADVENTURE': 150,
+                        'SOCIAL': 150,
+                        'GAME_SIMULATION': 200,
+                        'LIFESTYLE': 150,
+                        'EDUCATION': 200,
+                        'BEAUTY': 50,
+                        'GAME_CASUAL': 200,
+                        'BOOKS_AND_REFERENCE': 150,
+                        'BUSINESS': 200,
+                        'FINANCE': 200,
+                        'GAME_STRATEGY': 150,
+                        'SPORTS': 150,
+                        'COMMUNICATION': 150,
+                        'DATING': 50,
+                        'ENTERTAINMENT': 150,
+                        'GAME_BOARD': 150,
+                        'EVENTS': 50,
+                        'SHOPPING': 150,
+                        'FOOD_AND_DRINK': 150,
+                        'HEALTH_AND_FITNESS': 200,
+                        'HOUSE_AND_HOME': 100,
+                        'TOOLS': 150,
+                        'LIBRARIES_AND_DEMO': 150,
+                        'MAPS_AND_NAVIGATION': 150,
+                        'MEDICAL': 200,
+                        'MUSIC_AND_AUDIO': 150,
+                        'NEWS_AND_MAGAZINES': 150,
+                        'PARENTING': 150,
+                        'GAME_PUZZLE': 250,
+                        'VIDEO_PLAYERS': 150,
+                        'PRODUCTIVITY': 150,
+                        'WEATHER': 150,
+                        'GAME_ARCADE': 150,
+                        'GAME_CASINO': 50,
+                        'GAME_CARD': 150,
+                        'GAME_EDUCATIONAL': 150,
+                        'GAME_MUSIC': 50,
+                        'GAME_SPORTS': 150,
+                        'GAME_TRIVIA': 100,
+                        'GAME_WORD': 150},
+        'developer':
+                       {'top': 316,
+                        'non-top': 1200}}
+
     def __init__(self,
                  tcn,
                  initial_panel,
                  all_panels,
                  df=None,
-                 game_subsamples=None,
-                 input_text_cols=None,
+                 sub_sample_text_cols=None,
                  tf_idf_matrices=None,
                  svd_matrices=None,
                  output_labels=None):
@@ -87,8 +148,7 @@ class nlp_pipeline():
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.df = df
-        self.game_subsamples = game_subsamples
-        self.input_text_cols = input_text_cols
+        self.ss_text_cols = sub_sample_text_cols
         self.tf_idf_matrices = tf_idf_matrices
         self.svd_matrices = svd_matrices
         self.output_labels = output_labels
@@ -99,7 +159,7 @@ class nlp_pipeline():
         (depends on the definition of missig), but not every time you need to re-run text clustering (because it is time-consuming),
         so I will just use the FULL converted data and you could merged this predicted labels to imputed and deleted missing in combine_dataframes class.
         """
-        f_name = self.initial_panel + '_divided_sub_samples.pickle'
+        f_name = self.initial_panel + '_imputed_deleted_subsamples.pickle'
         q = nlp_pipeline.panel_path / f_name
         with open(q, 'rb') as f:
             self.df = pickle.load(f)
@@ -108,31 +168,50 @@ class nlp_pipeline():
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
-    ################# Divide processed df with processed and clean text column into subsamples ################
-    def divide_into_subsamples(self):
+    def generate_save_input_text_col(self):
         """
-        run tnis after self.prepare_text_col and self.impute_text_cols and self.find_appids_to_remove_before_imputing
+        Purpose of creating this cell is to avoid creating run_subsample switch in each function below.
+        Everytime you run the full sample NLP, you run the sub samples NLP simultaneously, it would take longer, but anyways.
         """
-        self.df['genreIdGame'] = self.df['ImputedgenreId_' + self.all_panels[-1]].apply(lambda x: 1 if 'GAME' in x else 0)
-        df2 = self.df.copy(deep=True)
-        df_game = df2.loc[df2['genreIdGame'] == 1]
-        df_nongame = df2.loc[df2['genreIdGame'] == 0]
-        self.game_subsamples = {'game': df_game,
-                                'nongame': df_nongame}
+        # --------------- full sample text cols ------------------------------------------------------
+        full_sample_text_col = self.df[self.tcn + 'ModeClean'].copy(deep=True)
+        # --------------- minInstalls text cols ------------------------------------------------------
+        minInstall_tier1_text_col = self.df.loc[
+            self.df['ImputedminInstalls_tier1'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
+        minInstall_tier2_text_col = self.df.loc[
+            self.df['ImputedminInstalls_tier2'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
+        minInstall_tier3_text_col = self.df.loc[
+            self.df['ImputedminInstalls_tier3'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
+        # --------------- category text cols ---------------------------------------------------------
+        app_categories = self.df['ImputedgenreId_Mode'].unique().tolist()
+        app_cat_text_cols = dict.fromkeys(app_categories)
+        for i in app_categories:
+            app_cat_text_cols[i] = self.df.loc[self.df[i] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
+        # --------------- star developer text cols ---------------------------------------------------
+        top_digital_firms_text_col = self.df.loc[
+            self.df['top_digital_firms'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
+        non_top_digital_firms_text_col = self.df.loc[
+            self.df['top_digital_firms'] == 0, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
+        # --------------- compile text cols ----------------------------------------------------------
+        self.ss_text_cols = {'full': {'full': full_sample_text_col},
+                             'minInstalls': {'ImputedminInstalls_tier1': minInstall_tier1_text_col,
+                                             'ImputedminInstalls_tier2': minInstall_tier2_text_col,
+                                             'ImputedminInstalls_tier3': minInstall_tier3_text_col},
+                             'genreId': app_cat_text_cols,
+                             'developer': {'top': top_digital_firms_text_col,
+                                           'non-top': non_top_digital_firms_text_col}}
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
@@ -142,110 +221,126 @@ class nlp_pipeline():
                                     stop_words='english',
                                     strip_accents='unicode',
                                     max_features=2000))])
-        matrix_df_dict = {}
-        for sample, input_text_col in self.input_text_cols.items():
-            matrix = pipe.fit_transform(input_text_col)
-            print(type(matrix))
-            # transform the matrix to matrix dataframe
-            matrix_df = pd.DataFrame(matrix.toarray(),
-                                     columns=pipe['tfidf'].get_feature_names())
-            matrix_df['app_ids'] = input_text_col.index.tolist()
-            matrix_df.set_index('app_ids', inplace=True)
-            matrix_df_dict[sample] = matrix_df
+        matrix_df_dict = dict.fromkeys(self.ss_text_cols.keys())
+        for sample, content in matrix_df_dict.items():
+            matrix_df_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
+        for sample, content in self.ss_text_cols.items():
+            for ss_name, col in content.items():
+                print('TF-IDF TRANSFORMATION')
+                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
+                matrix = pipe.fit_transform(col)
+                matrix_df = pd.DataFrame(matrix.toarray(),
+                                         columns=pipe['tfidf'].get_feature_names())
+                matrix_df['app_ids'] = col.index.tolist()
+                matrix_df.set_index('app_ids', inplace=True)
+                matrix_df_dict[sample][ss_name] = matrix_df
+                print(matrix_df.shape)
         self.tf_idf_matrices = matrix_df_dict
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
     def find_optimal_svd_component_plot(self):
-        # https://medium.com/swlh/truncated-singular-value-decomposition-svd-using-amazon-food-reviews-891d97af5d8d
-        n_comp = [4, 10, 15, 20, 50, 100, 150, 200, 500, 700, 800, 900, 1000, 1100, 1200, 1300,
-                  1400, 1500, 1600, 1700, 1800, 1900]  # list containing different values of components
-        for sample, matrix in self.tf_idf_matrices.items():
-            explained = []
-            for x in tqdm(n_comp):
-                svd = TruncatedSVD(n_components=x)
-                svd.fit(matrix)
-                explained.append(svd.explained_variance_ratio_.sum())
-                print("Number of components = %r and explained variance = %r" % (x, svd.explained_variance_ratio_.sum()))
-            fig, ax = plt.subplots()
-            ax.plot(n_comp, explained)
-            ax.grid()
-            plt.xlabel('Number of components')
-            plt.ylabel("Explained Variance")
-            plt.title(sample + " Plot of Number of components v/s explained variance")
-            filename = self.initial_panel + '_' + sample + '_optimal_svd_graph.png'
-            fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_svd_comp' / filename, facecolor='white', dpi=300)
-            plt.show()
+        """
+        https://medium.com/swlh/truncated-singular-value-decomposition-svd-using-amazon-food-reviews-891d97af5d8d
+        https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.TruncatedSVD.html
+        """
+        for sample, content in self.tf_idf_matrices.items():
+            for ss_name, matrix in content.items():
+                print('FIND OPTIMAL SVD COMPONENTS')
+                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
+                n_comp = np.round(np.linspace(0, matrix.shape[1]-1, 20))
+                n_comp = n_comp.astype(int)
+                explained = []
+                for x in tqdm(n_comp):
+                    svd = TruncatedSVD(n_components=x)
+                    svd.fit(matrix)
+                    explained.append(svd.explained_variance_ratio_.sum())
+                    print("Number of components = %r and explained variance = %r" % (x, svd.explained_variance_ratio_.sum()))
+                fig, ax = plt.subplots()
+                ax.plot(n_comp, explained)
+                ax.grid()
+                plt.xlabel('Number of components')
+                plt.ylabel("Explained Variance")
+                plt.title(self.initial_panel + sample + ss_name + " Plot of Number of components v/s explained variance")
+                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_optimal_svd_graph.png'
+                fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_svd_comp' / filename, facecolor='white', dpi=300)
+                plt.show()
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
-    def truncate_svd(self, n_comp, random_state):
-        svd = TruncatedSVD(n_components=n_comp, random_state=random_state)
-        matrix_df_dict = {}
-        for sample, matrix in self.tf_idf_matrices.items():
-            matrix_transformed = svd.fit_transform(matrix)
-            print(sample)
-            print(matrix_transformed.shape)
-            matrix_transformed_df = pd.DataFrame(matrix_transformed)  # do not need to assign column names because those do not correspond to each topic words (they have been transformed)
-            matrix_transformed_df['app_ids'] = matrix.index.tolist()
-            matrix_transformed_df.set_index('app_ids', inplace=True)
-            matrix_df_dict[sample] = matrix_transformed_df
+    def truncate_svd(self, random_state):
+        matrix_df_dict = dict.fromkeys(self.ss_text_cols.keys())
+        for sample, content in matrix_df_dict.items():
+            matrix_df_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
+        for sample, content in self.tf_idf_matrices.items():
+            for ss_name, matrix in content.items():
+                print('TRUNCATE SVD')
+                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
+                svd = TruncatedSVD(n_components=nlp_pipeline.n_comp_dict_201907[sample][ss_name],
+                                   random_state=random_state)
+                matrix_transformed = svd.fit_transform(matrix)
+                print(matrix_transformed.shape)
+                matrix_transformed_df = pd.DataFrame(matrix_transformed)  # do not need to assign column names because those do not correspond to each topic words (they have been transformed)
+                matrix_transformed_df['app_ids'] = matrix.index.tolist()
+                matrix_transformed_df.set_index('app_ids', inplace=True)
+                matrix_df_dict[sample][ss_name] = matrix_transformed_df
         self.svd_matrices = matrix_df_dict
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
     def find_optimal_cluster_plot(self):
         """
         https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f
+        https://scikit-learn.org/stable/modules/clustering.html
         """
-        n_cluster_list = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400]
-        for sample, matrix in self.svd_matrices.items():
-            Sum_of_squared_distances = []
-            for k in n_cluster_list:
-                km = KMeans(n_clusters=k)
-                km = km.fit(matrix)
-                Sum_of_squared_distances.append(km.inertia_)
-            fig, ax = plt.subplots()
-            ax.plot(n_cluster_list, Sum_of_squared_distances, 'bx-')
-            ax.grid()
-            plt.xlabel('k')
-            plt.ylabel('Sum_of_squared_distances')
-            plt.title(sample + ' Elbow Method For Optimal k')
-            filename = self.initial_panel + '_' + sample + '_optimal_cluster_of_svd_matrix.png'
-            fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
-            plt.show()
+        for sample, content in self.svd_matrices.items():
+            for ss_name, matrix in content.items():
+                print('FIND OPTIMAL KM CLUSTERS')
+                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
+                n_cluster_list = np.round(np.linspace(1, matrix.shape[1] - 1, 10))
+                n_cluster_list = n_cluster_list.astype(int)
+                sum_of_squared_distances = []
+                for k in tqdm(n_cluster_list):
+                    km = KMeans(n_clusters=k)
+                    km = km.fit(matrix)
+                    sum_of_squared_distances.append(km.inertia_)
+                fig, ax = plt.subplots()
+                ax.plot(n_cluster_list, sum_of_squared_distances, 'bx-')
+                ax.grid()
+                plt.xlabel('k')
+                plt.ylabel('Sum_of_squared_distances')
+                plt.title(self.initial_panel + sample + ss_name + ' Elbow Method For Optimal k')
+                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_optimal_cluster_of_svd_matrix.png'
+                fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
+                plt.show()
         return nlp_pipeline(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
@@ -253,14 +348,21 @@ class nlp_pipeline():
                        n_clusters_dict,
                        init,
                        random_state):
-        labels_dict = {}
-        for sample, matrix in self.svd_matrices.items():
-            kmeans = KMeans(n_clusters=n_clusters_dict[sample], init=init, random_state=random_state)
-            y_kmeans = kmeans.fit_predict(matrix)  # put matrix_transformed_df here would generate same result as put matrix_transformed
-            matrix[sample + '_kmeans_labels'] = y_kmeans
-            label_single = matrix[[sample + '_kmeans_labels']]
-            labels_dict[sample]=label_single
-        self.output_labels = labels_dict
+        label_dict = dict.fromkeys(self.ss_text_cols.keys())
+        for sample, content in label_dict.items():
+            label_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
+        for sample, content in self.svd_matrices.items():
+            for ss_name, matrix in content.items():
+                print('KMEANS CLUSTER')
+                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
+                kmeans = KMeans(n_clusters=n_clusters_dict[sample][ss_name],
+                                init=init,
+                                random_state=random_state)
+                y_kmeans = kmeans.fit_predict(matrix)  # put matrix_transformed_df here would generate same result as put matrix_transformed
+                matrix[sample + '_' + ss_name + '_kmeans_labels'] = y_kmeans
+                label_single = matrix[[sample + '_' + ss_name + '_kmeans_labels']]
+                label_dict[sample][ss_name] = label_single
+        self.output_labels = label_dict
         # --------------------------- save -------------------------------------------------
         # for this one, you do not need to run text cluster label every month when you scraped new data, because they would more or less stay the same
         filename = self.initial_panel + '_predicted_labels_dict.pickle'
@@ -271,8 +373,7 @@ class nlp_pipeline():
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
-                 game_subsamples=self.game_subsamples,
-                 input_text_cols = self.input_text_cols,
-                 tf_idf_matrices = self.tf_idf_matrices,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
