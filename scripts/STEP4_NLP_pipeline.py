@@ -17,6 +17,7 @@ from sklearn.manifold import TSNE
 import chart_studio.plotly as py
 import plotly.graph_objects as go
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.metrics import silhouette_score
 from sklearn.decomposition import NMF, LatentDirichletAllocation
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.pipeline import Pipeline
@@ -73,8 +74,9 @@ class nlp_pipeline():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
     tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
-    # after examining the optimal svd cluster graphs, I write n_comp_dict here as class attributes for each dataset
-    n_comp_dict_201907 = {
+    # after examining the optimal svd cluster graphs, I write dict here as class attributes for each dataset
+    # ------------------------------------------------------------------------
+    optimal_svd_components_201907 = {
         'full':
                        {'full': 1500},
         'minInstalls':
@@ -134,6 +136,69 @@ class nlp_pipeline():
         'developer':
                        {'top': 316,
                         'non-top': 1200}}
+    # after examining the optimal km cluster graphs (both elbow and sihouette graphs),
+    # I write dict here as class attributes for each dataset
+    # ------------------------------------------------------------------------
+    optimal_km_clusters_201907 = {
+        'full':
+            {'full': 250},
+        'minInstalls':
+            {'ImputedminInstalls_tier1': 240,
+             'ImputedminInstalls_tier2': 300,
+             'ImputedminInstalls_tier3': 80},
+        'genreId':
+            {'ART_AND_DESIGN': 8,
+             'COMICS': 12,
+             'PERSONALIZATION': 25,
+             'PHOTOGRAPHY': 25,
+             'AUTO_AND_VEHICLES': 30,
+             'GAME_ROLE_PLAYING': 30,
+             'GAME_ACTION': 4,
+             'GAME_RACING': 30,
+             'TRAVEL_AND_LOCAL': 30,
+             'GAME_ADVENTURE': 40,
+             'SOCIAL': 25,
+             'GAME_SIMULATION': 35,
+             'LIFESTYLE': 35,
+             'EDUCATION': 35,
+             'BEAUTY': 12,
+             'GAME_CASUAL': 30,
+             'BOOKS_AND_REFERENCE': 20,
+             'BUSINESS': 40,
+             'FINANCE': 35,
+             'GAME_STRATEGY': 35,
+             'SPORTS': 35,
+             'COMMUNICATION': 35,
+             'DATING': 16,
+             'ENTERTAINMENT': 40,
+             'GAME_BOARD': 15,
+             'EVENTS': 10,
+             'SHOPPING': 16,
+             'FOOD_AND_DRINK': 20,
+             'HEALTH_AND_FITNESS': 30,
+             'HOUSE_AND_HOME': 14,
+             'TOOLS': 30,
+             'LIBRARIES_AND_DEMO': 13,
+             'MAPS_AND_NAVIGATION': 30,
+             'MEDICAL': 35,
+             'MUSIC_AND_AUDIO': 30,
+             'NEWS_AND_MAGAZINES': 20,
+             'PARENTING': 10,
+             'GAME_PUZZLE': 35,
+             'VIDEO_PLAYERS': 30,
+             'PRODUCTIVITY': 35,
+             'WEATHER': 10,
+             'GAME_ARCADE': 35,
+             'GAME_CASINO': 4,
+             'GAME_CARD': 17,
+             'GAME_EDUCATIONAL': 40,
+             'GAME_MUSIC': 17,
+             'GAME_SPORTS': 29,
+             'GAME_TRIVIA': 17,
+             'GAME_WORD': 7},
+        'developer':
+            {'top': 60,
+             'non-top': 200}}
 
     def __init__(self,
                  tcn,
@@ -290,7 +355,7 @@ class nlp_pipeline():
             for ss_name, matrix in content.items():
                 print('TRUNCATE SVD')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                svd = TruncatedSVD(n_components=nlp_pipeline.n_comp_dict_201907[sample][ss_name],
+                svd = TruncatedSVD(n_components=nlp_pipeline.optimal_svd_components_201907[sample][ss_name],
                                    random_state=random_state)
                 matrix_transformed = svd.fit_transform(matrix)
                 print(matrix_transformed.shape)
@@ -309,16 +374,22 @@ class nlp_pipeline():
                  svd_matrices=self.svd_matrices,
                  output_labels=self.output_labels)
 
-    def find_optimal_cluster_plot(self):
+    def find_optimal_cluster_elbow(self):
         """
         https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f
         https://scikit-learn.org/stable/modules/clustering.html
         """
         for sample, content in self.svd_matrices.items():
             for ss_name, matrix in content.items():
-                print('FIND OPTIMAL KM CLUSTERS')
+                print('ELBOW METHOD TO FIND OPTIMAL KM CLUSTERS')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                n_cluster_list = np.round(np.linspace(1, matrix.shape[1] - 1, 10))
+                # note here, for svd comps, the maximum components are the total number of features (columns)
+                # here, the total number of clusters are the total number of apps (at extreme, 1 app per cluster)
+                # starts from 1 because this is only within cluster sum of squared distances
+                # the maximum number of clusters is controlled below 1/5 of total number of points because first it would
+                # take extremely long time to compute without controlling for maximum number of clusters, second,
+                # it is reasonable to assume that one would not want only 4 points in a cluster.
+                n_cluster_list = np.round(np.linspace(1, matrix.shape[0] - 0.8 * matrix.shape[0], 10))
                 n_cluster_list = n_cluster_list.astype(int)
                 sum_of_squared_distances = []
                 for k in tqdm(n_cluster_list):
@@ -331,7 +402,44 @@ class nlp_pipeline():
                 plt.xlabel('k')
                 plt.ylabel('Sum_of_squared_distances')
                 plt.title(self.initial_panel + sample + ss_name + ' Elbow Method For Optimal k')
-                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_optimal_cluster_of_svd_matrix.png'
+                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_optimal_cluster.png'
+                fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
+                plt.show()
+        return nlp_pipeline(
+                 tcn=self.tcn,
+                 initial_panel=self.initial_panel,
+                 all_panels=self.all_panels,
+                 df=self.df,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 tf_idf_matrices=self.tf_idf_matrices,
+                 svd_matrices=self.svd_matrices,
+                 output_labels=self.output_labels)
+
+    def find_optimal_cluster_silhouette(self):
+        """
+        https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
+        https://medium.com/@kunal_gohrani/different-types-of-distance-metrics-used-in-machine-learning-e9928c5e26c7
+        """
+        for sample, content in self.svd_matrices.items():
+            for ss_name, matrix in content.items():
+                print('SILHOUETTE SCORE TO FIND OPTIMAL KM CLUSTERS')
+                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
+                # starting from 2 because this score need to calculate between cluster estimators
+                n_cluster_list = np.round(np.linspace(2, matrix.shape[0] - 0.8 * matrix.shape[0], 10))
+                n_cluster_list = n_cluster_list.astype(int)
+                silhouette_scores = []
+                for k in tqdm(n_cluster_list):
+                    km = KMeans(n_clusters=k)
+                    km = km.fit(matrix)
+                    labels = km.labels_
+                    silhouette_scores.append(silhouette_score(matrix, labels, metric='cosine'))
+                fig, ax = plt.subplots()
+                ax.plot(n_cluster_list, silhouette_scores, 'bx-')
+                ax.grid()
+                plt.xlabel('k')
+                plt.ylabel('silhouette_scores (cosine distance)')
+                plt.title(self.initial_panel + sample + ss_name + ' Silhouette Scores For Optimal k')
+                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_silhouette_optimal_cluster.png'
                 fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
                 plt.show()
         return nlp_pipeline(
@@ -345,7 +453,6 @@ class nlp_pipeline():
                  output_labels=self.output_labels)
 
     def kmeans_cluster(self,
-                       n_clusters_dict,
                        init,
                        random_state):
         label_dict = dict.fromkeys(self.ss_text_cols.keys())
@@ -355,7 +462,7 @@ class nlp_pipeline():
             for ss_name, matrix in content.items():
                 print('KMEANS CLUSTER')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                kmeans = KMeans(n_clusters=n_clusters_dict[sample][ss_name],
+                kmeans = KMeans(n_clusters=nlp_pipeline.optimal_km_clusters_201907[sample][ss_name],
                                 init=init,
                                 random_state=random_state)
                 y_kmeans = kmeans.fit_predict(matrix)  # put matrix_transformed_df here would generate same result as put matrix_transformed
