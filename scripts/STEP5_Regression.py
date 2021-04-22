@@ -33,6 +33,7 @@ class regression_analysis():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
     descriptive_stats_graphs = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/graphs')
+
     var_latex_map = {
                'const': 'Constant',
                'score': 'Rating',
@@ -234,17 +235,19 @@ class regression_analysis():
                                    individual_dummies_df=self.i_dummies_df)
 
     def select_vars(self, the_panel=None, **kwargs):
-        if 'var_list' in kwargs.keys():
-            variables = kwargs['var_list']
-        elif 'single_var' in kwargs.keys():
-            variables = [kwargs['single_var']]
-        if the_panel is None:
-            selected_cols = []
-            for p in self.all_panels:
-                cols = [item + '_' + p for item in variables]
-                selected_cols.extend(cols)
-        else:
-            selected_cols = [item + '_' + the_panel for item in variables]
+        """
+        one input can have both time variant variables list and time invariants vars list, not if else relationship
+        """
+        selected_cols = []
+        if 'time_variant_vars_list' in kwargs.keys():
+            time_variables = kwargs['time_variant_vars_list']
+            if the_panel is None:
+                for p in self.all_panels:
+                    selected_cols.extend([item + '_' + p for item in time_variables])
+            else:
+                selected_cols.extend([item + '_' + the_panel for item in time_variables])
+        if 'time_invariant_vars_list' in kwargs.keys():
+            selected_cols.extend(kwargs['time_invariant_vars_list'])
         new_df = self.cdf.copy(deep=True)
         selected_df = new_df[selected_cols]
         return selected_df
@@ -407,7 +410,7 @@ class regression_analysis():
         """
         minInstalls dummies are time variant
         """
-        df1 = self.select_vars(single_var='ImputedminInstalls')
+        df1 = self.select_vars(time_variant_vars_list=['ImputedminInstalls'])
         for i in self.all_panels:
             df1['minInstallsTop_' + i] = df1['ImputedminInstalls_' + i].apply(
                 lambda x: 1 if x >= 1.000000e+07 else 0)
@@ -440,7 +443,7 @@ class regression_analysis():
         size is time invariant, use the mode size, 1 means not missing, interact with mode size.
         0 means size is missing
         """
-        df1 = self.select_vars(single_var='size')
+        df1 = self.select_vars(time_variant_vars_list=['size'])
         df1['sizeMode'] = df1.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
         df1['sizeMissing'] = 1  # 1 means not missing
         df1.loc[df1['sizeMode'].isnull(), ['sizeMissing']] = 0  # 0 means size is missing
@@ -466,7 +469,7 @@ class regression_analysis():
         contentRating dummy is time invariant, using the mode (this mode is different from previous imputation mode
         because there is no missings (all imputed).
         """
-        df1 = self.select_vars(single_var='ImputedcontentRating')
+        df1 = self.select_vars(time_variant_vars_list=['ImputedcontentRating'])
         df1['contentRatingMode'] = df1.mode(axis=1, numeric_only=False, dropna=False).iloc[:, 0]
         df1['contentRatingAdult'] = df1['contentRatingMode'].apply(
             lambda x: 0 if 'Everyone' in x else 1)
@@ -491,10 +494,12 @@ class regression_analysis():
         :param var: time invariant independent variables, could either be released or updated
         :return: a new variable which is the number of days between today() and the datetime
         """
-        df1 = self.select_vars(single_var='imputedreleased')
+        df1 = self.select_vars(time_variant_vars_list=['Imputedreleased'])
         df1['releasedMode'] = df1.mode(axis=1, numeric_only=False, dropna=False).iloc[:, 0]
         df1['DaysSinceReleased'] = pd.Timestamp.now().normalize() - df1['releasedMode']
         df1['DaysSinceReleased'] = df1['DaysSinceReleased'].apply(lambda x: int(x.days))
+        dcols = ['Imputedreleased_' + i for i in self.all_panels]
+        df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
         return regression_analysis(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
@@ -513,7 +518,7 @@ class regression_analysis():
         """
         paid dummies are time variant
         """
-        df1 = self.select_vars(single_var='Imputedfree')
+        df1 = self.select_vars(time_variant_vars_list=['Imputedfree'])
         for i in self.all_panels:
             df1['paidTrue_' + i] = df1['Imputedfree_' + i].apply(lambda x: 1 if x is False else 0)
         dcols = ['Imputedfree_' + i for i in self.all_panels]
@@ -533,7 +538,7 @@ class regression_analysis():
                                    individual_dummies_df=self.i_dummies_df)
 
     def create_generic_true_false_dummies(self, cat_var):
-        df1 = self.select_vars(single_var='Imputed' + cat_var)
+        df1 = self.select_vars(time_variant_vars_list=['Imputed' + cat_var])
         for i in self.all_panels:
             df1[cat_var + 'True_' + i] = df1['Imputed' + cat_var + '_' + i].apply(lambda x: 1 if x is True else 0)
         dcols = ['Imputed' + cat_var + '_' + i for i in self.all_panels]
@@ -626,14 +631,19 @@ class regression_analysis():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def create_post_dummy(self):
+    def create_post_dummy_and_interactions(self):
         start_covid_us = datetime.strptime('202003', "%Y%m")
+        nichedummies = self.gather_nicheDummies_into_list()
         for i in self.all_panels:
             panel = datetime.strptime(i, "%Y%m")
             if panel >= start_covid_us:
                 self.cdf['PostDummy_' + i] = 1
+                for j in nichedummies:
+                    self.cdf['PostX' + j + '_' + i] = self.cdf[j]
             else:
                 self.cdf['PostDummy_' + i] = 0
+                for j in nichedummies:
+                    self.cdf['PostX' + j + '_' + i] = 0
         return regression_analysis(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
@@ -653,7 +663,7 @@ class regression_analysis():
         """
         dfs = []
         for i in time_variant_vars:
-            sub_df = self.select_vars(single_var=i)
+            sub_df = self.select_vars(time_variant_vars_list=[i])
             sub_df['PanelMean' + i] = sub_df.mean(axis=1)
             for p in self.all_panels:
                 sub_df['DeMeaned' + i + '_' + p] = sub_df[i + '_' + p] - sub_df['PanelMean' + i]
@@ -681,7 +691,7 @@ class regression_analysis():
         for example, min max transformation uses the max and min of each column, not of the entire dataframe
         :return:
         """
-        df2 = self.select_vars(single_var=con_var)
+        df2 = self.select_vars(time_variant_vars_list=[con_var])
         print('before standardization:')
         for i in df2.columns:
             print(i)
@@ -728,6 +738,14 @@ class regression_analysis():
                 gathered_list.append(i)
         return gathered_list
 
+    def gather_PostXnicheDummies_into_list(self):
+        gathered_list = []
+        nichedummies = self.gather_nicheDummies_into_list()
+        for i in self.all_panels:
+                for j in nichedummies:
+                    gathered_list.append('PostX' + j + '_' + i)
+        return gathered_list
+
     def gather_slice_dummies_into_list(self):
         gathered_list = []
         for name1, content1 in self.ssnames.items():
@@ -738,16 +756,18 @@ class regression_analysis():
         return gathered_list
 
     def select_all_vars_before_slice_subsamples(self, time_variant_vars, time_invariant_vars):
-        df2 = self.cdf.copy(deep=True)
         niche_dummies_cols = self.gather_nicheDummies_into_list()
-        time_invariant_vars.extend(niche_dummies_cols)
+        post_niche_interactions = self.gather_PostXnicheDummies_into_list()
         allvars = []
+        allvars.extend(niche_dummies_cols)
+        allvars.extend(post_niche_interactions)
+        allvars.extend(time_invariant_vars)
         for var in time_variant_vars:
             varss = [var + '_' + i for i in self.all_panels]
             allvars.extend(varss)
-        allvars.extend(time_invariant_vars)
         slice_dummies_cols = self.gather_slice_dummies_into_list()
         allvars.extend(slice_dummies_cols)
+        df2 = self.cdf.copy(deep=True)
         df3 = df2[allvars]
         return df3
 
@@ -825,11 +845,13 @@ class regression_analysis():
     # Generate Descriptive Stats Latex Tables
     ###########################################################################################################
 
-    def correlation_matrix(self, vars, the_panel):
+    def correlation_matrix(self, time_variant_vars, time_invariant_vars, the_panel):
         """
         This is for the purpose of checking multicollinearity between independent variables
         """
-        df = self.select_vars(var_list=vars, the_panel=the_panel)
+        df = self.select_vars(time_variant_vars_list=time_variant_vars,
+                              time_invariant_vars_list=time_invariant_vars,
+                              the_panel=the_panel)
         df_corr = df.corr()
         print(df_corr)
         return regression_analysis(initial_panel=self.initial_panel,
