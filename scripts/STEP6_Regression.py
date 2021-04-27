@@ -35,14 +35,18 @@ class regression():
     def __init__(self,
                  initial_panel,
                  all_panels,
+                 dep_vars,
+                 independent_vars,
                  subsample_names=None,
                  reg_dict=None,
-                 several_reg_results_pandas=None):
+                 subsample_reg_results=None):
         self.initial_panel = initial_panel
         self.all_panels = all_panels
+        self.dep_vars = dep_vars
+        self.independent_vars = independent_vars
         self.ssnames = subsample_names
         self.reg_dict = reg_dict
-        self.several_reg_results = several_reg_results_pandas
+        self.subsample_reg_results = subsample_reg_results
 
     def open_long_df_dict(self):
         f_name = self.initial_panel + '_converted_long_table.pickle'
@@ -51,68 +55,85 @@ class regression():
             self.reg_dict = pickle.load(f)
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
                            subsample_names=self.ssnames,
                            reg_dict=self.reg_dict,
-                           several_reg_results_pandas=self.several_reg_results)
+                           subsample_reg_results=self.subsample_reg_results)
 
-    def regression(self, dep_var, time_variant_vars, time_invariant_vars,
-                   cross_section, reg_type, the_panel=None):
+    def add_subsample_names(self):
+        self.ssnames = dict.fromkeys(self.reg_dict.keys())
+        for key, content in self.reg_dict.items():
+            self.ssnames[key] = list(content.keys())
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           subsample_reg_results=self.subsample_reg_results)
+
+    def regression_for_each_subsample(self, n_niche_scales):
+        self.subsample_reg_results = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in self.reg_dict.items():
+            self.subsample_reg_results[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                self.subsample_reg_results[name1][name2] = dict.fromkeys(self.dep_vars)
+                x_vars = self.independent_vars
+                niche_dummy_col = name1 + '_' + name2 + '_NicheDummy'
+                x_vars.append(niche_dummy_col)
+                niche_post_col = 'PostX' + niche_dummy_col
+                x_vars.append(niche_post_col)
+                if name2 == 'full':
+                    niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(n_niche_scales)]
+                    x_vars.extend(niche_scale_cols)
+                    niche_scale_post_cols = ['PostX' + i for i in niche_scale_cols]
+                    x_vars.extend(niche_scale_post_cols)
+                for y_var in self.dep_vars:
+                    reg_types = ['POOLED_OLS', 'FE', 'RE']
+                    self.subsample_reg_results[name1][name2][y_var] = dict.fromkeys(reg_types)
+                    for reg_type in reg_types:
+                        self.subsample_reg_results[name1][name2][y_var][reg_type] = self.regression(
+                            y_var=y_var,
+                            x_vars=x_vars,
+                            df=df,
+                            reg_type=reg_type)
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           subsample_reg_results=self.subsample_reg_results)
+
+    def regression(self,
+                   y_var,
+                   x_vars,
+                   df,
+                   reg_type):
         """
-        run convert_df_from_wide_to_long first and get self.panel_long_df updated, then run this method
-        https://bashtage.github.io/linearmodels/doc/panel/models.html
-        I have observed that using demeaned time variant independent variables in POOLED_OLS generats the same
-        coefficient estimates (for time variant) as the ones from FE model with un-demeaned data.
-        The dependent variable is better to interpret as staying un-demeaned.
-        The coefficient of time invariant variables are then interpreted as when all other time variant variables are
-        set to their group specific means.
-        The weird thing, why does niche_app still get appear in FE model？
+        Internal function
         """
-        if cross_section is True:
-            x_vars = [i + '_' + the_panel for i in time_variant_vars]
-            x_vars.extend(time_invariant_vars)
-            new_df = self.df.copy(deep=True)
-            independents_df = new_df[x_vars]
-            X = sm.add_constant(independents_df)
-            dep_var = dep_var + '_' + the_panel
-            y = new_df[[dep_var]]
-            if reg_type == 'OLS':
-                model = sm.OLS(y, X)
-                results = model.fit()
-                results = results.get_robustcov_results()
-            elif reg_type == 'logit':
-                model = sm.Logit(y, X)
-                results = model.fit()
-            elif reg_type == 'probit':
-                model = sm.Probit(y, X)
-                results = model.fit()
-        else: # panel regression models
-            x_vars = []
-            x_vars.extend(time_variant_vars)
-            x_vars.extend(time_invariant_vars)
-            if reg_type == 'PPOLED_OLS_with_individual_dummies':
-                x_vars.extend(self.i_dummies_df.columns)
-            new_df = self.panel_long_df.copy(deep=True)
-            independents_df = new_df[x_vars]
-            X = sm.add_constant(independents_df)
-            y = new_df[[dep_var]]
-            # https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html
-            if reg_type == 'POOLED_OLS':
-                model = PooledOLS(y, X)
-                results = model.fit(cov_type='clustered', cluster_entity=True)
-            elif reg_type == 'PPOLED_OLS_with_individual_dummies':
-                model = PooledOLS(y, X)
-                results = model.fit(cov_type='clustered', cluster_entity=True)
-            elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
-                model = PanelOLS(y, X,
-                                 drop_absorbed=True,
-                                 entity_effects=True,
-                                 time_effects=True)
-                results = model.fit(cov_type = 'clustered', cluster_entity = True)
-            elif reg_type == 'RE':
-                model = RandomEffects(y, X,)
-                results = model.fit(cov_type = 'clustered', cluster_entity = True)
+        independents_df = df[x_vars]
+        X = sm.add_constant(independents_df)
+        y = df[[y_var]]
+        # https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html
+        if reg_type == 'POOLED_OLS':
+            model = PooledOLS(y, X)
+            results = model.fit(cov_type='clustered', cluster_entity=True)
+        elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
+            model = PanelOLS(y, X,
+                             drop_absorbed=True,
+                             entity_effects=True,
+                             time_effects=True)
+            results = model.fit(cov_type = 'clustered', cluster_entity = True)
+        elif reg_type == 'RE':
+            model = RandomEffects(y, X,)
+            results = model.fit(cov_type = 'clustered', cluster_entity = True)
         return results
 
+
+##############################################################################################
     def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars, cross_section, reg_types, the_panel=None):
         results_dict = dict.fromkeys(reg_types, dict.fromkeys(dep_vars))
         for reg_type in reg_types:
