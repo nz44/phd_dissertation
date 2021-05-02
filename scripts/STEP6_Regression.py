@@ -39,14 +39,18 @@ class regression():
                  independent_vars,
                  subsample_names=None,
                  reg_dict=None,
-                 subsample_reg_results=None):
+                 reg_dict_xy=None,
+                 single_panel_df=None,
+                 subsample_op_results=None):
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.dep_vars = dep_vars
         self.independent_vars = independent_vars
         self.ssnames = subsample_names
         self.reg_dict = reg_dict
-        self.subsample_reg_results = subsample_reg_results
+        self.reg_dict_xy = reg_dict_xy
+        self.single_panel_df = single_panel_df
+        self.subsample_op_results = subsample_op_results
 
     def open_long_df_dict(self):
         f_name = self.initial_panel + '_converted_long_table.pickle'
@@ -59,7 +63,9 @@ class regression():
                            independent_vars=self.independent_vars,
                            subsample_names=self.ssnames,
                            reg_dict=self.reg_dict,
-                           subsample_reg_results=self.subsample_reg_results)
+                           reg_dict_xy=self.reg_dict_xy,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
 
     def add_subsample_names(self):
         self.ssnames = dict.fromkeys(self.reg_dict.keys())
@@ -71,46 +77,155 @@ class regression():
                            independent_vars=self.independent_vars,
                            subsample_names=self.ssnames,
                            reg_dict=self.reg_dict,
-                           subsample_reg_results=self.subsample_reg_results)
+                           reg_dict_xy=self.reg_dict_xy,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
 
-    def regression_for_each_subsample(self, n_niche_scales):
-        self.subsample_reg_results = dict.fromkeys(self.ssnames.keys())
+    def select_x_y_for_subsample(self, n_niche_scales):
+        self.reg_dict_xy = dict.fromkeys(self.reg_dict.keys())
         for name1, content1 in self.reg_dict.items():
-            self.subsample_reg_results[name1] = dict.fromkeys(content1.keys())
+            self.reg_dict_xy[name1] = dict.fromkeys(content1.keys())
             for name2, df in content1.items():
-                self.subsample_reg_results[name1][name2] = dict.fromkeys(self.dep_vars)
-                x_vars = self.independent_vars
-                niche_dummy_col = name1 + '_' + name2 + '_NicheDummy'
-                x_vars.append(niche_dummy_col)
-                niche_post_col = 'PostX' + niche_dummy_col
-                x_vars.append(niche_post_col)
+                x_vars = []
+                x_vars.extend(self.independent_vars)
                 if name2 == 'full':
-                    niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(n_niche_scales)]
-                    x_vars.extend(niche_scale_cols)
+                    self.reg_dict_xy['full']['full'] = dict.fromkeys(['NicheDummy', 'NicheScaleDummies'])
+                    # here is the full_full_NicheScaleDummy_0 is dropped as baseline group
+                    # you cannot run regression with both nichedummy and nichescaledummies together
+                    # -------------------------------------------------------------------------------
+                    x_vars_full_nd = []
+                    x_vars_full_nd.extend(x_vars)
+                    x_vars_full_nd.extend(['full_full_NicheDummy', 'PostXfull_full_NicheDummy'])
+                    x_vars_full_nd.extend(self.dep_vars)
+                    self.reg_dict_xy['full']['full']['NicheDummy'] = df[x_vars_full_nd]
+                    # -------------------------------------------------------------------------------
+                    x_vars_full_sd = []
+                    x_vars_full_sd.extend(x_vars)
+                    niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(1, n_niche_scales)]
+                    x_vars_full_sd.extend(niche_scale_cols)
                     niche_scale_post_cols = ['PostX' + i for i in niche_scale_cols]
-                    x_vars.extend(niche_scale_post_cols)
-                for y_var in self.dep_vars:
-                    reg_types = ['POOLED_OLS', 'FE', 'RE']
-                    self.subsample_reg_results[name1][name2][y_var] = dict.fromkeys(reg_types)
-                    for reg_type in reg_types:
-                        self.subsample_reg_results[name1][name2][y_var][reg_type] = self.regression(
-                            y_var=y_var,
-                            x_vars=x_vars,
-                            df=df,
-                            reg_type=reg_type)
+                    x_vars_full_sd.extend(niche_scale_post_cols)
+                    x_vars_full_sd.extend(self.dep_vars)
+                    self.reg_dict_xy['full']['full']['NicheScaleDummies'] = df[x_vars_full_sd]
+                else:
+                    self.reg_dict_xy[name1][name2] = dict.fromkeys(['NicheDummy'])
+                    niche_dummy_col = name1 + '_' + name2 + '_NicheDummy'
+                    x_vars.append(niche_dummy_col)
+                    niche_post_col = 'PostX' + niche_dummy_col
+                    x_vars.append(niche_post_col)
+                    x_vars.extend(self.dep_vars)
+                    self.reg_dict_xy[name1][name2]['NicheDummy'] = df[x_vars]
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
                            dep_vars=self.dep_vars,
                            independent_vars=self.independent_vars,
                            subsample_names=self.ssnames,
                            reg_dict=self.reg_dict,
-                           subsample_reg_results=self.subsample_reg_results)
+                           reg_dict_xy=self.reg_dict_xy,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
 
-    def regression(self,
+    def slice_single_panel(self, the_panel):
+        self.single_panel_df = dict.fromkeys(self.reg_dict_xy.keys())
+        for name1, content1 in self.reg_dict_xy.items():
+            self.single_panel_df[name1] = dict.fromkeys(content1.keys())
+            for name2, content2 in content1.items():
+                self.single_panel_df[name1][name2] = dict.fromkeys(content2.keys())
+                for name3, df in content2.items():
+                    print(name1, name2, name3)
+                    print(df.shape)
+                    v = self._slice_a_panel_from_long_df(the_panel, df)
+                    print(v.shape)
+                    self.single_panel_df[name1][name2] = v
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           reg_dict_xy=self.reg_dict_xy,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
+
+    def _slice_a_panel_from_long_df(self, the_panel, df):
+        """
+        The function should be run after select_x_y_for_subsample, otherwise you would have too many variables.
+        df has multiindex structure, we are slicing the secondary index with the_panel.
+        """
+        df2 = df.copy(deep=True)
+        df3 = df2.reset_index()
+        df3 = df3.loc[df3['panel'] == int(the_panel)]
+        df3 = df3.set_index('index')
+        # delete panel and PostDummy because for a single panel the value are all the same
+        cols_drop = []
+        for i in df3.columns:
+            if 'PostX' in i:
+                cols_drop.append(i)
+        cols_drop.extend(['panel', 'PostDummy'])
+        df3 = df3.drop(cols_drop, axis=1)
+        return df3
+
+    def correlation_for_single_panel(self):
+        for name1, content1 in self.single_panel_df.items():
+            for name2, content2 in content1.items():
+                for name3, df in content2.items():
+                    dfcorr = df.corr(method='pearson')
+                    f_name = name1 + '_' + name2 +  '_' + name3 + '.csv'
+                    q = regression.panel_path / 'correlations' / f_name
+                    dfcorr.to_csv(q)
+                    print(name1, name2, name3, ' correlation matrix exported to csv ')
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           reg_dict_xy=self.reg_dict_xy,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
+
+    def all_regressions(self, reg_func):
+        """
+        This is run after self.slice_single_panel
+        """
+        self.subsample_op_results = dict.fromkeys(self.single_panel_df.keys())
+        for name1, content1 in self.single_panel_df.items():
+            self.subsample_op_results[name1] = dict.fromkeys(content1.keys())
+            for name2, content2 in content1.items():
+                self.subsample_op_results[name1][name2] = dict.fromkeys(content2.keys())
+                for name3, df in content2.items():
+                    self.subsample_op_results[name1][name2][name3] = dict.fromkeys(self.dep_vars)
+                    x_vars = [elem for elem in df.columns if elem not in self.dep_vars]
+                    for y in self.dep_vars:
+                        self.subsample_op_results[name1][name2][name3][y] = reg_func(
+                                      y_var=y,
+                                      x_vars=x_vars,
+                                      df=df)
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
+
+    def _cross_section_regression(self,
+                                  y_var,
+                                  x_vars,
+                                  df):
+        independents_df = df[x_vars]
+        X = sm.add_constant(independents_df)
+        y = df[[y_var]]
+        model = sm.OLS(y, X)
+        results = model.fit()
+        return results
+
+    def _panel_regression(self,
                    y_var,
                    x_vars,
                    df,
-                   reg_type):
+                   reg_type=None):
         """
         Internal function
         """
@@ -138,7 +253,7 @@ class regression():
         results_dict = dict.fromkeys(reg_types, dict.fromkeys(dep_vars))
         for reg_type in reg_types:
             for dep_var in dep_vars:
-                result = self.regression(
+                result = self._regression(
                     dep_var,
                     time_variant_vars,
                     time_invariant_vars,

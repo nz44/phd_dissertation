@@ -355,16 +355,15 @@ class reg_preparation():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def create_dummies_for_size_missing(self):
+    def impute_missingSize_as_zero(self):
         """
-        size is time invariant, use the mode size, 1 means not missing, interact with mode size.
-        0 means size is missing
+        size is time invariant, use the mode size as the time invariant variable.
+        If the size is not missing, it must not be zero. It is equivalent as having a dummies, where missing is 0 and non-missing is 1,
+        and the interaction of the dummy with the original variable is imputing the original's missing as zeros.
         """
         df1 = self.select_vars(time_variant_vars_list=['size'])
-        df1['sizeMode'] = df1.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
-        df1['sizeMissing'] = 1  # 1 means not missing
-        df1.loc[df1['sizeMode'].isnull(), ['sizeMissing']] = 0  # 0 means size is missing
-        df1['sizeXmissing'] = df1['sizeMode'] * df1['sizeMissing']
+        df1['size'] = df1.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
+        df1['size'] = df1['size'].fillna(0)
         dcols = ['size_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
