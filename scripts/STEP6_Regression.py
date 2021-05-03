@@ -136,7 +136,7 @@ class regression():
                     print(df.shape)
                     v = self._slice_a_panel_from_long_df(the_panel, df)
                     print(v.shape)
-                    self.single_panel_df[name1][name2] = v
+                    self.single_panel_df[name1][name2][name3] = v
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
                            dep_vars=self.dep_vars,
@@ -214,11 +214,18 @@ class regression():
                                   y_var,
                                   x_vars,
                                   df):
+        """
+        https://www.statsmodels.org/stable/generated/statsmodels.regression.linear_model.RegressionResults.html#statsmodels.regression.linear_model.RegressionResults
+        #https://www.statsmodels.org/stable/rlm.html
+        https://stackoverflow.com/questions/30553838/getting-statsmodels-to-use-heteroskedasticity-corrected-standard-errors-in-coeff
+        source code for HC0, HC1, HC2, and HC3, white and Mackinnon
+        https://www.statsmodels.org/dev/_modules/statsmodels/regression/linear_model.html
+        """
         independents_df = df[x_vars]
         X = sm.add_constant(independents_df)
         y = df[[y_var]]
         model = sm.OLS(y, X)
-        results = model.fit()
+        results = model.fit(cov_type='HC3')
         return results
 
     def _panel_regression(self,
@@ -245,85 +252,78 @@ class regression():
         elif reg_type == 'RE':
             model = RandomEffects(y, X,)
             results = model.fit(cov_type = 'clustered', cluster_entity = True)
+        else:
+            raise Exception('Error: need to input panel reg_type')
         return results
 
+    def put_reg_results_into_pandas(self, reg_folder_name, n_niche_scale):
+        """
+        This is a general pandas, not the one put into latex.
+        You can trim the pandas later to decide how to put it into latex.
+        reg_folder_name is one of cross_section, panel_FE, panel_RE, panel_pooled_OLS
+        """
+        reg_level_dfs = []
+        combined_niche_dummies_dfs = []
+        cols = copy.deepcopy(self.dep_vars)
+        cols.append('index')
+        cols.extend([i + '_pvalue' for i in self.dep_vars])
+        for name1, content1 in self.subsample_op_results.items():
+            for name2, content2 in content1.items():
+                for name3, content3 in content2.items():
+                    df = pd.DataFrame()
+                    combined_niche_dummies = pd.DataFrame(columns=cols)
+                    for y, result in content3.items():
+                        # -----------------------------------------------------------------------------
+                        # result is RegressionResultsWrapper object
+                        reg_level_stats_df = pd.DataFrame(columns=['index', 'nobs', 'rsquared', 'rsquared_adj'])
+                        reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y
+                        reg_level_stats_df.at[0, 'nobs'] = result.nobs
+                        reg_level_stats_df.at[0, 'rsquared'] = result.rsquared
+                        reg_level_stats_df.at[0, 'rsquared_adj'] = result.rsquared_adj
+                        reg_level_dfs.append(reg_level_stats_df)
+                        # -----------------------------------------------------------------------------
+                        df[y + '_params'] = result.params
+                        df[y + '_pvalue'] = result.pvalues
+                        # -----------------------------------------------------------------------------
+                        index_list = []
+                        for i in result.params.index.values:
+                            if 'Niche' in i:
+                                index_list.append(i)
+                        for i in range(len(index_list)):
+                            combined_niche_dummies.at[i, 'index'] = index_list[i]
+                            combined_niche_dummies.at[i, y] = result.params.loc[index_list[i]]
+                            combined_niche_dummies.at[i, y + '_pvalue'] = result.pvalues.loc[index_list[i]]
+                    combined_niche_dummies_dfs.append(combined_niche_dummies)
+                    f_name = name1 + '_' + name2 + '_' + name3 + '_coefficients' + '.csv'
+                    q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+                    df = df.round(3)
+                    df.to_csv(q)
+        combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), reg_level_dfs)
+        combined_df.set_index('index', inplace=True)
+        combined_df = combined_df.astype(float).round({'rsquared': 3, 'rsquared_adj': 3})
+        f_name = 'regression_level_stats.csv'
+        q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+        combined_df.to_csv(q)
+        # -----------------------------------------------------------------------------
+        niche_df = functools.reduce(lambda a, b: pd.concat([a, b]), combined_niche_dummies_dfs)
+        niche_df.set_index('index', inplace=True)
+        niche_df = niche_df.astype(float).round(3)
+        f_name = 'NicheDummy_combined.csv'
+        q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+        niche_df.to_csv(q)
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
 
-##############################################################################################
-    def several_regressions(self, dep_vars, time_variant_vars, time_invariant_vars, cross_section, reg_types, the_panel=None):
-        results_dict = dict.fromkeys(reg_types, dict.fromkeys(dep_vars))
-        for reg_type in reg_types:
-            for dep_var in dep_vars:
-                result = self._regression(
-                    dep_var,
-                    time_variant_vars,
-                    time_invariant_vars,
-                    cross_section,
-                    reg_type,
-                    the_panel)
-                results_dict[reg_type][dep_var] = result
-        return results_dict
 
-    def compare_several_panel_reg_results(self, results_dict, dep_vars):
-        """
-        https://bashtage.github.io/linearmodels/panel/examples/examples.html
-        results_dict is the output of several_regressions
-        """
-        panels_results = dict.fromkeys(dep_vars, {})
-        panels_compare = dict.fromkeys(dep_vars)
-        for reg_type, results in results_dict.items():
-            if reg_type in ['FE', 'RE', 'POOLED_OLS', 'PPOLED_OLS_with_individual_dummies']:
-                for dep_var in results.keys():
-                    panels_results[dep_var][reg_type] = results[dep_var]
-                    compared_results = compare(panels_results[dep_var])
-                    print(compared_results)
-                    panels_compare[dep_var] = compared_results
-        return panels_compare
-
-    def compile_several_reg_results_into_pandas(self, panels_compare):
-        """
-        panel_compare is the output of self.compare_several_panel_reg_results(self, results_dict)
-        """
-        def change_index_name(df, end_fix):
-            dfn = df.copy(deep=True)
-            for i in dfn.index:
-                dfn.rename(index={i: i+'_'+end_fix}, inplace=True)
-            return dfn
-        df5 = []
-        for dep_var, compare in panels_compare.items():
-            df_params = change_index_name(compare.params, end_fix='coef')
-            df_tstats = change_index_name(compare.tstats, end_fix='tstats')
-            df_pvalues = change_index_name(compare.pvalues, end_fix='pvalues')
-            df1 = [df_params, df_tstats, df_pvalues]
-            df2 = functools.reduce(lambda a, b: pd.concat([a, b], axis=0), df1)
-            df3 = [df2,
-                   compare.f_statistic.T,
-                   compare.rsquared.to_frame().T,
-                   compare.nobs.to_frame().T,
-                   compare.cov_estimator.to_frame().T]
-            df4 = functools.reduce(lambda a, b: pd.concat([a, b], axis=0), df3)
-            for i in df4.columns:
-                df4.rename(columns={i: dep_var+'_'+i}, inplace=True)
-            df5.append(df4)
-        df6 = functools.reduce(lambda a, b: a.join(b, how='inner'), df5)
-        # round the entire dataframe
-        df7 = df6.T
-        for i in df7.columns:
-            if i not in ['_cov_type', 'nobs']:
-                df7[i] = df7[i].astype(float).round(decimals=3)
-            elif i == 'nobs':
-                df7[i] = df7[i].astype(int)
-        df8 = df7.T
-        return df8
-
-    def customize_reg_results_pandas_before_output_latex(self,
-                                             df,
-                                             selective_dep_vars,
-                                             selective_reg_types,
-                                             p_value_as_asterisk=False):
-        """
-        :param df6: the output of self.compile_several_reg_results_into_pandas(panels_compare)
-        :return: df8: the customized version of pandas that will ultimately transformed into latex
-        """
+########################################################################################################################
+    # extra code
+    def extra_code(self):
         cols_to_keep = [i + '_' + j for j in selective_reg_types for i in selective_dep_vars]
         df7 = df.copy(deep=True)
         df8 = df7[cols_to_keep]
@@ -351,17 +351,23 @@ class regression():
             ind_vars_sig_at_5_percent.remove(i)
             ind_vars_sig_at_10_percent.remove(i)
             df9[i + '_coef'] = df9.apply(
-                        lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.01'] if row[i + '_pvalues<0.01'] != 'not sig at 1%' else str(row[i + '_coef']),
-                         axis=1)
+                lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.01'] if row[
+                                                                                    i + '_pvalues<0.01'] != 'not sig at 1%' else str(
+                    row[i + '_coef']),
+                axis=1)
         for i in ind_vars_sig_at_5_percent:
             ind_vars_sig_at_10_percent.remove(i)
             df9[i + '_coef'] = df9.apply(
-                        lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.05'] if row[i + '_pvalues<0.05'] != 'not sig at 5%' else str(row[i + '_coef']),
-                        axis=1)
+                lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.05'] if row[
+                                                                                    i + '_pvalues<0.05'] != 'not sig at 5%' else str(
+                    row[i + '_coef']),
+                axis=1)
         for i in ind_vars_sig_at_10_percent:
             df9[i + '_coef'] = df9.apply(
-                        lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.1'] if row[i + '_pvalues<0.1'] != 'not sig at 10%' else str(row[i + '_coef']),
-                        axis=1)
+                lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.1'] if row[
+                                                                                   i + '_pvalues<0.1'] != 'not sig at 10%' else str(
+                    row[i + '_coef']),
+                axis=1)
         cols_to_keep = [i for i in df9.columns if '_coef' in i]
         cols_to_keep.extend(['F stat', 'P-value', 'rsquared', 'nobs', '_cov_type'])
         df10 = df9[cols_to_keep]
