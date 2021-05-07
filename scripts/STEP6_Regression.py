@@ -86,8 +86,7 @@ class regression():
         for name1, content1 in self.reg_dict.items():
             self.reg_dict_xy[name1] = dict.fromkeys(content1.keys())
             for name2, df in content1.items():
-                x_vars = []
-                x_vars.extend(self.independent_vars)
+                x_vars = copy.deepcopy(self.independent_vars)
                 if name2 == 'full':
                     self.reg_dict_xy['full']['full'] = dict.fromkeys(['NicheDummy', 'NicheScaleDummies'])
                     # here is the full_full_NicheScaleDummy_0 is dropped as baseline group
@@ -99,22 +98,47 @@ class regression():
                     x_vars_full_nd.extend(self.dep_vars)
                     self.reg_dict_xy['full']['full']['NicheDummy'] = df[x_vars_full_nd]
                     # -------------------------------------------------------------------------------
-                    x_vars_full_sd = []
-                    x_vars_full_sd.extend(x_vars)
                     niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(1, n_niche_scales)]
+                    x_vars_full_sd = ['PostX' + i for i in niche_scale_cols]
                     x_vars_full_sd.extend(niche_scale_cols)
-                    niche_scale_post_cols = ['PostX' + i for i in niche_scale_cols]
-                    x_vars_full_sd.extend(niche_scale_post_cols)
+                    x_vars_full_sd.extend(x_vars)
                     x_vars_full_sd.extend(self.dep_vars)
                     self.reg_dict_xy['full']['full']['NicheScaleDummies'] = df[x_vars_full_sd]
+                # you can delete this elif block once you've run the may 2021 procedure because sub-sample and minInstallstop dummies are the same
+                elif 'minInstalls' in name2:
+                    self.reg_dict_xy['minInstalls'][name2] = dict.fromkeys(['NicheDummy'])
+                    x_vars_mininstalls = [name1 + '_' + name2 + '_NicheDummy',
+                                          'PostX' + name1 + '_' + name2 + '_NicheDummy']
+                    x_vars_mininstalls.extend(x_vars)
+                    x_vars_mininstalls.extend(self.dep_vars)
+                    # since this minInstall is subsample sliced according to
+                    remove_minInstalls_dummies = [i for i in x_vars_mininstalls if 'DeMeanedminInstalls' not in i]
+                    self.reg_dict_xy['minInstalls'][name2]['NicheDummy'] = df[remove_minInstalls_dummies]
                 else:
                     self.reg_dict_xy[name1][name2] = dict.fromkeys(['NicheDummy'])
-                    niche_dummy_col = name1 + '_' + name2 + '_NicheDummy'
-                    x_vars.append(niche_dummy_col)
-                    niche_post_col = 'PostX' + niche_dummy_col
-                    x_vars.append(niche_post_col)
+                    x_vars.extend([name1 + '_' + name2 + '_NicheDummy',
+                                  'PostX' + name1 + '_' + name2 + '_NicheDummy'])
                     x_vars.extend(self.dep_vars)
-                    self.reg_dict_xy[name1][name2]['NicheDummy'] = df[x_vars]
+                    unchecked_df = df[x_vars]
+                    checked_df = unchecked_df.copy(deep=True)
+                    # for some genreId, some column variables has no variation (the same value),
+                    # print out them and delete them (if they are not dep vars)
+                    for i in unchecked_df.columns:
+                        unique_v = unchecked_df[i].unique()
+                        if len(unique_v) == 1:
+                            print(name1, name2, i, ' contains only 1 unique value ')
+                            checked_df.drop(i, axis=1, inplace=True)
+                            print('dropped ', i)
+                    # additionally, you need to check whether two columns are perfectly correlated, and delete one of them.
+                    # this especially could happen to DeMeanedminInstallsTop and DeMeanedminInstallsMiddle
+                    if all(x in checked_df.columns for x in ['DeMeanedminInstallsTop', 'DeMeanedminInstallsMiddle']):
+                        correlation = checked_df['DeMeanedminInstallsTop'].corr(checked_df['DeMeanedminInstallsMiddle'])
+                        if 0.99 <= abs(correlation) <= 1:
+                            print(name1, name2, ' DeMeanedminInstallsTop and DeMeanedminInstallsMiddle are perfectly correlated ')
+                            checked_df.drop('DeMeanedminInstallsMiddle', axis=1, inplace=True)
+                            print(name1, name2,
+                                  ' DROPPED DeMeanedminInstallsMiddle to avoid exog full rank error in regressions ')
+                    self.reg_dict_xy[name1][name2]['NicheDummy'] = checked_df
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
                            dep_vars=self.dep_vars,
@@ -184,12 +208,14 @@ class regression():
                            single_panel_df=self.single_panel_df,
                            subsample_op_results=self.subsample_op_results)
 
-    def all_regressions(self, reg_func):
+    def all_regressions(self, reg_func, xy_df):
         """
-        This is run after self.slice_single_panel
+        This is run after self.slice_single_panel for cross section
+        reg_func is self._cross_section_regression abd xy_df is self.single_panel_df for cross section
+        reg_func is self._panel_regression and xy_df is self.reg_dict_xy
         """
-        self.subsample_op_results = dict.fromkeys(self.single_panel_df.keys())
-        for name1, content1 in self.single_panel_df.items():
+        self.subsample_op_results = dict.fromkeys(xy_df.keys())
+        for name1, content1 in xy_df.items():
             self.subsample_op_results[name1] = dict.fromkeys(content1.keys())
             for name2, content2 in content1.items():
                 self.subsample_op_results[name1][name2] = dict.fromkeys(content2.keys())
@@ -197,10 +223,12 @@ class regression():
                     self.subsample_op_results[name1][name2][name3] = dict.fromkeys(self.dep_vars)
                     x_vars = [elem for elem in df.columns if elem not in self.dep_vars]
                     for y in self.dep_vars:
+                        print('start regressing on ', name1, name2, name3, y)
                         self.subsample_op_results[name1][name2][name3][y] = reg_func(
                                       y_var=y,
                                       x_vars=x_vars,
                                       df=df)
+                        print('finished regressing on ', name1, name2, name3, y)
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
                            dep_vars=self.dep_vars,
@@ -231,32 +259,37 @@ class regression():
     def _panel_regression(self,
                    y_var,
                    x_vars,
-                   df,
-                   reg_type=None):
+                   df):
         """
         Internal function
+        return a dictionary containing all different type of panel reg results
+        I will not run fixed effects model here because they will drop time-invariant variables.
+        In addition, I just wanted to check whether for the time variant variables, the demeaned time variant variables
+        will have the same coefficient in POOLED OLS as the time variant variables in FE.
         """
         independents_df = df[x_vars]
         X = sm.add_constant(independents_df)
         y = df[[y_var]]
         # https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html
-        if reg_type == 'POOLED_OLS':
-            model = PooledOLS(y, X)
-            results = model.fit(cov_type='clustered', cluster_entity=True)
-        elif reg_type == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
-            model = PanelOLS(y, X,
-                             drop_absorbed=True,
-                             entity_effects=True,
-                             time_effects=True)
-            results = model.fit(cov_type = 'clustered', cluster_entity = True)
-        elif reg_type == 'RE':
-            model = RandomEffects(y, X,)
-            results = model.fit(cov_type = 'clustered', cluster_entity = True)
-        else:
-            raise Exception('Error: need to input panel reg_type')
-        return results
+        result_dict = dict.fromkeys(['POOLED_OLS', 'RE'])
+        for key in result_dict.keys():
+            if key == 'POOLED_OLS':
+                print('start Pooled_ols regression')
+                model = PooledOLS(y, X)
+                result_dict['POOLED_OLS'] = model.fit(cov_type='clustered', cluster_entity=True)
+            # elif key == 'FE': # niche_type will be abosrbed in this model because it is time-invariant
+            #     model = PanelOLS(y, X,
+            #                      drop_absorbed=True,
+            #                      entity_effects=True,
+            #                      time_effects=True)
+            #     result_dict['FE'] = model.fit(cov_type = 'clustered', cluster_entity = True)
+            else:
+                print('start RE regression')
+                model = RandomEffects(y, X,)
+                result_dict['RE'] = model.fit(cov_type = 'clustered', cluster_entity = True)
+        return result_dict
 
-    def put_reg_results_into_pandas(self, reg_folder_name, n_niche_scale):
+    def put_reg_results_into_pandas(self, reg_folder_name):
         """
         This is a general pandas, not the one put into latex.
         You can trim the pandas later to decide how to put it into latex.
@@ -274,7 +307,7 @@ class regression():
                     combined_niche_dummies = pd.DataFrame(columns=cols)
                     for y, result in content3.items():
                         # -----------------------------------------------------------------------------
-                        # result is RegressionResultsWrapper object
+                        # OLS result is RegressionResultsWrapper object
                         reg_level_stats_df = pd.DataFrame(columns=['index', 'nobs', 'rsquared', 'rsquared_adj'])
                         reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y
                         reg_level_stats_df.at[0, 'nobs'] = result.nobs
@@ -322,6 +355,8 @@ class regression():
 
 
 ########################################################################################################################
+    # pooled OLS with individual dummies will be another completely different function.
+
     # extra code
     def extra_code(self):
         cols_to_keep = [i + '_' + j for j in selective_reg_types for i in selective_dep_vars]

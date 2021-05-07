@@ -326,15 +326,17 @@ class reg_preparation():
     def create_minInstalls_dummies(self):
         """
         minInstalls dummies are time variant
+        This should be the same as dividing rule of sub-samples into ImputedminInstalls_tier1,
+        tier2 and tier3 in STEP3_sub_samples.py
         """
         df1 = self.select_vars(time_variant_vars_list=['ImputedminInstalls'])
         for i in self.all_panels:
             df1['minInstallsTop_' + i] = df1['ImputedminInstalls_' + i].apply(
                 lambda x: 1 if x >= 1.000000e+07 else 0)
             df1['minInstallsMiddle_' + i] = df1['ImputedminInstalls_' + i].apply(
-                lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+04 else 0)
+                lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+05 else 0)
             df1['minInstallsBottom_' + i] = df1['ImputedminInstalls_' + i].apply(
-                lambda x: 1 if x < 1.000000e+04 else 0)
+                lambda x: 1 if x < 1.000000e+05 else 0)
             df1['CategoricalminInstalls' + '_' + i] = None
             df1.loc[df1['minInstallsTop' + '_' + i] == 1, 'CategoricalminInstalls' + '_' + i] = 'Top'
             df1.loc[df1['minInstallsMiddle' + '_' + i] == 1, 'CategoricalminInstalls' + '_' + i] = 'Middle'

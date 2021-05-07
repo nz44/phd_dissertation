@@ -364,12 +364,12 @@ class divide():
     def create_division_rules(self):
         # use the most recent panel of imputedminInstalls as the bar for dividing sub samples
         self.df['ImputedminInstalls_tier1'] = 0
-        self.df['ImputedminInstalls_tier1'].loc[self.df['ImputedminInstalls_'+self.all_panels[-1]] >= 10000000] = 1
+        self.df['ImputedminInstalls_tier1'].loc[self.df['ImputedminInstalls_'+self.all_panels[-1]] >= 1.000000e+07] = 1
         self.df['ImputedminInstalls_tier2'] = 0
-        self.df['ImputedminInstalls_tier2'].loc[(self.df['ImputedminInstalls_' + self.all_panels[-1]] < 10000000) &
-                                                (self.df['ImputedminInstalls_' + self.all_panels[-1]] >= 100000)] = 1
+        self.df['ImputedminInstalls_tier2'].loc[(self.df['ImputedminInstalls_' + self.all_panels[-1]] < 1.000000e+07) &
+                                                (self.df['ImputedminInstalls_' + self.all_panels[-1]] >= 1.000000e+05)] = 1
         self.df['ImputedminInstalls_tier3'] = 0
-        self.df['ImputedminInstalls_tier3'].loc[self.df['ImputedminInstalls_' + self.all_panels[-1]] < 100000] = 1
+        self.df['ImputedminInstalls_tier3'].loc[self.df['ImputedminInstalls_' + self.all_panels[-1]] < 1.000000e+05] = 1
 
         # use the mode of imputedGenreId as the bar for dividing sub samples
         genreIds = ['ImputedgenreId_' + j for j in self.all_panels]
