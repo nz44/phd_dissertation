@@ -295,55 +295,57 @@ class regression():
         You can trim the pandas later to decide how to put it into latex.
         reg_folder_name is one of cross_section, panel_FE, panel_RE, panel_pooled_OLS
         """
-        reg_level_dfs = []
         combined_niche_dummies_dfs = []
-        cols = copy.deepcopy(self.dep_vars)
-        cols.append('index')
-        cols.extend([i + '_pvalue' for i in self.dep_vars])
+        df = pd.DataFrame()
+        reg_level_dfs = []
         for name1, content1 in self.subsample_op_results.items():
             for name2, content2 in content1.items():
                 for name3, content3 in content2.items():
-                    df = pd.DataFrame()
-                    combined_niche_dummies = pd.DataFrame(columns=cols)
-                    for y, result in content3.items():
-                        # -----------------------------------------------------------------------------
-                        # OLS result is RegressionResultsWrapper object
+                    # for OLS results ====================================================================================
+                    if reg_folder_name == 'cross_section':
                         reg_level_stats_df = pd.DataFrame(columns=['index', 'nobs', 'rsquared', 'rsquared_adj'])
-                        reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y
-                        reg_level_stats_df.at[0, 'nobs'] = result.nobs
-                        reg_level_stats_df.at[0, 'rsquared'] = result.rsquared
-                        reg_level_stats_df.at[0, 'rsquared_adj'] = result.rsquared_adj
-                        reg_level_dfs.append(reg_level_stats_df)
-                        # -----------------------------------------------------------------------------
-                        df[y + '_params'] = result.params
-                        df[y + '_pvalue'] = result.pvalues
-                        # -----------------------------------------------------------------------------
-                        index_list = []
-                        for i in result.params.index.values:
-                            if 'Niche' in i:
-                                index_list.append(i)
-                        for i in range(len(index_list)):
-                            combined_niche_dummies.at[i, 'index'] = index_list[i]
-                            combined_niche_dummies.at[i, y] = result.params.loc[index_list[i]]
-                            combined_niche_dummies.at[i, y + '_pvalue'] = result.pvalues.loc[index_list[i]]
-                    combined_niche_dummies_dfs.append(combined_niche_dummies)
+                        cols = copy.deepcopy(self.dep_vars)
+                        cols.append('index')
+                        cols.extend([i + '_pvalue' for i in self.dep_vars])
+                        combined_niche_dummies = pd.DataFrame(columns=cols)
+                        for y, result in content3.items():
+                            df, reg_level_stats_df, combined_niche_dummies = self._put_ols_results_into_pandas(
+                                name1, name2, name3, y, result,
+                                df, reg_level_stats_df, combined_niche_dummies)
+                    # for PANEL results ==================================================================================
+                    else:
+                        reg_level_stats_df = pd.DataFrame(columns=['index'])
+                        combined_niche_dummies = pd.DataFrame(columns=['index'])
+                        for y, result in content3.items():
+                            for panel_reg, panel_res in result.items():
+                                cols_to_add = [y + '_' + panel_reg, y + '_' + panel_reg + '_pvalue']
+                                combined_niche_dummies.loc[:, cols_to_add] = None
+                                col_reg_stats = [i + '_' + panel_reg for i in ['nobs', 'rsquared']]
+                                reg_level_stats_df.loc[:, col_reg_stats] = None
+                                df, reg_level_stats_df, combined_niche_dummies = self._put_panel_results_into_pandas(
+                                    name1, name2, name3, y, panel_reg, panel_res,
+                                    df, reg_level_stats_df, combined_niche_dummies)
+                    # ------------------------------------------------------------------------------------------
                     f_name = name1 + '_' + name2 + '_' + name3 + '_coefficients' + '.csv'
                     q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
                     df = df.round(3)
                     df.to_csv(q)
-        combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), reg_level_dfs)
-        combined_df.set_index('index', inplace=True)
-        combined_df = combined_df.astype(float).round({'rsquared': 3, 'rsquared_adj': 3})
-        f_name = 'regression_level_stats.csv'
-        q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
-        combined_df.to_csv(q)
-        # -----------------------------------------------------------------------------
-        niche_df = functools.reduce(lambda a, b: pd.concat([a, b]), combined_niche_dummies_dfs)
-        niche_df.set_index('index', inplace=True)
-        niche_df = niche_df.astype(float).round(3)
-        f_name = 'NicheDummy_combined.csv'
-        q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
-        niche_df.to_csv(q)
+                    # ------------------------------------------------------------------------------------------
+                    reg_level_dfs.append(reg_level_stats_df)
+                    combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), reg_level_dfs)
+                    combined_df.set_index('index', inplace=True)
+                    combined_df = combined_df.astype(float).round({'rsquared': 3, 'rsquared_adj': 3})
+                    f_name = 'regression_level_stats.csv'
+                    q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+                    combined_df.to_csv(q)
+                    # ------------------------------------------------------------------------------------------
+                    combined_niche_dummies_dfs.append(combined_niche_dummies)
+                    niche_df = functools.reduce(lambda a, b: pd.concat([a, b]), combined_niche_dummies_dfs)
+                    niche_df.set_index('index', inplace=True)
+                    niche_df = niche_df.astype(float).round(3)
+                    f_name = 'NicheDummy_combined.csv'
+                    q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+                    niche_df.to_csv(q)
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
                            dep_vars=self.dep_vars,
@@ -352,6 +354,50 @@ class regression():
                            reg_dict=self.reg_dict,
                            single_panel_df=self.single_panel_df,
                            subsample_op_results=self.subsample_op_results)
+
+    def _put_ols_results_into_pandas(self, name1, name2, name3, y, result,
+                                     df, reg_level_stats_df, combined_niche_dummies):
+        # single regression coefficients and p-values ---------------------------------
+        df[y + '_params'] = result.params
+        df[y + '_pvalue'] = result.pvalues
+        # regression level stats ------------------------------------------------------
+        reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y
+        reg_level_stats_df.at[0, 'nobs'] = result.nobs
+        reg_level_stats_df.at[0, 'rsquared'] = result.rsquared
+        reg_level_stats_df.at[0, 'rsquared_adj'] = result.rsquared_adj
+        # put all niche dummies into a single table -----------------------------------
+        index_list = []
+        for i in result.params.index.values:
+            if 'Niche' in i:
+                index_list.append(i)
+        for i in range(len(index_list)):
+            combined_niche_dummies.at[i, 'index'] = index_list[i]
+            combined_niche_dummies.at[i, y] = result.params.loc[index_list[i]]
+            combined_niche_dummies.at[i, y + '_pvalue'] = result.pvalues.loc[index_list[i]]
+        return df, reg_level_stats_df, combined_niche_dummies
+
+    def _put_panel_results_into_pandas(self, name1, name2, name3, y, panel_reg, panel_res,
+                                       df, reg_level_stats_df, combined_niche_dummies):
+        # single panel regression coefficients and p-values -------------------------
+        df[y + '_' + panel_reg + '_params'] = panel_res.params
+        df[y + '_' + panel_reg + '_pvalue'] = panel_res.pvalues
+        # panel regression level stats ------------------------------------------------------
+        reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y + '_' + panel_reg
+        reg_level_stats_df.at[0, 'nobs' + '_' + panel_reg] = panel_res.nobs
+        reg_level_stats_df.at[0, 'rsquared' + '_' + panel_reg] = panel_res.rsquared
+        # no adjusted rsquared for panel regressions
+        # put all niche dummies into a single table -----------------------------------
+        index_list = []
+        for i in panel_res.params.index.values:
+            if 'Niche' in i:
+                index_list.append(i)
+        for i in range(len(index_list)):
+            combined_niche_dummies.at[i, 'index'] = index_list[i]
+            combined_niche_dummies.at[i, y + '_' + panel_reg] = panel_res.params.loc[index_list[i]]
+            combined_niche_dummies.at[i, y + '_' + panel_reg + '_pvalue'] = panel_res.pvalues.loc[index_list[i]]
+        return df, reg_level_stats_df, combined_niche_dummies
+
+
 
 
 ########################################################################################################################
