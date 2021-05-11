@@ -304,11 +304,10 @@ class regression():
                     # for OLS results ====================================================================================
                     if reg_folder_name == 'cross_section':
                         reg_level_stats_df = pd.DataFrame(columns=['index', 'nobs', 'rsquared', 'rsquared_adj'])
-                        cols = copy.deepcopy(self.dep_vars)
-                        cols.append('index')
-                        cols.extend([i + '_pvalue' for i in self.dep_vars])
-                        combined_niche_dummies = pd.DataFrame(columns=cols)
+                        combined_niche_dummies = pd.DataFrame(columns=['index'])
                         for y, result in content3.items():
+                            cols_to_add = [y, y + '_pvalue']
+                            combined_niche_dummies.loc[:, cols_to_add] = None
                             df, reg_level_stats_df, combined_niche_dummies = self._put_ols_results_into_pandas(
                                 name1, name2, name3, y, result,
                                 df, reg_level_stats_df, combined_niche_dummies)
@@ -332,20 +331,23 @@ class regression():
                     df.to_csv(q)
                     # ------------------------------------------------------------------------------------------
                     reg_level_dfs.append(reg_level_stats_df)
-                    combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), reg_level_dfs)
-                    combined_df.set_index('index', inplace=True)
-                    combined_df = combined_df.astype(float).round({'rsquared': 3, 'rsquared_adj': 3})
-                    f_name = 'regression_level_stats.csv'
-                    q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
-                    combined_df.to_csv(q)
-                    # ------------------------------------------------------------------------------------------
                     combined_niche_dummies_dfs.append(combined_niche_dummies)
-                    niche_df = functools.reduce(lambda a, b: pd.concat([a, b]), combined_niche_dummies_dfs)
-                    niche_df.set_index('index', inplace=True)
-                    niche_df = niche_df.astype(float).round(3)
-                    f_name = 'NicheDummy_combined.csv'
-                    q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
-                    niche_df.to_csv(q)
+                # After appending for each level 3 name dataframes ================================================
+                combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), reg_level_dfs)
+                combined_df.set_index('index', inplace=True)
+                for i in combined_df.columns:
+                    if 'rsquared' in i:
+                        combined_df = combined_df.astype(float).round({i: 3})
+                f_name = 'regression_level_stats.csv'
+                q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+                combined_df.to_csv(q)
+                # After appending for each level 3 name dataframes ================================================
+                niche_df = functools.reduce(lambda a, b: pd.concat([a, b]), combined_niche_dummies_dfs)
+                niche_df.set_index('index', inplace=True)
+                niche_df = niche_df.astype(float).round(3)
+                f_name = 'NicheDummy_combined.csv'
+                q = regression.panel_path / 'reg_results' / reg_folder_name / f_name
+                niche_df.to_csv(q)
         return regression(initial_panel=self.initial_panel,
                            all_panels=self.all_panels,
                            dep_vars=self.dep_vars,
@@ -397,7 +399,65 @@ class regression():
             combined_niche_dummies.at[i, y + '_' + panel_reg + '_pvalue'] = panel_res.pvalues.loc[index_list[i]]
         return df, reg_level_stats_df, combined_niche_dummies
 
+    def convert_csv_to_latex_result_PostXNicheDummy(self, result_type, table_type):
+        """
+        table_type == table_1:
+        include full, minInstalls and developer sub-samples, pooled OLS results with
+        post * niche dummy (PostXNicheDummy) for now.
+        table_type == table_2:
+        include genreId sub-samples, pooled OLS results with
+        post * niche dummy (PostXNicheDummy) for now.
+        table_type == table_3:
+        include full sample, pooled OLS results with
+        post * niche scale dummies 1-19 (PostXNicheDummy) for now.
+        """
+        if result_type == 'panel':
+            q = regression.panel_path / 'reg_results' / 'panel' / 'NicheDummy_combined.csv'
+        else:
+            q = regression.panel_path / 'reg_results' / 'cross_section' / 'NicheDummy_combined.csv'
+        df = pd.read_csv(q)
+        df.set_index('index', inplace=True)
+        # -------------------------------------------------------------------------------
+        if result_type == 'panel':
+            selected_col_names = []
+            substrings = ['POOLED_OLS', 'POOLED_OLS_pvalue']
+            for i in df.columns:
+                if any([substring in i for substring in substrings]):
+                    selected_col_names.append(i)
+        else:
+            selected_col_names = df.columns.tolist()
+        # -------------------------------------------------------------------------------
+        selected_row_indices = []
+        if table_type == 'table_1':
+            if result_type == 'panel':
+                substrings = ['PostX', 'NicheDummy']
+            else:
+                substrings = ['NicheDummy']
+            for i in df.index.values:
+                if all([substring in i for substring in substrings]) and 'genreId' not in i:
+                    selected_row_indices.append(i)
+        elif table_type == 'table_2':
+            if result_type == 'panel':
+                substrings = ['PostX', 'NicheDummy', 'genreId']
+            else:
+                substrings = ['NicheDummy', 'genreId']
+            for i in df.index.values:
+                if all([substring in i for substring in substrings]):
+                    selected_row_indices.append(i)
+        else:
+            if result_type == 'panel':
+                substrings = ['PostX', 'NicheScaleDummy']
+            else:
+                substrings = ['NicheScaleDummy']
+            for i in df.index.values:
+                if all([substring in i for substring in substrings]):
+                    selected_row_indices.append(i)
+        # -------------------------------------------------------------------------------
+        df2 = df.loc[selected_row_indices, selected_col_names]
+        return df2
 
+    def convert_csv_to_latex_panel_result_table_2(self):
+        pass
 
 
 ########################################################################################################################
