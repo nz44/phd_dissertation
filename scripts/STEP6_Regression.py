@@ -399,7 +399,7 @@ class regression():
             combined_niche_dummies.at[i, y + '_' + panel_reg + '_pvalue'] = panel_res.pvalues.loc[index_list[i]]
         return df, reg_level_stats_df, combined_niche_dummies
 
-    def convert_csv_to_latex_result_PostXNicheDummy(self, result_type, table_type):
+    def select_cols_and_rows_result_PostXNicheDummy(self, result_type, table_type):
         """
         table_type == table_1:
         include full, minInstalls and developer sub-samples, pooled OLS results with
@@ -456,65 +456,83 @@ class regression():
         df2 = df.loc[selected_row_indices, selected_col_names]
         return df2
 
-    def convert_csv_to_latex_panel_result_table_2(self):
-        pass
+    def add_pvalue_asterisk_to_results(self, df):
+        """
+        This should be run after self.select_cols_and_rows_result_PostXNicheDummy(self, result_type, table_type).
+        df is the output of self.select_cols_and_rows_result_PostXNicheDummy
+        """
+        # convert p_value columns to asterisks
+        df2 = df.copy(deep=True)
+        pvaluecols = [i for i in df2.columns if 'pvalue' in i]
+        def f(x):
+            if 0.05 < float(x) <= 0.1:
+                return '*'
+            elif 0.01 < float(x) <= 0.05:
+                return '**'
+            elif float(x) <= 0.01:
+                return '***'
+            else:
+                return ''
+        for i in pvaluecols:
+            df2[i] = df2[i].apply(f)
+        # concat pvalue cols to coefficient cols
+        for i in df2.columns:
+            if i not in pvaluecols:
+                df2[i] = df2[i].astype(str) + df2[i+'_pvalue']
+        df2.drop(pvaluecols, axis=1, inplace=True)
+        return df2
+
+    def set_row_and_column_groups(self, df, result_type):
+        """
+        The input df is the output of self.add_pvalue_asterisk_to_results(df)
+        """
+        df2 = df.copy(deep=True)
+        # group columns ---------------------------------------------------------
+        for i in df2.columns:
+            new_i = i.replace('_POOLED_OLS', '')
+            df2.rename(columns={i: new_i}, inplace=True)
+        df2.columns = pd.MultiIndex.from_product([['Dependant Variables'],
+                                                  df2.columns.tolist()])
+        if result_type == 'panel':
+            # group rows ------------------------------------------------------------
+            df2 = df2.reset_index()
+            df2.rename(columns={'index': 'PostXNicheDummy'}, inplace=True)
+            replacement = {'PostXfull_':'',
+                           'PostXminInstalls_Imputed':'',
+                           'PostXdeveloper_':'',
+                           '_NicheDummy':''}
+            df2['PostXNicheDummy'] = df2['PostXNicheDummy'].replace(replacement, regex=True)
+            # If you need multiindex you could use code below, but now I do not think you need it
+            # df.set_index(['year', 'month'])
+        else:
+            # group rows ------------------------------------------------------------
+            df2 = df2.reset_index()
+            df2.rename(columns={'index': 'NicheDummy'}, inplace=True)
+            replacement = {'genreId_': '',
+                           '_full_': '',
+                           'ImputedminInstalls_': '',
+                           'developer_': '',
+                           '_NicheDummy': '',
+                           'NicheDummy': ''}
+            df2['NicheDummy'] = df2['NicheDummy'].replace(replacement, regex=True)
+            # If you need multiindex you could use code below, but now I do not think you need it
+            # df.set_index(['year', 'month'])
+        return df2
+
+    def convert_to_latex(self, df, result_type, table_type):
+        """
+        df is the output of self.set_row_and_column_groups(self, df, result_type)
+        """
+        f_name = result_type + '_' + table_type + '_NicheDummy_Combined.tex'
+        df.to_latex(buf=regression.reg_table_path / f_name,
+                   multirow=True,
+                   multicolumn=True,
+                   position='h!',
+                   escape=False)
+        return df
 
 
 ########################################################################################################################
-    # pooled OLS with individual dummies will be another completely different function.
-
-    # extra code
-    def extra_code(self):
-        cols_to_keep = [i + '_' + j for j in selective_reg_types for i in selective_dep_vars]
-        df7 = df.copy(deep=True)
-        df8 = df7[cols_to_keep]
-        if p_value_as_asterisk is True:
-            df9 = df8.T
-        for j in df9.columns:
-            if '_pvalues' in j:
-                df9[j + '<0.01'] = df9[j].apply(lambda x: '***' if x < 0.01 else 'not sig at 1%')
-                df9[j + '<0.05'] = df9[j].apply(lambda x: '**' if x < 0.05 else 'not sig at 5%')
-                df9[j + '<0.1'] = df9[j].apply(lambda x: '*' if x < 0.1 else 'not sig at 10%')
-        ind_vars_sig_at_1_percent = []
-        ind_vars_sig_at_5_percent = []
-        ind_vars_sig_at_10_percent = []
-        for j in df9.columns:
-            if '***' in df9[j].values:
-                ind_var = j.rstrip('pvalues<0.01').rstrip('_')
-                ind_vars_sig_at_1_percent.append(ind_var)
-            elif '**' in df9[j].values:
-                ind_var = j.rstrip('pvalues<0.05').rstrip('_')
-                ind_vars_sig_at_5_percent.append(ind_var)
-            elif '*' in df9[j].values:
-                ind_var = j.rstrip('pvalues<0.1').rstrip('_')
-                ind_vars_sig_at_10_percent.append(ind_var)
-        for i in ind_vars_sig_at_1_percent:
-            ind_vars_sig_at_5_percent.remove(i)
-            ind_vars_sig_at_10_percent.remove(i)
-            df9[i + '_coef'] = df9.apply(
-                lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.01'] if row[
-                                                                                    i + '_pvalues<0.01'] != 'not sig at 1%' else str(
-                    row[i + '_coef']),
-                axis=1)
-        for i in ind_vars_sig_at_5_percent:
-            ind_vars_sig_at_10_percent.remove(i)
-            df9[i + '_coef'] = df9.apply(
-                lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.05'] if row[
-                                                                                    i + '_pvalues<0.05'] != 'not sig at 5%' else str(
-                    row[i + '_coef']),
-                axis=1)
-        for i in ind_vars_sig_at_10_percent:
-            df9[i + '_coef'] = df9.apply(
-                lambda row: str(row[i + '_coef']) + row[i + '_pvalues<0.1'] if row[
-                                                                                   i + '_pvalues<0.1'] != 'not sig at 10%' else str(
-                    row[i + '_coef']),
-                axis=1)
-        cols_to_keep = [i for i in df9.columns if '_coef' in i]
-        cols_to_keep.extend(['F stat', 'P-value', 'rsquared', 'nobs', '_cov_type'])
-        df10 = df9[cols_to_keep]
-        df10 = df10.T
-        return df10
-
     def output_reg_results_pandas_to_latex(self, df, the_reg_type):
         """
         :param df: the output of self.customize_pandas_before_output_latex()
