@@ -2,58 +2,156 @@
 \centering
 \begin{tabular}{llllll}
 \toprule
-{} &           NicheDummy & \multicolumn{4}{l}{Dependant Variables} \\
-{} &       offersIAPTrue & containsAdsTrue &   paidTrue & Imputedprice \\
+          &       & \multicolumn{4}{l}{Dependant Variables} \\
+          &       &           OffersIAP & ContainsAds &       Paid &      Price \\
+Samples & Independent Vars &                     &             &            &            \\
 \midrule
-0  &  ART_AND_DESIGN &  0.101 &  0.055 &  -0.082 &  -0.757* \\
-1  &  COMICS &  -0.129 &  -0.06 &  0.104 &  0.785* \\
-2  &  PERSONALIZATION &  0.238*** &  0.321*** &  -0.223*** &  -0.088 \\
-3  &  PHOTOGRAPHY &  -0.089 &  0.087 &  -0.031 &  0.099 \\
-4  &  AUTO_AND_VEHICLES &  0.136 &  0.226*** &  -0.13 &  -1.285 \\
-5  &  GAME_ROLE_PLAYING &  -0.227*** &  0.071 &  0.139** &  0.767 \\
-6  &  GAME_ACTION &  0.451 &  -0.132 &  0.195 &  1.014 \\
-7  &  GAME_RACING &  -0.009 &  0.058 &  0.07 &  0.108 \\
-8  &  TRAVEL_AND_LOCAL &  0.086 &  0.135** &  -0.172** &  -0.07 \\
-9  &  GAME_ADVENTURE &  0.028 &  0.205* &  0.093 &  0.338 \\
-10 &  SOCIAL &  -0.197** &  -0.098 &  0.194** &  0.879** \\
-11 &  GAME_SIMULATION &  0.136 &  0.112 &  -0.114 &  -0.421 \\
-12 &  LIFESTYLE &  -0.172** &  -0.028 &  0.172** &  3.513 \\
-13 &  EDUCATION &  0.195*** &  0.184*** &  0.005 &  0.268 \\
-14 &  BEAUTY &  0.092 &  0.175 &  0.019 &  0.019 \\
-15 &  GAME_CASUAL &  0.125* &  -0.072 &  -0.221*** &  -0.851*** \\
-16 &  BOOKS_AND_REFERENCE &  0.017 &  0.205*** &  -0.047 &  -1.366 \\
-17 &  BUSINESS &  0.084 &  0.069* &  0.09 &  0.577 \\
-18 &  FINANCE &  0.303*** &  0.135*** &  0.333*** &  2.175** \\
-19 &  GAME_STRATEGY &  -0.105 &  -0.027 &  0.081 &  0.296 \\
-20 &  SPORTS &  0.09 &  -0.236** &  0.132 &  0.954 \\
-21 &  COMMUNICATION &  -0.115 &  0.04 &  0.001 &  -1.76 \\
-22 &  DATING &  -0.04 &  -0.116 &  0.013 &  0.151 \\
-23 &  ENTERTAINMENT &  -0.118* &  -0.02 &  0.156** &  -0.031 \\
-24 &  GAME_BOARD &  -0.139** &  0.285*** &  -0.253*** &  -1.609*** \\
-25 &  EVENTS &  0.005 &  0.167 &  0.054 &  0.069 \\
-26 &  SHOPPING &  0.191** &  0.059 &  0.101*** &  3.178 \\
-27 &  FOOD_AND_DRINK &  -0.064 &  0.004 &  -0.022 &  3.371 \\
-28 &  HEALTH_AND_FITNESS &  -0.075 &  0.252*** &  0.054 &  0.558 \\
-29 &  HOUSE_AND_HOME &  0.127 &  0.104 &  -0.062 &  0.308 \\
-30 &  TOOLS &  0.09 &  0.171*** &  0.003 &  -0.245 \\
-31 &  LIBRARIES_AND_DEMO &  0.14 &  0.364*** &  -0.818*** &  -0.312 \\
-32 &  MAPS_AND_NAVIGATION &  -0.109 &  0.156*** &  -0.017 &  -1.932 \\
-33 &  MEDICAL &  -0.014 &  0.043 &  -0.182* &  -17.37* \\
-34 &  MUSIC_AND_AUDIO &  -0.177* &  0.032 &  0.063 &  -2.131 \\
-35 &  NEWS_AND_MAGAZINES &  0.398*** &  -0.056 &  -0.007 &  -0.232 \\
-36 &  PARENTING &  -0.023 &  0.347*** &  0.03 &  0.177 \\
-37 &  GAME_PUZZLE &  0.11 &  0.121* &  -0.139* &  -0.253 \\
-38 &  VIDEO_PLAYERS &  -0.076 &  0.042 &  0.094 &  0.65 \\
-39 &  PRODUCTIVITY &  0.028 &  0.064 &  0.085 &  1.928* \\
-40 &  WEATHER &  0.007 &  -0.136* &  0.13 &  0.512 \\
-41 &  GAME_ARCADE &  0.146* &  0.144** &  -0.135* &  -0.839** \\
-42 &  GAME_CASINO &  0.228*** &  0.082 &  -0.209*** &  -0.885** \\
-43 &  GAME_CARD &  0.036 &  -0.22*** &  0.137** &  0.891 \\
-44 &  GAME_EDUCATIONAL &  -0.402*** &  -0.586*** &  0.398*** &  1.375*** \\
-45 &  GAME_MUSIC &  -0.097 &  -0.281*** &  0.138 &  0.411* \\
-46 &  GAME_SPORTS &  -0.053 &  -0.117 &  0.007 &  0.453* \\
-47 &  GAME_TRIVIA &  -0.039 &  0.053 &  0.045 &  1.874* \\
-48 &  GAME_WORD &  -0.015 &  -0.128 &  0.132* &  0.525** \\
+\multirow{2}{*}{Art and design} & Constant &  0.366*** &  0.714*** &  0.168* &  0.372 \\
+          & Niche &  0.101 &  0.055 &  -0.082 &  -0.757* \\
+\cline{1-6}
+\multirow{2}{*}{Comics} & Constant &  1.17*** &  1.278*** &  -0.284* &  -1.204 \\
+          & Niche &  -0.129 &  -0.06 &  0.104 &  0.785* \\
+\cline{1-6}
+\multirow{2}{*}{Personalization} & Constant &  0.309*** &  0.164 &  0.653*** &  0.305 \\
+          & Niche &  0.238*** &  0.321*** &  -0.223*** &  -0.088 \\
+\cline{1-6}
+\multirow{2}{*}{Photography} & Constant &  0.618*** &  0.375*** &  0.292*** &  0.414 \\
+          & Niche &  -0.089 &  0.087 &  -0.031 &  0.099 \\
+\cline{1-6}
+\multirow{2}{*}{Auto and vehicles} & Constant &  0.401 &  0.226 &  0.366 &  2.704 \\
+          & Niche &  0.136 &  0.226*** &  -0.13 &  -1.285 \\
+\cline{1-6}
+\multirow{2}{*}{Game role playing} & Constant &  0.817*** &  0.588*** &  0.092 &  -0.166 \\
+          & Niche &  -0.227*** &  0.071 &  0.139** &  0.767 \\
+\cline{1-6}
+\multirow{2}{*}{Game action} & Constant &  -0.181 &  2.167*** &  -0.867 &  -3.742 \\
+          & Niche &  0.451 &  -0.132 &  0.195 &  1.014 \\
+\cline{1-6}
+\multirow{2}{*}{Game racing} & Constant &  0.795*** &  1.021*** &  -0.145 &  -0.101 \\
+          & Niche &  -0.009 &  0.058 &  0.07 &  0.108 \\
+\cline{1-6}
+\multirow{2}{*}{Travel and local} & Constant &  0.366*** &  0.374*** &  0.361** &  2.564 \\
+          & Niche &  0.086 &  0.135** &  -0.172** &  -0.07 \\
+\cline{1-6}
+\multirow{2}{*}{Game adventure} & Constant &  0.536*** &  0.614*** &  0.048 &  0.892 \\
+          & Niche &  0.028 &  0.205* &  0.093 &  0.338 \\
+\cline{1-6}
+\multirow{2}{*}{Social} & Constant &  0.337** &  0.274 &  0.332** &  0.25 \\
+          & Niche &  -0.197** &  -0.098 &  0.194** &  0.879** \\
+\cline{1-6}
+\multirow{2}{*}{Game simulation} & Constant &  0.681*** &  0.577*** &  0.325** &  1.337*** \\
+          & Niche &  0.136 &  0.112 &  -0.114 &  -0.421 \\
+\cline{1-6}
+\multirow{2}{*}{Lifestyle} & Constant &  0.621*** &  0.287*** &  0.215** &  -3.175 \\
+          & Niche &  -0.172** &  -0.028 &  0.172** &  3.513 \\
+\cline{1-6}
+\multirow{2}{*}{Education} & Constant &  0.473*** &  0.478*** &  0.136 &  -0.174 \\
+          & Niche &  0.195*** &  0.184*** &  0.005 &  0.268 \\
+\cline{1-6}
+\multirow{2}{*}{Beauty} & Constant &  -0.04 &  0.504 &  0.041 &  0.04 \\
+          & Niche &  0.092 &  0.175 &  0.019 &  0.019 \\
+\cline{1-6}
+\multirow{2}{*}{Game casual} & Constant &  0.504*** &  0.96*** &  0.272*** &  0.796* \\
+          & Niche &  0.125* &  -0.072 &  -0.221*** &  -0.851*** \\
+\cline{1-6}
+\multirow{2}{*}{Books and reference} & Constant &  0.33*** &  0.355*** &  0.29*** &  4.322* \\
+          & Niche &  0.017 &  0.205*** &  -0.047 &  -1.366 \\
+\cline{1-6}
+\multirow{2}{*}{Business} & Constant &  0.43*** &  0.198*** &  0.092 &  -1.254 \\
+          & Niche &  0.084 &  0.069* &  0.09 &  0.577 \\
+\cline{1-6}
+\multirow{2}{*}{Finance} & Constant &  0.187** &  0.008 &  -0.157* &  4.949 \\
+          & Niche &  0.303*** &  0.135*** &  0.333*** &  2.175** \\
+\cline{1-6}
+\multirow{2}{*}{Game strategy} & Constant &  0.906*** &  0.425*** &  0.255** &  1.083** \\
+          & Niche &  -0.105 &  -0.027 &  0.081 &  0.296 \\
+\cline{1-6}
+\multirow{2}{*}{Sports} & Constant &  0.6*** &  0.573*** &  0.239* &  4.227 \\
+          & Niche &  0.09 &  -0.236** &  0.132 &  0.954 \\
+\cline{1-6}
+\multirow{2}{*}{Communication} & Constant &  0.487*** &  0.205** &  0.417*** &  8.111 \\
+          & Niche &  -0.115 &  0.04 &  0.001 &  -1.76 \\
+\cline{1-6}
+\multirow{2}{*}{Dating} & Constant &  0.967*** &  1.049*** &  0.004 &  -0.066 \\
+          & Niche &  -0.04 &  -0.116 &  0.013 &  0.151 \\
+\cline{1-6}
+\multirow{2}{*}{Entertainment} & Constant &  0.62*** &  0.193* &  0.356*** &  1.168 \\
+          & Niche &  -0.118* &  -0.02 &  0.156** &  -0.031 \\
+\cline{1-6}
+\multirow{2}{*}{Game board} & Constant &  0.713*** &  0.388*** &  0.503*** &  2.363*** \\
+          & Niche &  -0.139** &  0.285*** &  -0.253*** &  -1.609*** \\
+\cline{1-6}
+\multirow{2}{*}{Events} & Constant &  5.164 &  5.808* &  0.25 &  0.258 \\
+          & Niche &  0.005 &  0.167 &  0.054 &  0.069 \\
+\cline{1-6}
+\multirow{2}{*}{Shopping} & Constant &  0.178 &  0.218 &  0.028 &  9.441 \\
+          & Niche &  0.191** &  0.059 &  0.101*** &  3.178 \\
+\cline{1-6}
+\multirow{2}{*}{Food and drink} & Constant &  0.324*** &  0.282*** &  0.469*** &  21.305*** \\
+          & Niche &  -0.064 &  0.004 &  -0.022 &  3.371 \\
+\cline{1-6}
+\multirow{2}{*}{Health and fitness} & Constant &  0.693*** &  -0.034 &  0.225** &  0.96* \\
+          & Niche &  -0.075 &  0.252*** &  0.054 &  0.558 \\
+\cline{1-6}
+\multirow{2}{*}{House and home} & Constant &  0.614*** &  0.331 &  0.39** &  1.027 \\
+          & Niche &  0.127 &  0.104 &  -0.062 &  0.308 \\
+\cline{1-6}
+\multirow{2}{*}{Tools} & Constant &  0.338*** &  0.376*** &  0.212** &  0.673 \\
+          & Niche &  0.09 &  0.171*** &  0.003 &  -0.245 \\
+\cline{1-6}
+\multirow{2}{*}{Libraries and demo} & Constant &  0.069 &  1.053*** &  0.557*** &  -0.379 \\
+          & Niche &  0.14 &  0.364*** &  -0.818*** &  -0.312 \\
+\cline{1-6}
+\multirow{2}{*}{Maps and navigation} & Constant &  0.357** &  0.086 &  0.608*** &  5.404 \\
+          & Niche &  -0.109 &  0.156*** &  -0.017 &  -1.932 \\
+\cline{1-6}
+\multirow{2}{*}{Medical} & Constant &  0.325 &  0.13 &  0.108 &  22.843* \\
+          & Niche &  -0.014 &  0.043 &  -0.182* &  -17.37* \\
+\cline{1-6}
+\multirow{2}{*}{Music and audio} & Constant &  0.669*** &  0.452*** &  0.229** &  4.373 \\
+          & Niche &  -0.177* &  0.032 &  0.063 &  -2.131 \\
+\cline{1-6}
+\multirow{2}{*}{News and magazines} & Constant &  -0.159 &  0.698*** &  0.143 &  0.98 \\
+          & Niche &  0.398*** &  -0.056 &  -0.007 &  -0.232 \\
+\cline{1-6}
+\multirow{2}{*}{Parenting} & Constant &  0.624*** &  0.384*** &  -0.075 &  -0.467 \\
+          & Niche &  -0.023 &  0.347*** &  0.03 &  0.177 \\
+\cline{1-6}
+\multirow{2}{*}{Game puzzle} & Constant &  0.659*** &  0.767*** &  0.124 &  0.594* \\
+          & Niche &  0.11 &  0.121* &  -0.139* &  -0.253 \\
+\cline{1-6}
+\multirow{2}{*}{Video players} & Constant &  0.707*** &  0.643*** &  0.141 &  -0.144 \\
+          & Niche &  -0.076 &  0.042 &  0.094 &  0.65 \\
+\cline{1-6}
+\multirow{2}{*}{Productivity} & Constant &  0.444*** &  0.083 &  0.268* &  3.417 \\
+          & Niche &  0.028 &  0.064 &  0.085 &  1.928* \\
+\cline{1-6}
+\multirow{2}{*}{Weather} & Constant &  0.364*** &  0.658*** &  0.18** &  0.787* \\
+          & Niche &  0.007 &  -0.136* &  0.13 &  0.512 \\
+\cline{1-6}
+\multirow{2}{*}{Game arcade} & Constant &  0.883*** &  0.966*** &  0.043 &  0.637 \\
+          & Niche &  0.146* &  0.144** &  -0.135* &  -0.839** \\
+\cline{1-6}
+\multirow{2}{*}{Game casino} & Constant &  0.195 &  0.198 &  0.739*** &  1.589 \\
+          & Niche &  0.228*** &  0.082 &  -0.209*** &  -0.885** \\
+\cline{1-6}
+\multirow{2}{*}{Game card} & Constant &  0.532*** &  0.827*** &  0.064 &  0.164 \\
+          & Niche &  0.036 &  -0.22*** &  0.137** &  0.891 \\
+\cline{1-6}
+\multirow{2}{*}{Game educational} & Constant &  0.638*** &  0.995*** &  0.16 &  0.24 \\
+          & Niche &  -0.402*** &  -0.586*** &  0.398*** &  1.375*** \\
+\cline{1-6}
+\multirow{2}{*}{Game music} & Constant &  0.458** &  1.054*** &  -0.021 &  -0.04 \\
+          & Niche &  -0.097 &  -0.281*** &  0.138 &  0.411* \\
+\cline{1-6}
+\multirow{2}{*}{Game sports} & Constant &  0.757*** &  0.865*** &  0.143 &  0.441 \\
+          & Niche &  -0.053 &  -0.117 &  0.007 &  0.453* \\
+\cline{1-6}
+\multirow{2}{*}{Game trivia} & Constant &  0.493*** &  0.896*** &  -0.147 &  -2.618* \\
+          & Niche &  -0.039 &  0.053 &  0.045 &  1.874* \\
+\cline{1-6}
+\multirow{2}{*}{Game word} & Constant &  0.956*** &  1.062*** &  -0.069 &  -0.507* \\
+          & Niche &  -0.015 &  -0.128 &  0.132* &  0.525** \\
 \bottomrule
 \end{tabular}
 \end{table}

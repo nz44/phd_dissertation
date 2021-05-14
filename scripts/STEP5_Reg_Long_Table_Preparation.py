@@ -38,6 +38,7 @@ class reg_preparation():
                  initial_panel,
                  all_panels,
                  tcn,
+                 niche_keyvar_dfs=None,
                  subsample_names=None,
                  df=None,
                  text_label_df=None,
@@ -52,6 +53,7 @@ class reg_preparation():
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.tcn = tcn
+        self.niche_kv_dfs = niche_keyvar_dfs
         self.ssnames = subsample_names
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.text_label_df = text_label_df
@@ -76,6 +78,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -94,6 +97,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -115,6 +119,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -141,6 +146,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -180,6 +186,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -231,6 +238,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -284,6 +292,46 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
+                                   subsample_names=self.ssnames,
+                                   df=self.df,
+                                   text_label_df=self.text_label_df,
+                                   combined_df=self.cdf,
+                                   text_label_count_df=self.tlc_df,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    def niche_scale_scatter_plot_against_key_vars(self, the_panel):
+        key_vars = ['price']
+        selected_vars = [i + '_' + the_panel for i in key_vars]
+        df2 = self.cdf.copy(deep=True)
+        self.niche_kv_dfs = {}
+        for key, sub_sample_dummies in self.ssnames.items():
+            self.niche_kv_dfs[key] = {}
+            if key == 'full':
+                svars = copy.deepcopy(selected_vars)
+                svars.extend(['full_full_kmeans_labels'])
+                df = df2.loc[:, svars]
+                self.niche_kv_dfs['full']['full'] = df
+            elif key == 'developer':
+                svars = copy.deepcopy(selected_vars)
+                svars.extend(['top_digital_firms',
+                              'developer_top_kmeans_labels',
+                              'developer_non-top_kmeans_labels'])
+                self.niche_kv_dfs['developer']['top'] = df2.loc[df2['top_digital_firms']==1, svars]
+                self.niche_kv_dfs['developer']['non-top'] = df2.loc[
+                    df2['top_digital_firms'] == 0, svars]
+            else:
+                for ss_dummy in sub_sample_dummies:
+                    svars = copy.deepcopy(selected_vars)
+                    svars.extend([ss_dummy, key + '_' + ss_dummy + '_kmeans_labels'])
+                    self.niche_kv_dfs[key][ss_dummy] = df2.loc[df2[ss_dummy]==1, svars]
+        return reg_preparation(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -347,6 +395,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -372,6 +421,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -397,6 +447,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -422,6 +473,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -445,6 +497,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -465,6 +518,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -487,6 +541,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -524,6 +579,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -545,6 +601,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -578,6 +635,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -605,6 +663,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -643,6 +702,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -770,6 +830,7 @@ class reg_preparation():
         return reg_preparation(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,

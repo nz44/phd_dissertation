@@ -18,6 +18,7 @@ from linearmodels import RandomEffects
 from linearmodels.panel import compare
 from datetime import datetime
 import functools
+import re
 today = datetime.today()
 yearmonth = today.strftime("%Y%m")
 
@@ -296,7 +297,6 @@ class regression():
         reg_folder_name is one of cross_section, panel_FE, panel_RE, panel_pooled_OLS
         """
         combined_niche_dummies_dfs = []
-        df = pd.DataFrame()
         reg_level_dfs = []
         for name1, content1 in self.subsample_op_results.items():
             for name2, content2 in content1.items():
@@ -305,6 +305,7 @@ class regression():
                     if reg_folder_name == 'cross_section':
                         reg_level_stats_df = pd.DataFrame(columns=['index', 'nobs', 'rsquared', 'rsquared_adj'])
                         combined_niche_dummies = pd.DataFrame(columns=['index'])
+                        df = pd.DataFrame(columns=['index'])
                         for y, result in content3.items():
                             cols_to_add = [y, y + '_pvalue']
                             combined_niche_dummies.loc[:, cols_to_add] = None
@@ -315,6 +316,7 @@ class regression():
                     else:
                         reg_level_stats_df = pd.DataFrame(columns=['index'])
                         combined_niche_dummies = pd.DataFrame(columns=['index'])
+                        df = pd.DataFrame(columns=['index'])
                         for y, result in content3.items():
                             for panel_reg, panel_res in result.items():
                                 cols_to_add = [y + '_' + panel_reg, y + '_' + panel_reg + '_pvalue']
@@ -360,8 +362,12 @@ class regression():
     def _put_ols_results_into_pandas(self, name1, name2, name3, y, result,
                                      df, reg_level_stats_df, combined_niche_dummies):
         # single regression coefficients and p-values ---------------------------------
-        df[y + '_params'] = result.params
-        df[y + '_pvalue'] = result.pvalues
+        df['index'] = result.params.index
+        df.set_index('index', inplace=True)
+        coef = result.params.rename(y + '_params').to_frame()
+        pv = result.pvalues.rename(y + '_pvalue').to_frame()
+        df = df.join(coef, how='inner')
+        df = df.join(pv, how='inner')
         # regression level stats ------------------------------------------------------
         reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y
         reg_level_stats_df.at[0, 'nobs'] = result.nobs
@@ -370,33 +376,43 @@ class regression():
         # put all niche dummies into a single table -----------------------------------
         index_list = []
         for i in result.params.index.values:
-            if 'Niche' in i:
+            if 'Niche' in i or i == 'const':
                 index_list.append(i)
         for i in range(len(index_list)):
             combined_niche_dummies.at[i, 'index'] = index_list[i]
             combined_niche_dummies.at[i, y] = result.params.loc[index_list[i]]
             combined_niche_dummies.at[i, y + '_pvalue'] = result.pvalues.loc[index_list[i]]
+        combined_niche_dummies.at[
+            combined_niche_dummies['index'] == 'const', 'index'] = name1 + '_' + name2 + '_' + name3 + '_Constant'
         return df, reg_level_stats_df, combined_niche_dummies
 
     def _put_panel_results_into_pandas(self, name1, name2, name3, y, panel_reg, panel_res,
                                        df, reg_level_stats_df, combined_niche_dummies):
-        # single panel regression coefficients and p-values -------------------------
-        df[y + '_' + panel_reg + '_params'] = panel_res.params
-        df[y + '_' + panel_reg + '_pvalue'] = panel_res.pvalues
+        # single panel regression coefficients and p-values ---------------------------------
+        df['index'] = panel_res.params.index
+        df.set_index('index', inplace=True)
+        coef = panel_res.params.rename(y + panel_reg + '_params').to_frame()
+        pv = panel_res.pvalues.rename(y + panel_reg + '_pvalue').to_frame()
+        df = df.join(coef, how='inner')
+        df = df.join(pv, how='inner')
         # panel regression level stats ------------------------------------------------------
         reg_level_stats_df.at[0, 'index'] = name1 + '_' + name2 + '_' + name3 + '_' + y + '_' + panel_reg
-        reg_level_stats_df.at[0, 'nobs' + '_' + panel_reg] = panel_res.nobs
-        reg_level_stats_df.at[0, 'rsquared' + '_' + panel_reg] = panel_res.rsquared
+        reg_level_stats_df.at[0, 'nobs_' + panel_reg] = panel_res.nobs
+        reg_level_stats_df.at[0, 'rsquared_' + panel_reg] = panel_res.rsquared
         # no adjusted rsquared for panel regressions
-        # put all niche dummies into a single table -----------------------------------
+        # put all niche dummies into a single table -----------------------------------------
         index_list = []
         for i in panel_res.params.index.values:
-            if 'Niche' in i:
+            if 'Niche' in i or i == 'PostDummy' or i == 'const': # PostDummy is the treatment dummy in DiD
                 index_list.append(i)
         for i in range(len(index_list)):
             combined_niche_dummies.at[i, 'index'] = index_list[i]
             combined_niche_dummies.at[i, y + '_' + panel_reg] = panel_res.params.loc[index_list[i]]
             combined_niche_dummies.at[i, y + '_' + panel_reg + '_pvalue'] = panel_res.pvalues.loc[index_list[i]]
+        # change the PostDummy and const index to incorporate names for the purpose of future concatenating frames
+        combined_niche_dummies.at[combined_niche_dummies['index'] == 'PostDummy', 'index'] = name1 + '_' + name2 + '_' + name3 + '_PostDummy'
+        combined_niche_dummies.at[
+            combined_niche_dummies['index'] == 'const', 'index'] = name1 + '_' + name2 + '_' + name3 + '_Constant'
         return df, reg_level_stats_df, combined_niche_dummies
 
     def select_cols_and_rows_result_PostXNicheDummy(self, result_type, table_type):
@@ -430,27 +446,32 @@ class regression():
         selected_row_indices = []
         if table_type == 'table_1':
             if result_type == 'panel':
-                substrings = ['PostX', 'NicheDummy']
+                contain = ['PostX', 'NicheDummy', 'PostDummy', 'Constant']
             else:
-                substrings = ['NicheDummy']
+                contain = ['NicheDummy', 'Constant']
+            not_contain = ['genreId', 'NicheScaleDummy', 'NicheScaleDummies']
             for i in df.index.values:
-                if all([substring in i for substring in substrings]) and 'genreId' not in i:
+                if any([substring in i for substring in contain]) and not any([substring in i for substring in not_contain]):
                     selected_row_indices.append(i)
         elif table_type == 'table_2':
             if result_type == 'panel':
-                substrings = ['PostX', 'NicheDummy', 'genreId']
+                substrings = ['PostX', 'NicheDummy', 'PostDummy', 'Constant']
             else:
-                substrings = ['NicheDummy', 'genreId']
+                substrings = ['NicheDummy', 'Constant']
             for i in df.index.values:
-                if all([substring in i for substring in substrings]):
+                if any([substring in i for substring in substrings]) and 'genreId' in i:
                     selected_row_indices.append(i)
         else:
             if result_type == 'panel':
-                substrings = ['PostX', 'NicheScaleDummy']
+                substrings = ['PostXfull_full_NicheScaleDummy',
+                              'full_full_NicheScaleDummy',
+                              'NicheScaleDummies_PostDummy',
+                              'NicheScaleDummies_Constant']
             else:
-                substrings = ['NicheScaleDummy']
+                substrings = ['NicheScaleDummy',
+                              'NicheScaleDummies_Constant']
             for i in df.index.values:
-                if all([substring in i for substring in substrings]):
+                if any([substring in i for substring in substrings]):
                     selected_row_indices.append(i)
         # -------------------------------------------------------------------------------
         df2 = df.loc[selected_row_indices, selected_col_names]
@@ -491,32 +512,102 @@ class regression():
         for i in df2.columns:
             new_i = i.replace('_POOLED_OLS', '')
             df2.rename(columns={i: new_i}, inplace=True)
+        df2.rename(columns={'offersIAPTrue': 'OffersIAP',
+                            'containsAdsTrue': 'ContainsAds',
+                            'paidTrue': 'Paid',
+                            'Imputedprice': 'Price'},
+                   inplace=True)
         df2.columns = pd.MultiIndex.from_product([['Dependant Variables'],
                                                   df2.columns.tolist()])
+        df2 = df2.reset_index()
+        def reformat_index(x):
+            x = x.replace('_', ' ')
+            x = x.lower()
+            return x
+        df2['index'] = df2['index'].apply(reformat_index)
+        df2.rename(columns={'index': 'Independent Vars'}, inplace=True)
+        df2['Samples'] = None
+        def replace_all(text, dic):
+            for i, j in dic.items():
+                text = text.replace(i, j)
+            return text
+        def set_sample(x):
+            if 'full' in x:
+                x = 'full'
+            elif 'genreid' in x:
+                rep = {' nichedummy': '',
+                       'postxgenreid ': '',
+                        'genreid ': '',
+                       ' postdummy': '',
+                       ' constant': ''}
+                x = replace_all(x, rep)
+            elif 'mininstalls imputedmininstalls ' in x:
+                rep = {' nichedummy': '',
+                       'postxmininstalls imputedmininstalls ': '',
+                        'mininstalls imputedmininstalls ': '',
+                       ' postdummy': '',
+                       ' constant': ''}
+                x = replace_all(x, rep)
+            elif 'developer' in x:
+                rep = {' nichedummy': '',
+                       'postxdeveloper ': '',
+                        'developer ': '',
+                       ' postdummy': '',
+                       ' constant': ''}
+                x = replace_all(x, rep)
+            else:
+                x = x
+            return x
+        df2['Samples'] = df2['Independent Vars'].apply(set_sample)
+        df2['Samples'] = df2['Samples'].apply(lambda x: x.capitalize())
+        # ----------------------------------------------------------------------------------
+        def set_row_indep_var_panel(x):
+            if 'constant' in x:
+                return 'Constant'
+            elif 'postdummy' in x:
+                return 'Post'
+            elif 'nichedummy' in x and 'postx' not in x:
+                return 'Niche'
+            elif 'nichedummy' in x and 'postx' in x:
+                return 'PostNiche'
+            elif 'postx' in x and 'nichescaledummy' in x:
+                rep = {'postxfull full ': 'Post',
+                       'nichescaledummy': 'NicheScale'}
+                x = replace_all(x, rep)
+                return x
+            elif 'full full nichescaledummy' in x:
+                rep = {'full full nichescaledummy': 'NicheScale'}
+                x = replace_all(x, rep)
+                return x
+            else:
+                return x
+        def set_row_indep_var_ols(x):
+            if 'constant' in x:
+                return 'Constant'
+            elif 'nichedummy' in x:
+                return 'Niche'
+            elif 'nichescaledummy' in x:
+                return 'NicheScale'
+            else:
+                return x
+        # ----------------------------------------------------------------------------------
         if result_type == 'panel':
-            # group rows ------------------------------------------------------------
-            df2 = df2.reset_index()
-            df2.rename(columns={'index': 'PostXNicheDummy'}, inplace=True)
-            replacement = {'PostXfull_':'',
-                           'PostXminInstalls_Imputed':'',
-                           'PostXdeveloper_':'',
-                           '_NicheDummy':''}
-            df2['PostXNicheDummy'] = df2['PostXNicheDummy'].replace(replacement, regex=True)
-            # If you need multiindex you could use code below, but now I do not think you need it
-            # df.set_index(['year', 'month'])
+            df2['Independent Vars'] = df2['Independent Vars'].apply(set_row_indep_var_panel)
         else:
-            # group rows ------------------------------------------------------------
-            df2 = df2.reset_index()
-            df2.rename(columns={'index': 'NicheDummy'}, inplace=True)
-            replacement = {'genreId_': '',
-                           '_full_': '',
-                           'ImputedminInstalls_': '',
-                           'developer_': '',
-                           '_NicheDummy': '',
-                           'NicheDummy': ''}
-            df2['NicheDummy'] = df2['NicheDummy'].replace(replacement, regex=True)
-            # If you need multiindex you could use code below, but now I do not think you need it
-            # df.set_index(['year', 'month'])
+            df2['Independent Vars'] = df2['Independent Vars'].apply(set_row_indep_var_ols)
+        # sort independent vars in the order Post Niche and Postniche
+        df2['ind_var_order'] = None
+        df2.at[df2['Independent Vars'] == 'Constant', 'ind_var_order'] = 0
+        df2.at[df2['Independent Vars'] == 'Niche', 'ind_var_order'] = 1
+        df2.at[df2['Independent Vars'] == 'Post', 'ind_var_order'] = 2
+        df2.at[df2['Independent Vars'] == 'PostNiche', 'ind_var_order'] = 3
+        for i in range(1, 20):
+            df2.at[df2['Independent Vars'] == 'NicheScale ' + str(i), 'ind_var_order'] = i+2
+            df2.at[df2['Independent Vars'] == 'PostNicheScale ' + str(i), 'ind_var_order'] = i+2
+        df2 = df2.groupby(['Samples'], sort=False) \
+            .apply(lambda x: x.sort_values(['ind_var_order'], ascending=True)) \
+            .reset_index(drop=True).drop(['ind_var_order'], axis=1)
+        df2.set_index(['Samples', 'Independent Vars'], inplace=True)
         return df2
 
     def convert_to_latex(self, df, result_type, table_type):

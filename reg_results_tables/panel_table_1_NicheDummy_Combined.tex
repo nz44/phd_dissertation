@@ -2,15 +2,39 @@
 \centering
 \begin{tabular}{llllll}
 \toprule
-{} &    PostXNicheDummy & \multicolumn{4}{l}{Dependant Variables} \\
-{} &       offersIAPTrue & containsAdsTrue & paidTrue & Imputedprice \\
+        &           & \multicolumn{4}{l}{Dependant Variables} \\
+        &           &           OffersIAP & ContainsAds &       Paid &      Price \\
+Samples & Independent Vars &                     &             &            &            \\
 \midrule
-0 &  full &  0.118*** &  -0.001 &  0.003* &  -0.361* \\
-1 &  minInstalls_tier1 &  0.1* &  -0.002 &  -0.0 &  0.0 \\
-2 &  minInstalls_tier2 &  0.107*** &  0.001 &  0.001 &  0.013 \\
-3 &  minInstalls_tier3 &  0.058*** &  -0.0 &  -0.0 &  -0.795* \\
-4 &  top &  -0.243*** &  -0.004 &  -0.001 &  -0.035*** \\
-5 &  non-top &  0.128*** &  0.0 &  -0.0 &  -0.221** \\
+\multirow{4}{*}{Full} & Constant &  0.047*** &  0.399*** &  0.331*** &  2.767*** \\
+        & Niche &  0.003 &  0.185*** &  -0.12*** &  -1.086*** \\
+        & Post &  0.283*** &  -0.001 &  -0.004** &  0.376* \\
+        & PostNiche &  0.118*** &  -0.001 &  0.003* &  -0.361* \\
+\cline{1-6}
+\multirow{4}{*}{Tier1} & Constant &  0.082** &  0.875*** &  -0.001 &  -0.009 \\
+        & Niche &  -0.04 &  0.058 &  0.001 &  0.006 \\
+        & Post &  0.48*** &  -0.002 &  0.0 &  0.0 \\
+        & PostNiche &  0.1* &  -0.002 &  -0.0 &  0.0 \\
+\cline{1-6}
+\multirow{4}{*}{Tier2} & Constant &  0.261*** &  0.655*** &  -0.06*** &  -0.282*** \\
+        & Niche &  -0.018*** &  0.185*** &  -0.021* &  -0.142* \\
+        & Post &  0.136*** &  0.002 &  0.007*** &  0.023*** \\
+        & PostNiche &  0.107*** &  0.001 &  0.001 &  0.013 \\
+\cline{1-6}
+\multirow{4}{*}{Tier3} & Constant &  0.164*** &  0.112*** &  0.648*** &  5.85*** \\
+        & Niche &  0.001 &  -0.009 &  0.017 &  -0.811 \\
+        & Post &  -0.034*** &  0.0 &  -0.0 &  0.682* \\
+        & PostNiche &  0.058*** &  -0.0 &  -0.0 &  -0.795* \\
+\cline{1-6}
+\multirow{4}{*}{Top} & Constant &  -0.097** &  0.429*** &  0.086 &  0.094 \\
+        & Niche &  0.007 &  -0.275*** &  0.017 &  0.306 \\
+        & Post &  0.62*** &  -0.0 &  -0.001 &  -0.011* \\
+        & PostNiche &  -0.243*** &  -0.004 &  -0.001 &  -0.035*** \\
+\cline{1-6}
+\multirow{4}{*}{Non-top} & Constant &  0.048*** &  0.417*** &  0.366*** &  3.039*** \\
+        & Niche &  -0.002 &  0.192*** &  -0.176*** &  -1.5*** \\
+        & Post &  0.29*** &  -0.002** &  -0.0 &  0.239** \\
+        & PostNiche &  0.128*** &  0.0 &  -0.0 &  -0.221** \\
 \bottomrule
 \end{tabular}
 \end{table}

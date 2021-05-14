@@ -2,28 +2,50 @@
 \centering
 \begin{tabular}{llllll}
 \toprule
-{} &          PostXNicheDummy & \multicolumn{4}{l}{Dependant Variables} \\
-{} &       offersIAPTrue & containsAdsTrue &  paidTrue & Imputedprice \\
+     &                   & \multicolumn{4}{l}{Dependant Variables} \\
+     &                   &           OffersIAP & ContainsAds &       Paid &      Price \\
+Samples & Independent Vars &                     &             &            &            \\
 \midrule
-0  &  full_NicheScaleDummy_1 &  0.044*** &  -0.0 &  0.002** &  -0.149** \\
-1  &  full_NicheScaleDummy_2 &  0.039** &  0.002*** &  -0.0 &  -0.109 \\
-2  &  full_NicheScaleDummy_3 &  0.057*** &  -0.001 &  -0.003 &  -0.216** \\
-3  &  full_NicheScaleDummy_4 &  0.018 &  -0.001 &  0.005** &  -0.137* \\
-4  &  full_NicheScaleDummy_5 &  0.03 &  -0.0 &  0.0 &  -0.156** \\
-5  &  full_NicheScaleDummy_6 &  0.073*** &  -0.004 &  -0.001 &  -0.13* \\
-6  &  full_NicheScaleDummy_7 &  0.122*** &  0.002*** &  0.007** &  -0.12 \\
-7  &  full_NicheScaleDummy_8 &  0.029 &  -0.001 &  -0.0 &  -0.125* \\
-8  &  full_NicheScaleDummy_9 &  0.033 &  0.001** &  -0.001 &  -0.154** \\
-9  &  full_NicheScaleDummy_10 &  0.029 &  0.002*** &  0.006 &  -0.101 \\
-10 &  full_NicheScaleDummy_11 &  0.043 &  -0.001 &  0.001 &  -0.152** \\
-11 &  full_NicheScaleDummy_12 &  0.014 &  0.001** &  0.003*** &  -0.168** \\
-12 &  full_NicheScaleDummy_13 &  -0.042 &  0.001** &  0.003*** &  -0.067 \\
-13 &  full_NicheScaleDummy_14 &  0.054 &  0.002*** &  0.003*** &  -0.135* \\
-14 &  full_NicheScaleDummy_15 &  0.036 &  0.001** &  0.003*** &  -0.093 \\
-15 &  full_NicheScaleDummy_16 &  0.014 &  0.001** &  0.003*** &  -0.138* \\
-16 &  full_NicheScaleDummy_17 &  -0.131*** &  0.002** &  0.003*** &  -0.145** \\
-17 &  full_NicheScaleDummy_18 &  0.029 &  0.001* &  0.004*** &  0.064 \\
-18 &  full_NicheScaleDummy_19 &  -0.042 &  0.001** &  -0.031 &  -0.192** \\
+\multirow{40}{*}{Full} & Constant &  0.043*** &  0.439*** &  0.313*** &  2.471*** \\
+     & Post &  0.36*** &  -0.002*** &  -0.002*** &  0.153** \\
+     & NicheScale 1 &  0.012*** &  0.199*** &  -0.243*** &  -1.753*** \\
+     & PostNicheScale 1 &  0.044*** &  -0.0 &  0.002** &  -0.149** \\
+     & NicheScale 2 &  0.005 &  0.016 &  -0.075*** &  -0.772*** \\
+     & PostNicheScale 2 &  0.039** &  0.002*** &  -0.0 &  -0.109 \\
+     & NicheScale 3 &  0.001 &  0.15*** &  -0.114*** &  0.469 \\
+     & PostNicheScale 3 &  0.057*** &  -0.001 &  -0.003 &  -0.216** \\
+     & NicheScale 4 &  0.001 &  0.186*** &  -0.21*** &  -1.427*** \\
+     & PostNicheScale 4 &  0.018 &  -0.001 &  0.005** &  -0.137* \\
+     & NicheScale 5 &  0.018*** &  0.133*** &  -0.06** &  -0.949*** \\
+     & PostNicheScale 5 &  0.03 &  -0.0 &  0.0 &  -0.156** \\
+     & NicheScale 6 &  0.007 &  0.178*** &  -0.015 &  -1.304*** \\
+     & PostNicheScale 6 &  0.073*** &  -0.004 &  -0.001 &  -0.13* \\
+     & NicheScale 7 &  -0.014*** &  0.289*** &  -0.223*** &  -1.285*** \\
+     & PostNicheScale 7 &  0.122*** &  0.002*** &  0.007** &  -0.12 \\
+     & PostNicheScale 8 &  0.029 &  -0.001 &  -0.0 &  -0.125* \\
+     & NicheScale 8 &  0.005 &  0.137*** &  -0.105*** &  -0.358 \\
+     & PostNicheScale 9 &  0.033 &  0.001** &  -0.001 &  -0.154** \\
+     & NicheScale 9 &  0.014** &  0.3*** &  -0.092*** &  -0.423 \\
+     & NicheScale 10 &  0.018* &  0.318*** &  -0.168*** &  -1.829*** \\
+     & PostNicheScale 10 &  0.029 &  0.002*** &  0.006 &  -0.101 \\
+     & NicheScale 11 &  0.011*** &  0.278*** &  -0.204*** &  -1.648*** \\
+     & PostNicheScale 11 &  0.043 &  -0.001 &  0.001 &  -0.152** \\
+     & NicheScale 12 &  0.008 &  0.135*** &  -0.083** &  -0.227 \\
+     & PostNicheScale 12 &  0.014 &  0.001** &  0.003*** &  -0.168** \\
+     & NicheScale 13 &  0.007 &  0.108*** &  -0.007 &  1.878 \\
+     & PostNicheScale 13 &  -0.042 &  0.001** &  0.003*** &  -0.067 \\
+     & NicheScale 14 &  -0.002 &  0.249*** &  -0.076* &  -1.568*** \\
+     & PostNicheScale 14 &  0.054 &  0.002*** &  0.003*** &  -0.135* \\
+     & PostNicheScale 15 &  0.036 &  0.001** &  0.003*** &  -0.093 \\
+     & NicheScale 15 &  0.024* &  0.19*** &  -0.046 &  -1.067*** \\
+     & PostNicheScale 16 &  0.014 &  0.001** &  0.003*** &  -0.138* \\
+     & NicheScale 16 &  0.017 &  0.173*** &  -0.131** &  -0.997** \\
+     & PostNicheScale 17 &  -0.131*** &  0.002** &  0.003*** &  -0.145** \\
+     & NicheScale 17 &  0.007 &  0.126** &  0.037 &  -0.651 \\
+     & PostNicheScale 18 &  0.029 &  0.001* &  0.004*** &  0.064 \\
+     & NicheScale 18 &  0.009 &  -0.056 &  -0.037 &  2.422 \\
+     & NicheScale 19 &  0.029 &  0.079 &  0.012 &  -0.551 \\
+     & PostNicheScale 19 &  -0.042 &  0.001** &  -0.031 &  -0.192** \\
 \bottomrule
 \end{tabular}
 \end{table}
