@@ -286,7 +286,7 @@ class reg_preparation():
                 ax.set_ylabel("Number of Apps")
                 ax.set_title(self.initial_panel + ' ' + name1 + ' ' + name2 + ' Text Cluster Bar Graph')
                 filename = self.initial_panel + '_' + name1 + '_' + name2 + '_text_cluster_bar.png'
-                fig.savefig(reg_preparation.descriptive_stats_graphs / filename,
+                fig.savefig(reg_preparation.descriptive_stats_graphs / 'text_cluster_bar' / filename,
                             facecolor='white',
                             dpi=300)
         return reg_preparation(initial_panel=self.initial_panel,
@@ -304,9 +304,10 @@ class reg_preparation():
                                    individual_dummies_df=self.i_dummies_df)
 
     def niche_scale_scatter_plot_against_key_vars(self, the_panel):
-        key_vars = ['price']
+        key_vars = ['Imputedprice', 'offersIAPTrue', 'containsAdsTrue', 'paidTrue']
         selected_vars = [i + '_' + the_panel for i in key_vars]
         df2 = self.cdf.copy(deep=True)
+        # ------------ fill in self.niche_kv_dfs -----------------------------------------------------
         self.niche_kv_dfs = {}
         for key, sub_sample_dummies in self.ssnames.items():
             self.niche_kv_dfs[key] = {}
@@ -328,19 +329,69 @@ class reg_preparation():
                     svars = copy.deepcopy(selected_vars)
                     svars.extend([ss_dummy, key + '_' + ss_dummy + '_kmeans_labels'])
                     self.niche_kv_dfs[key][ss_dummy] = df2.loc[df2[ss_dummy]==1, svars]
-        return reg_preparation(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
-                                   subsample_names=self.ssnames,
-                                   df=self.df,
-                                   text_label_df=self.text_label_df,
-                                   combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
+        # ------------ create niche indicator according to group size (prepare to graph)  -----------
+        for name1, content1 in self.niche_kv_dfs.items():
+            for name2, df in content1.items():
+                df2 = self._create_index_indicator_based_on_group_size(name1=name1, name2=name2, df=df)
+                fig = self._scatter_graph_niche_indicator_against_a_key_var(name1=name1, name2=name2, df=df2,
+                                                                            key_vars=selected_vars)
+        return fig
+        # return reg_preparation(initial_panel=self.initial_panel,
+        #                            all_panels=self.all_panels,
+        #                            tcn=self.tcn,
+        #                            niche_keyvar_dfs=self.niche_kv_dfs,
+        #                            subsample_names=self.ssnames,
+        #                            df=self.df,
+        #                            text_label_df=self.text_label_df,
+        #                            combined_df=self.cdf,
+        #                            text_label_count_df=self.tlc_df,
+        #                            broad_niche_cutoff=self.broad_niche_cutoff,
+        #                            nicheDummy_labels=self.nicheDummy_labels,
+        #                            long_cdf=self.long_cdf,
+        #                            individual_dummies_df=self.i_dummies_df)
+
+    def _create_index_indicator_based_on_group_size(self, name1, name2, df):
+        """
+        :param df: the df stored in self.niche_kv_dfs, after running self.niche_scale_scatter_plot_against_key_vars
+        :return:
+        """
+        df2 = df.copy(deep=True)
+        df3 = df2.groupby([name1 + '_' + name2 + '_kmeans_labels']).size().sort_values(ascending=False).to_frame().reset_index()
+        # niche_indicator: 0 the group with most members (most broad), 1 decreasing members ...
+        df3['niche_indicators'] = np.arange(df3.shape[0])
+        niche_label_and_indicators = list(zip(df3[name1 + '_' + name2 + '_kmeans_labels'], df3['niche_indicators']))
+        df2['niche_indicators'] = None
+        for i in niche_label_and_indicators:
+            df2.at[df2[name1 + '_' + name2 + '_kmeans_labels'] == i[0], 'niche_indicators'] = i[1]
+        return df2
+
+    def _scatter_graph_niche_indicator_against_a_key_var(self, name1, name2, df, key_vars):
+        """
+        :param df: the df output of self._create_index_indicator_based_on_group_size
+        :param key_vars: a list of key variables
+        :return:
+        """
+        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11, 8.5))
+        fig.tight_layout(pad=3)
+        for i in range(len(key_vars)):
+            if 'price' in key_vars[i]:
+                ax.flat[i] = df.plot.scatter(x='niche_indicators',
+                                        y=key_vars[i], ax=ax.flat[i])
+            else:
+                df2 = df.copy(deep=True)
+                df3 = df2[['niche_indicators', key_vars[i]]]
+                df3['Apps'] = 1 # count column
+                df4 = df3.groupby(['niche_indicators', key_vars[i]]).sum().unstack()
+                ax.flat[i] = df4.plot(kind='bar', y='Apps', stacked=True, ax=ax.flat[i])
+            ax.flat[i].set_xlabel('Niche Scale (0 is the most broad type)')
+            ax.flat[i].set_ylabel('Apps')
+            ax.flat[i].set_title(key_vars[i] + ' against Niche Scale Scatter Plot')
+        fig.suptitle(self.initial_panel + ' ' + name1 + ' ' + name2 + ' Pricing Variables Against Niche Scale', fontsize=14)
+        filename = self.initial_panel + '_' + name1 + '_' + name2 + '_niche_scale_scatter.png'
+        fig.savefig(reg_preparation.descriptive_stats_graphs / 'niche_scale_scatter' / filename,
+                    facecolor='white',
+                    dpi=300)
+        return fig
 
     ###########################################################################################################
     # Create Variables for Regression / Descriptive Stats
