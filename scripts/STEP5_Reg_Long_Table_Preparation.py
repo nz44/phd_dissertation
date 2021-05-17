@@ -333,8 +333,11 @@ class reg_preparation():
         for name1, content1 in self.niche_kv_dfs.items():
             for name2, df in content1.items():
                 df2 = self._create_index_indicator_based_on_group_size(name1=name1, name2=name2, df=df)
-                fig = self._scatter_graph_niche_indicator_against_a_key_var(name1=name1, name2=name2, df=df2,
-                                                                            key_vars=selected_vars)
+                fig = self._scatter_graph_niche_indicator_against_a_key_var(name1=name1,
+                                                                            name2=name2,
+                                                                            df=df2,
+                                                                            key_vars=selected_vars,
+                                                                            the_panel=the_panel)
         return fig
         # return reg_preparation(initial_panel=self.initial_panel,
         #                            all_panels=self.all_panels,
@@ -365,7 +368,7 @@ class reg_preparation():
             df2.at[df2[name1 + '_' + name2 + '_kmeans_labels'] == i[0], 'niche_indicators'] = i[1]
         return df2
 
-    def _scatter_graph_niche_indicator_against_a_key_var(self, name1, name2, df, key_vars):
+    def _scatter_graph_niche_indicator_against_a_key_var(self, name1, name2, df, key_vars, the_panel):
         """
         :param df: the df output of self._create_index_indicator_based_on_group_size
         :param key_vars: a list of key variables
@@ -375,19 +378,41 @@ class reg_preparation():
         fig.tight_layout(pad=3)
         for i in range(len(key_vars)):
             if 'price' in key_vars[i]:
+                pass
                 ax.flat[i] = df.plot.scatter(x='niche_indicators',
                                         y=key_vars[i], ax=ax.flat[i])
+                ax.flat[i].set_ylabel('Price (USD)')
+                np1 = df['niche_indicators'].to_numpy()
             else:
                 df2 = df.copy(deep=True)
                 df3 = df2[['niche_indicators', key_vars[i]]]
                 df3['Apps'] = 1 # count column
                 df4 = df3.groupby(['niche_indicators', key_vars[i]]).sum().unstack()
+                df4 = df4.fillna(0) # beacuse nan means actually there is no member in the group
                 ax.flat[i] = df4.plot(kind='bar', y='Apps', stacked=True, ax=ax.flat[i])
+                ax.flat[i].set_ylabel('Apps')
+                np1 = df4.index.to_numpy()
+            if name1 == 'full':
+                ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 50.0).astype(int))
+            elif name1 == 'developer':
+                if name2 == 'top':
+                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 10.0).astype(int))
+                else:
+                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 25.0).astype(int))
+            elif name1 == 'minInstalls':
+                if name2 == 'ImputedminInstalls_tier1':
+                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 50.0).astype(int))
+                elif name2 == 'ImputedminInstalls_tier2':
+                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 50.0).astype(int))
+                else:
+                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 10.0).astype(int))
+            else:
+                ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 5.0).astype(int))
+            ax.flat[i].set_xticklabels(ax.flat[i].get_xticks(), rotation=0)
             ax.flat[i].set_xlabel('Niche Scale (0 is the most broad type)')
-            ax.flat[i].set_ylabel('Apps')
-            ax.flat[i].set_title(key_vars[i] + ' against Niche Scale Scatter Plot')
-        fig.suptitle(self.initial_panel + ' ' + name1 + ' ' + name2 + ' Pricing Variables Against Niche Scale', fontsize=14)
-        filename = self.initial_panel + '_' + name1 + '_' + name2 + '_niche_scale_scatter.png'
+        fig.suptitle(self.initial_panel + ' Dataset -- Panel ' + the_panel + ' ' + name1 + ' ' + name2 + '\nPricing Variables Against Niche Scale', fontsize=14)
+        plt.subplots_adjust(top=0.9)
+        filename = self.initial_panel + '_' + the_panel + '_' + name1 + '_' + name2 + '_niche_scale_scatter.png'
         fig.savefig(reg_preparation.descriptive_stats_graphs / 'niche_scale_scatter' / filename,
                     facecolor='white',
                     dpi=300)
