@@ -158,7 +158,7 @@ class pre_processing():
         null_data = text_col[text_col.isnull()]
         print(self.initial_panel, ' IMPUTED ', self.tcn, ' using Mode. ')
         if len(null_data) == 0:
-            print('NO MISSING remaining')
+            print('NO MISSING remaining in mode text col.')
         self.df = self.df.join(df3[self.tcn + 'Mode'], how='inner')
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,

@@ -1,7 +1,7 @@
 from pathlib import Path
 import pickle
 import pandas as pd
-pd.set_option('display.max_colwidth', -1)
+pd.set_option('display.max_colwidth', 100)
 pd.options.display.max_rows = 999
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -271,14 +271,14 @@ class divide():
                  sub_sample_vars_dict=None,
                  sub_sample_counts=None,
                  division_rules=None,
-                 final_division_counts=None):
+                 subsamples_count_table=None):
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.df = df
         self.ssvard = sub_sample_vars_dict
         self.sscounts = sub_sample_counts
         self.division_rules = division_rules
-        self.final_division_counts = final_division_counts
+        self.subsamples_count_table = subsamples_count_table
 
     def open_imputed_and_deleted_missing_df(self):
         f_name = self.initial_panel + '_imputed_and_deleted_missing.pickle'
@@ -291,7 +291,7 @@ class divide():
                       sub_sample_vars_dict=self.ssvard,
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
-                      final_division_counts=self.final_division_counts)
+                      subsamples_count_table=self.subsamples_count_table)
 
     def create_star_developer_var(self):
         """
@@ -308,8 +308,14 @@ class divide():
             for j, row in self.df.iterrows():
                 if divide.top_digital_firms_exactly_match[i] == row['developerTimeInvar_formatted']:
                     self.df.at[j, 'top_digital_firms'] = 1
+        self.df['non-top_digital_firms'] = 0
+        self.df.at[self.df['top_digital_firms']==0, 'non-top_digital_firms'] = 1
+        # ------------------ print check -----------------------------------------
         c = self.df.groupby(['top_digital_firms'], dropna=False).size()
         print(self.initial_panel, ' : top digital firms.')
+        print(c)
+        c = self.df.groupby(['non-top_digital_firms'], dropna=False).size()
+        print(self.initial_panel, ' : non-top digital firms.')
         print(c)
         return divide(initial_panel=self.initial_panel,
                       all_panels=self.all_panels,
@@ -317,7 +323,7 @@ class divide():
                       sub_sample_vars_dict=self.ssvard,
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
-                      final_division_counts=self.final_division_counts)
+                      subsamples_count_table=self.subsamples_count_table)
 
     def create_subsample_var_dict(self):
         """
@@ -326,14 +332,15 @@ class divide():
         """
         self.ssvard = {'minInstalls': ['ImputedminInstalls_' + i for i in self.all_panels],
                        'genreId': ['ImputedgenreId_' + i for i in self.all_panels],
-                       'starDeveloper': ['top_digital_firms']}
+                       'starDeveloper': ['top_digital_firms',
+                                         'non-top_digital_firms']}
         return divide(initial_panel=self.initial_panel,
                       all_panels=self.all_panels,
                       df=self.df,
                       sub_sample_vars_dict=self.ssvard,
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
-                      final_division_counts=self.final_division_counts)
+                      subsamples_count_table=self.subsamples_count_table)
 
     def count_apps_in_each_category(self):
         """
@@ -359,7 +366,7 @@ class divide():
                       sub_sample_vars_dict=self.ssvard,
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
-                      final_division_counts=self.final_division_counts)
+                      subsamples_count_table=self.subsamples_count_table)
 
     def create_division_rules(self):
         # use the most recent panel of imputedminInstalls as the bar for dividing sub samples
@@ -384,41 +391,88 @@ class divide():
                                                'ImputedminInstalls_tier2',
                                                'ImputedminInstalls_tier3'],
                                'genreId': app_categories,
-                               'starDeveloper': ['top_digital_firms']}
+                               'starDeveloper': ['top_digital_firms',
+                                                 'non-top_digital_firms']}
         # -------------- save -----------------------------------------------------
         filename = self.initial_panel + '_imputed_deleted_subsamples.pickle'
         q = divide.panel_path / filename
         pickle.dump(self.df, open(q, 'wb'))
         print(self.initial_panel, ' finished creating division rules for sub samples and saved dataframe. ')
+        # -------------- save -----------------------------------------------------
+        filename = self.initial_panel + '_subsample_division_rules.pickle'
+        q = divide.panel_path / 'subsample_division_rule' / filename
+        pickle.dump(self.division_rules, open(q, 'wb'))
         return divide(initial_panel=self.initial_panel,
                       all_panels=self.all_panels,
                       df=self.df,
                       sub_sample_vars_dict=self.ssvard,
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
-                      final_division_counts=self.final_division_counts)
+                      subsamples_count_table=self.subsamples_count_table)
 
-    def check_subsamples(self):
-        self.final_division_counts = {
-            'minInstalls': {'ImputedminInstalls_tier1':None,
-                           'ImputedminInstalls_tier2':None,
-                           'ImputedminInstalls_tier3':None},
-            'genreId': dict.fromkeys(self.division_rules['genreId']),
-            'starDeveloper': {'top_digital_firms':None}}
-        print(self.initial_panel, ' count number of apps in each sub samples')
-        for name, dummy_vars in self.division_rules.items():
-            print(self.initial_panel, ' : ', name)
-            for d_var in dummy_vars:
-                print(self.initial_panel, ' : ', d_var)
-                c = self.df.groupby([d_var], dropna=False).size()
-                print(c)
-                self.final_division_counts[name][d_var] = c
-        print()
-        print()
+    def open_subsamples_df_and_division_rules(self):
+        # ----------------------------------------------------------------
+        f_name = self.initial_panel + '_imputed_deleted_subsamples.pickle'
+        q = divide.panel_path / f_name
+        with open(q, 'rb') as f:
+            self.df = pickle.load(f)
+        # ----------------------------------------------------------------
+        f_name = self.initial_panel + '_subsample_division_rules.pickle'
+        q = divide.panel_path / 'subsample_division_rule' / f_name
+        with open(q, 'rb') as f:
+            self.division_rules = pickle.load(f)
         return divide(initial_panel=self.initial_panel,
                       all_panels=self.all_panels,
                       df=self.df,
                       sub_sample_vars_dict=self.ssvard,
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
-                      final_division_counts=self.final_division_counts)
+                      subsamples_count_table=self.subsamples_count_table)
+
+    def subsamples_count_pandas(self):
+        self.subsamples_count_table = pd.DataFrame(columns=['Criteria', 'Segments', 'Size', 'Total'])
+        genreids = copy.deepcopy(self.division_rules['genreId'])
+        segments = ['ImputedminInstalls_tier1', 'ImputedminInstalls_tier2',
+                    'ImputedminInstalls_tier3', 'top_digital_firms', 'non-top_digital_firms'] + genreids
+        self.subsamples_count_table['Segments'] = segments
+        for name, dummy_vars in self.division_rules.items():
+            name_total_count = 0
+            for d_var in dummy_vars:
+                self.subsamples_count_table.at[self.subsamples_count_table['Segments'] == d_var, 'Criteria'] = name
+                c = self.df.groupby([d_var], dropna=False).size()
+                self.subsamples_count_table.at[self.subsamples_count_table['Segments'] == d_var, 'Size'] = c[1]
+                name_total_count += c[1]
+            self.subsamples_count_table.at[self.subsamples_count_table['Criteria'] == name, 'Total'] = name_total_count
+        # special case
+        self.subsamples_count_table.at[self.subsamples_count_table['Segments'] == 'non-top_digital_firms', 'Criteria'] = 'starDeveloper'
+        # rename
+        # -------------- Criteria column ---------------------------------------------------
+        def set_criteria(x):
+            if 'minInstalls' in x:
+                return 'Min Installs'
+            elif 'genreId' in x:
+                return 'Category'
+            else:
+                return 'Company'
+        self.subsamples_count_table['Criteria'] = self.subsamples_count_table['Criteria'].apply(set_criteria)
+        # -------------- Segments column ---------------------------------------------------
+        def set_segments(x):
+            x = x.replace('_', ' ')
+            x = x.lower()
+            if 'ImputedminInstalls' in x:
+                x = x.replace('ImputedminInstalls ', '')
+            elif 'top' in x:
+                x = x.replace(' digital firms', '')
+            else:
+                x = x
+            return x
+        self.subsamples_count_table['Segments'] = self.subsamples_count_table['Segments'].apply(set_segments)
+        # multiindex
+        self.subsamples_count_table.set_index(['Criteria', 'Total'], inplace=True)
+        return divide(initial_panel=self.initial_panel,
+                      all_panels=self.all_panels,
+                      df=self.df,
+                      sub_sample_vars_dict=self.ssvard,
+                      sub_sample_counts=self.sscounts,
+                      division_rules=self.division_rules,
+                      subsamples_count_table=self.subsamples_count_table)

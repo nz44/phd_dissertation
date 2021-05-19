@@ -173,12 +173,12 @@ class convert():
         for i in range(len(self.all_panels)):
             if i == 0:  # open the initial panel
                 filename = 'ALL_APP_DETAILS_' + self.initial_panel + '.pickle'
-                q = convert.initial_dict_path / "NEW_ALGORITHM_MONTHLY_SCRAPE" / self.initial_panel / filename
+                q = convert.initial_dict_path / self.initial_panel / filename
                 with open(q, 'rb') as f:
                     dfs[self.initial_panel] = pickle.load(f)
             else:
                 filename = 'TRACKING_' + self.initial_panel + '.pickle'
-                q = convert.tracking_path / "TRACKING_THE_SAME_ID_MONTHLY_SCRAPE" / self.all_panels[i] / filename
+                q = convert.tracking_path / self.all_panels[i] / filename
                 with open(q, 'rb') as f:
                     dfs[self.all_panels[i]] = pickle.load(f)
         self.d = dfs
@@ -239,7 +239,7 @@ class convert():
         # --------------------------- save --------------------------------------
         filename = self.initial_panel + '_MERGED.pickle'
         q = convert.imputed_path / filename
-        pickle.dump(self.df, open(q, 'wb'))
+        pickle.dump(self.merged_df, open(q, 'wb'))
         print('panel data ', self.initial_panel, ' has shape : ', self.merged_df.shape)
         return convert(initial_panel=self.initial_panel,
                        all_panels=self.all_panels,
