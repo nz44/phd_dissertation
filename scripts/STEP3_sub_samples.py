@@ -33,6 +33,10 @@ The niche text label will be generated within each subsample.
 class divide():
     panel_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+
+    descriptive_stats_tables = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
+
     # https://www.forbes.com/top-digital-companies/list/3/#tab:rank
     # https://companiesmarketcap.com/tech/largest-tech-companies-by-market-cap/
     # https://www.gamedesigning.org/gaming/mobile-companies/
@@ -430,45 +434,40 @@ class divide():
                       subsamples_count_table=self.subsamples_count_table)
 
     def subsamples_count_pandas(self):
-        self.subsamples_count_table = pd.DataFrame(columns=['Criteria', 'Segments', 'Size', 'Total'])
-        genreids = copy.deepcopy(self.division_rules['genreId'])
-        segments = ['ImputedminInstalls_tier1', 'ImputedminInstalls_tier2',
-                    'ImputedminInstalls_tier3', 'top_digital_firms', 'non-top_digital_firms'] + genreids
-        self.subsamples_count_table['Segments'] = segments
-        for name, dummy_vars in self.division_rules.items():
-            name_total_count = 0
-            for d_var in dummy_vars:
-                self.subsamples_count_table.at[self.subsamples_count_table['Segments'] == d_var, 'Criteria'] = name
-                c = self.df.groupby([d_var], dropna=False).size()
-                self.subsamples_count_table.at[self.subsamples_count_table['Segments'] == d_var, 'Size'] = c[1]
-                name_total_count += c[1]
-            self.subsamples_count_table.at[self.subsamples_count_table['Criteria'] == name, 'Total'] = name_total_count
-        # special case
-        self.subsamples_count_table.at[self.subsamples_count_table['Segments'] == 'non-top_digital_firms', 'Criteria'] = 'starDeveloper'
-        # rename
-        # -------------- Criteria column ---------------------------------------------------
-        def set_criteria(x):
-            if 'minInstalls' in x:
-                return 'Min Installs'
-            elif 'genreId' in x:
-                return 'Category'
-            else:
-                return 'Company'
-        self.subsamples_count_table['Criteria'] = self.subsamples_count_table['Criteria'].apply(set_criteria)
-        # -------------- Segments column ---------------------------------------------------
         def set_segments(x):
             x = x.replace('_', ' ')
             x = x.lower()
-            if 'ImputedminInstalls' in x:
-                x = x.replace('ImputedminInstalls ', '')
+            if 'imputedmininstalls' in x:
+                x = x.replace('imputedmininstalls ', '')
             elif 'top' in x:
                 x = x.replace(' digital firms', '')
             else:
                 x = x
             return x
-        self.subsamples_count_table['Segments'] = self.subsamples_count_table['Segments'].apply(set_segments)
-        # multiindex
-        self.subsamples_count_table.set_index(['Criteria', 'Total'], inplace=True)
+        df_list = []
+        for name, dummy_vars in self.division_rules.items():
+            df = pd.DataFrame(columns=['Segments', 'Size'])
+            df['Segments'] = dummy_vars
+            for d_var in dummy_vars:
+                c = self.df.groupby([d_var], dropna=False).size()
+                df.at[df['Segments'] == d_var, 'Size'] = c[1]
+            total = df.sum()
+            total.name = 'Total'
+            df = df.append(total.transpose())
+            df.at['Total', 'Segments'] = 'Total'
+            df['Segments'] = df['Segments'].apply(set_segments)
+            df['Segments'] = df['Segments'].apply(lambda x: x.capitalize())
+            df.set_index('Segments', inplace=True)
+            # ---------- convert to latex -------------------------------------------------------
+            f_name = self.initial_panel + '_' + name + '_subsamples_counts.tex'
+            df.to_latex(buf=divide.descriptive_stats_tables / f_name,
+                        multirow=True,
+                        multicolumn=True,
+                        longtable=True,
+                        position='h!',
+                        escape=False)
+            df_list.append(df)
+        self.subsamples_count_table = df_list
         return divide(initial_panel=self.initial_panel,
                       all_panels=self.all_panels,
                       df=self.df,
@@ -476,3 +475,4 @@ class divide():
                       sub_sample_counts=self.sscounts,
                       division_rules=self.division_rules,
                       subsamples_count_table=self.subsamples_count_table)
+

@@ -2,7 +2,7 @@ import pandas as pd
 import copy
 from pathlib import Path
 import pickle
-pd.set_option('display.max_colwidth', -1)
+pd.set_option('display.max_colwidth', 100)
 pd.options.display.max_rows = 999
 import numpy as np
 import math
@@ -93,34 +93,31 @@ class regression():
                     # here is the full_full_NicheScaleDummy_0 is dropped as baseline group
                     # you cannot run regression with both nichedummy and nichescaledummies together
                     # -------------------------------------------------------------------------------
-                    x_vars_full_nd = []
-                    x_vars_full_nd.extend(x_vars)
-                    x_vars_full_nd.extend(['full_full_NicheDummy', 'PostXfull_full_NicheDummy'])
-                    x_vars_full_nd.extend(self.dep_vars)
+                    x_vars_full_nd = x_vars \
+                                     + ['full_full_NicheDummy', 'PostXfull_full_NicheDummy'] \
+                                     + self.dep_vars
                     self.reg_dict_xy['full']['full']['NicheDummy'] = df[x_vars_full_nd]
                     # -------------------------------------------------------------------------------
                     niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(1, n_niche_scales)]
-                    x_vars_full_sd = ['PostX' + i for i in niche_scale_cols]
-                    x_vars_full_sd.extend(niche_scale_cols)
-                    x_vars_full_sd.extend(x_vars)
-                    x_vars_full_sd.extend(self.dep_vars)
+                    x_vars_full_sd = niche_scale_cols \
+                                    + ['PostX' + i for i in niche_scale_cols] \
+                                    + x_vars + self.dep_vars
                     self.reg_dict_xy['full']['full']['NicheScaleDummies'] = df[x_vars_full_sd]
                 # you can delete this elif block once you've run the may 2021 procedure because sub-sample and minInstallstop dummies are the same
                 elif 'minInstalls' in name2:
                     self.reg_dict_xy['minInstalls'][name2] = dict.fromkeys(['NicheDummy'])
                     x_vars_mininstalls = [name1 + '_' + name2 + '_NicheDummy',
-                                          'PostX' + name1 + '_' + name2 + '_NicheDummy']
-                    x_vars_mininstalls.extend(x_vars)
-                    x_vars_mininstalls.extend(self.dep_vars)
+                                          'PostX' + name1 + '_' + name2 + '_NicheDummy'] \
+                                        + x_vars + self.dep_vars
                     # since this minInstall is subsample sliced according to
                     remove_minInstalls_dummies = [i for i in x_vars_mininstalls if 'DeMeanedminInstalls' not in i]
                     self.reg_dict_xy['minInstalls'][name2]['NicheDummy'] = df[remove_minInstalls_dummies]
                 else:
                     self.reg_dict_xy[name1][name2] = dict.fromkeys(['NicheDummy'])
-                    x_vars.extend([name1 + '_' + name2 + '_NicheDummy',
-                                  'PostX' + name1 + '_' + name2 + '_NicheDummy'])
-                    x_vars.extend(self.dep_vars)
-                    unchecked_df = df[x_vars]
+                    genreid_x_vars = [name1 + '_' + name2 + '_NicheDummy',
+                                      'PostX' + name1 + '_' + name2 + '_NicheDummy']\
+                                      + x_vars + self.dep_vars
+                    unchecked_df = df[genreid_x_vars]
                     checked_df = unchecked_df.copy(deep=True)
                     # for some genreId, some column variables has no variation (the same value),
                     # print out them and delete them (if they are not dep vars)
@@ -208,6 +205,50 @@ class regression():
                            reg_dict_xy=self.reg_dict_xy,
                            single_panel_df=self.single_panel_df,
                            subsample_op_results=self.subsample_op_results)
+
+    def graph_parallel_trend(self):
+        data = self.reg_dict_xy
+        ls = []
+        mdf = []
+        for name1, content1 in data.items():
+            for name2, content2 in content1.items():
+                for nichetype, df in content2.items():
+                    df2 = df.copy(deep=True)
+                    if nichetype != 'NicheScaleDummies':
+                        NicheDummy = name1 + '_' + name2 + '_' + nichetype
+                        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11, 8.5))
+                        fig.tight_layout(pad=3)
+                        for i in range(len(self.dep_vars)):
+                            df3 = df2[[self.dep_vars[i], NicheDummy]].reset_index()
+                            ls.append(df3)
+                            # groupby nichedummy and return the mean of the dependent variable
+                            df4 = df3.groupby(['panel', NicheDummy])[self.dep_vars[i]].mean()\
+                                    .unstack(level=-1) \
+                                    .rename(columns={0: 'Broad', 1: 'Niche'})
+                            mdf.append(df4)
+                            ax.flat[i] = df4.plot.line(ax=ax.flat[i])
+                            ax.flat[i].legend(loc='lower right',
+                                              title=None)
+                            ax.flat[i].set_ylabel(self.dep_vars[i])
+                            ax.flat[i].set_xlabel('Time')
+                        fig.suptitle(
+                            self.initial_panel + ' Dataset -- Panel ' + name1 + ' ' + name2 + '\n Mean Pricing Variables for Niche VS. Broad \nType Apps Before and After Covid-19',
+                            fontsize=14)
+                        plt.subplots_adjust(top=0.85)
+                        filename = self.initial_panel + '_' + name1 + '_' + name2 + '_parallel_trend.png'
+                        fig.savefig(regression.descriptive_stats_graphs / 'parallel_trend' / filename,
+                                    facecolor='white',
+                                    dpi=300)
+        return ls, mdf
+        # return regression(initial_panel=self.initial_panel,
+        #                    all_panels=self.all_panels,
+        #                    dep_vars=self.dep_vars,
+        #                    independent_vars=self.independent_vars,
+        #                    subsample_names=self.ssnames,
+        #                    reg_dict=self.reg_dict,
+        #                    reg_dict_xy=self.reg_dict_xy,
+        #                    single_panel_df=self.single_panel_df,
+        #                    subsample_op_results=self.subsample_op_results)
 
     def all_regressions(self, reg_func, xy_df):
         """
