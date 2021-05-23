@@ -1,28 +1,39 @@
-\begin{table}[h!]
-\centering
-\begin{tabular}{llllll}
+\begin{longtable}[h!]{llllll}
 \toprule
         &       & \multicolumn{4}{l}{Dependant Variables} \\
         &       &           OffersIAP & ContainsAds &       Paid &      Price \\
 Samples & Independent Vars &                     &             &            &            \\
 \midrule
-\multirow{2}{*}{Full} & Constant &  0.427*** &  0.4*** &  0.321*** &  3.464*** \\
-        & Niche &  0.152*** &  0.18*** &  -0.111*** &  -1.63*** \\
-\cline{1-6}
-\multirow{2}{*}{Tier1} & Constant &  0.709*** &  0.874*** &  -0.001 &  -0.009 \\
-        & Niche &  0.077 &  0.055 &  0.001 &  0.006 \\
-\cline{1-6}
-\multirow{2}{*}{Tier2} & Constant &  0.6*** &  0.642*** &  -0.073*** &  -0.39*** \\
-        & Niche &  0.105*** &  0.188*** &  -0.02 &  -0.113 \\
-\cline{1-6}
-\multirow{2}{*}{Tier3} & Constant &  1.03** &  -0.208 &  0.701** &  -7.939 \\
-        & Niche &  0.075*** &  -0.009 &  0.018 &  -2.098** \\
-\cline{1-6}
-\multirow{2}{*}{Top} & Constant &  0.607*** &  0.42*** &  0.099 &  0.162 \\
-        & Niche &  -0.3*** &  -0.286*** &  0.023 &  0.391 \\
-\cline{1-6}
-\multirow{2}{*}{Non-top} & Constant &  0.438*** &  0.417*** &  0.359*** &  3.547*** \\
-        & Niche &  0.153*** &  0.187*** &  -0.17*** &  -1.848*** \\
+\endfirsthead
+
+\toprule
+        &       & \multicolumn{4}{l}{Dependant Variables} \\
+        &       &           OffersIAP & ContainsAds &       Paid &      Price \\
+Samples & Independent Vars &                     &             &            &            \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{{Continued on next page}} \\
+\midrule
+\endfoot
+
 \bottomrule
-\end{tabular}
-\end{table}
+\endlastfoot
+\multirow{2}{*}{Full} & Constant &            0.422*** &    0.401*** &    0.33*** &   3.551*** \\
+        & Niche &            0.151*** &    0.175*** &  -0.107*** &  -1.632*** \\
+\cline{1-6}
+\multirow{2}{*}{Tier1} & Constant &            0.708*** &    0.862*** &     -0.001 &     -0.009 \\
+        & Niche &               0.071 &       0.067 &      0.001 &      0.006 \\
+\cline{1-6}
+\multirow{2}{*}{Tier2} & Constant &            0.598*** &    0.645*** &  -0.072*** &  -0.387*** \\
+        & Niche &            0.103*** &    0.188*** &      -0.02 &     -0.117 \\
+\cline{1-6}
+\multirow{2}{*}{Tier3} & Constant &             0.859** &       -0.14 &   0.756*** &     -6.095 \\
+        & Niche &            0.076*** &      -0.006 &      0.016 &   -2.122** \\
+\cline{1-6}
+\multirow{2}{*}{Top} & Constant &            0.606*** &    0.425*** &      0.097 &      0.154 \\
+        & Niche &             -0.3*** &   -0.285*** &      0.022 &      0.385 \\
+\cline{1-6}
+\multirow{2}{*}{Non-top} & Constant &            0.432*** &    0.414*** &   0.371*** &    3.64*** \\
+        & Niche &            0.154*** &    0.187*** &   -0.17*** &  -1.857*** \\
+\end{longtable}

@@ -33,7 +33,16 @@ class reg_preparation():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
     descriptive_stats_graphs = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/graphs')
-
+    graph_ylabel_dict = {'containsAdsTrue': 'ContainsAds',
+                         'offersIAPTrue': 'OffersIAP',
+                         'paidTrue': 'Paid',
+                         'Imputedprice': 'Price'}
+    graph_subsample_title_dict = {'minInstalls ImputedminInstalls_tier1': 'Tier 1 (Minimum Installs)',
+                                    'minInstalls ImputedminInstalls_tier2': 'Tier 2 (Minimum Installs)',
+                                    'minInstalls ImputedminInstalls_tier3': 'Tier 3 (Minimum Installs)',
+                                    'developer top': 'Top (Companies)',
+                                    'developer non-top': 'Non-top (Companies)',
+                                    'full full': 'Full Sample'}
     def __init__(self,
                  initial_panel,
                  all_panels,
@@ -284,7 +293,21 @@ class reg_preparation():
                                 textcoords='offset points')
                 ax.set_xlabel("Text Clusters")
                 ax.set_ylabel("Number of Apps")
-                ax.set_title(self.initial_panel + ' ' + name1 + ' ' + name2 + ' Text Cluster Bar Graph')
+                # ------------ set title ----------------------------------------
+                if name1 != 'genreId':
+                    subsample_name = name1 + ' ' + name2
+                    title = self.initial_panel + ' ' \
+                                + reg_preparation.graph_subsample_title_dict[subsample_name] \
+                                + ' Text Cluster Bar Graph'
+                else:
+                    title = self.initial_panel + ' ' \
+                                + name1 + ' ' + name2 \
+                                + ' Text Cluster Bar Graph'
+                    title = title.replace("genreId", "Category")
+                    title = title.replace("_", " ")
+                    title = title.lower()
+                title = title.title()
+                ax.set_title(title)
                 filename = self.initial_panel + '_' + name1 + '_' + name2 + '_text_cluster_bar.png'
                 fig.savefig(reg_preparation.descriptive_stats_graphs / 'text_cluster_bar' / filename,
                             facecolor='white',
@@ -332,26 +355,31 @@ class reg_preparation():
         # ------------ create niche indicator according to group size (prepare to graph)  -----------
         for name1, content1 in self.niche_kv_dfs.items():
             for name2, df in content1.items():
+                # the reason there are nan in niche indicators is because in 202104 the niche labels are generated with different subsamples
+                # because the cutoff points are adjusted in 202105. Thus some previous memebrs were not in this group, thus they were
+                # not accounted for when generating text labels within each sub samples.
+                print(name1, name2, ' BEFORE dropping nan in niche indicators : ', df.shape)
+                df.dropna(subset=['niche_indicators'], inplace=True)
+                print(name1, name2, ' AFTER dropping nan in niche indicators : ', df.shape)
                 df2 = self._create_index_indicator_based_on_group_size(name1=name1, name2=name2, df=df)
                 fig = self._scatter_graph_niche_indicator_against_a_key_var(name1=name1,
                                                                             name2=name2,
                                                                             df=df2,
                                                                             key_vars=selected_vars,
                                                                             the_panel=the_panel)
-        return fig
-        # return reg_preparation(initial_panel=self.initial_panel,
-        #                            all_panels=self.all_panels,
-        #                            tcn=self.tcn,
-        #                            niche_keyvar_dfs=self.niche_kv_dfs,
-        #                            subsample_names=self.ssnames,
-        #                            df=self.df,
-        #                            text_label_df=self.text_label_df,
-        #                            combined_df=self.cdf,
-        #                            text_label_count_df=self.tlc_df,
-        #                            broad_niche_cutoff=self.broad_niche_cutoff,
-        #                            nicheDummy_labels=self.nicheDummy_labels,
-        #                            long_cdf=self.long_cdf,
-        #                            individual_dummies_df=self.i_dummies_df)
+        return reg_preparation(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   niche_keyvar_dfs=self.niche_kv_dfs,
+                                   subsample_names=self.ssnames,
+                                   df=self.df,
+                                   text_label_df=self.text_label_df,
+                                   combined_df=self.cdf,
+                                   text_label_count_df=self.tlc_df,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
 
     def _create_index_indicator_based_on_group_size(self, name1, name2, df):
         """
@@ -381,7 +409,7 @@ class reg_preparation():
                 pass
                 ax.flat[i] = df.plot.scatter(x='niche_indicators',
                                         y=key_vars[i], ax=ax.flat[i])
-                ax.flat[i].set_ylabel('Price (USD)')
+                ax.flat[i].set_ylabel('Price')
                 np1 = df['niche_indicators'].to_numpy()
             else:
                 df2 = df.copy(deep=True)
@@ -410,7 +438,21 @@ class reg_preparation():
                 ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 5.0).astype(int))
             ax.flat[i].set_xticklabels(ax.flat[i].get_xticks(), rotation=0)
             ax.flat[i].set_xlabel('Niche Scale (0 is the most broad type)')
-        fig.suptitle(self.initial_panel + ' Dataset -- Panel ' + the_panel + ' ' + name1 + ' ' + name2 + '\nPricing Variables Against Niche Scale', fontsize=14)
+        # ------------ set title --------------------------------------
+        if name1 != 'genreId':
+            subsample_name = name1 + ' ' + name2
+            title = self.initial_panel + ' Dataset -- Panel ' + the_panel + ' ' \
+                     + reg_preparation.graph_subsample_title_dict[subsample_name] \
+                     + '\nPricing Variables Against Niche Scale'
+        else:
+            title = self.initial_panel + ' Dataset -- Panel ' + the_panel + ' ' \
+                     + name1 + ' ' + name2 \
+                     + '\nPricing Variables Against Niche Scale'
+            title = title.replace("genreId", "Category")
+            title = title.replace("_", " ")
+            title = title.lower()
+        title = title.title()
+        fig.suptitle(title, fontsize=14)
         plt.subplots_adjust(top=0.9)
         filename = self.initial_panel + '_' + the_panel + '_' + name1 + '_' + name2 + '_niche_scale_scatter.png'
         fig.savefig(reg_preparation.descriptive_stats_graphs / 'niche_scale_scatter' / filename,

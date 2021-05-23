@@ -8,6 +8,7 @@ import numpy as np
 import math
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 from sklearn import preprocessing
 import statsmodels.api as sm
@@ -32,7 +33,16 @@ class regression():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
     descriptive_stats_graphs = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/graphs')
-
+    graph_ylabel_dict = {'containsAdsTrue': 'ContainsAds',
+                         'offersIAPTrue': 'OffersIAP',
+                         'paidTrue': 'Paid',
+                         'Imputedprice': 'Price'}
+    graph_subsample_title_dict = {'minInstalls ImputedminInstalls_tier1': 'Tier 1 (Minimum Installs)',
+                                    'minInstalls ImputedminInstalls_tier2': 'Tier 2 (Minimum Installs)',
+                                    'minInstalls ImputedminInstalls_tier3': 'Tier 3 (Minimum Installs)',
+                                    'developer top': 'Top (Companies)',
+                                    'developer non-top': 'Non-top (Companies)',
+                                    'full full': 'Full Sample'}
     def __init__(self,
                  initial_panel,
                  all_panels,
@@ -217,23 +227,47 @@ class regression():
                     if nichetype != 'NicheScaleDummies':
                         NicheDummy = name1 + '_' + name2 + '_' + nichetype
                         fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11, 8.5))
-                        fig.tight_layout(pad=3)
+                        fig.tight_layout(pad=4)
                         for i in range(len(self.dep_vars)):
                             df3 = df2[[self.dep_vars[i], NicheDummy]].reset_index()
+                            df3['panel'] = pd.to_datetime(df3['panel'], format='%Y%m')
                             ls.append(df3)
                             # groupby nichedummy and return the mean of the dependent variable
                             df4 = df3.groupby(['panel', NicheDummy])[self.dep_vars[i]].mean()\
                                     .unstack(level=-1) \
                                     .rename(columns={0: 'Broad', 1: 'Niche'})
                             mdf.append(df4)
-                            ax.flat[i] = df4.plot.line(ax=ax.flat[i])
+                            ax.flat[i].plot(df4.index.values, df4['Broad'], marker='o', label = 'Broad')
+                            ax.flat[i].plot(df4.index.values, df4['Niche'], marker='o', label = 'Niche')
                             ax.flat[i].legend(loc='lower right',
                                               title=None)
-                            ax.flat[i].set_ylabel(self.dep_vars[i])
+                            ax.flat[i].set_ylabel(regression.graph_ylabel_dict[self.dep_vars[i]])
                             ax.flat[i].set_xlabel('Time')
-                        fig.suptitle(
-                            self.initial_panel + ' Dataset -- Panel ' + name1 + ' ' + name2 + '\n Mean Pricing Variables for Niche VS. Broad \nType Apps Before and After Covid-19',
-                            fontsize=14)
+                            ax.flat[i].grid(axis='y')
+                            # add vertical line for DiD (stay-at-home order, most states issued in mid March, some in early April.)
+                            # https://www.nytimes.com/interactive/2020/us/coronavirus-stay-at-home-order.html
+                            # plt.axvline(datetime(2020, 3, 15))
+                            ax.flat[i].axvline(x=datetime(2020, 3, 15), linewidth=2, color='red')
+                            # ax.flat[i].text(datetime(2020, 3, 15), -.05, 'stay \nhome \norder', color='red',
+                            #                 transform=ax.flat[i].get_xaxis_transform(),
+                            #                 ha='center', va='top')
+                            # You cannot use ax rorate ticks because the time will become random numbers
+                            # ax.flat[i].set_xticklabels(ax.flat[i].get_xticks(), rotation=30)
+                            plt.setp(ax.flat[i].get_xticklabels(), rotation=30)
+                        if name1 != 'genreId':
+                            subsample_name = name1 + ' ' + name2
+                            title = self.initial_panel + ' Dataset -- Panel ' \
+                                + regression.graph_subsample_title_dict[subsample_name] \
+                                + '\n Mean Pricing Variables for Niche VS. Broad \nType Apps Before and After 2020 March'
+                        else:
+                            title = self.initial_panel + ' Dataset -- Panel ' \
+                                + name1 + ' ' + name2 \
+                                + '\n Mean Pricing Variables for Niche VS. Broad \nType Apps Before and After 2020 March'
+                            title = title.replace("genreId", "Category")
+                            title = title.replace("_", " ")
+                            title = title.lower()
+                        title = title.title()
+                        fig.suptitle(title, fontsize=14)
                         plt.subplots_adjust(top=0.85)
                         filename = self.initial_panel + '_' + name1 + '_' + name2 + '_parallel_trend.png'
                         fig.savefig(regression.descriptive_stats_graphs / 'parallel_trend' / filename,
@@ -659,6 +693,7 @@ class regression():
         df.to_latex(buf=regression.reg_table_path / f_name,
                    multirow=True,
                    multicolumn=True,
+                   longtable=True,
                    position='h!',
                    escape=False)
         return df
