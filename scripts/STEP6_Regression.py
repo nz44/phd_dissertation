@@ -122,6 +122,14 @@ class regression():
                     # since this minInstall is subsample sliced according to
                     remove_minInstalls_dummies = [i for i in x_vars_mininstalls if 'DeMeanedminInstalls' not in i]
                     self.reg_dict_xy['minInstalls'][name2]['NicheDummy'] = df[remove_minInstalls_dummies]
+                elif 'top' in name2:
+                    self.reg_dict_xy[name1][name2] = dict.fromkeys(['NicheDummy'])
+                    x_vars_developer = [name1 + '_' + name2 + '_NicheDummy',
+                                        'PostX' + name1 + '_' + name2 + '_NicheDummy'] \
+                                        + x_vars + self.dep_vars
+                    # since this top and non-top is subsample sliced according to top_digital_firms
+                    remove_top_digital_firms = [i for i in x_vars_developer if i != 'top_digital_firms']
+                    self.reg_dict_xy['developer'][name2]['NicheDummy'] = df[remove_top_digital_firms]
                 else:
                     self.reg_dict_xy[name1][name2] = dict.fromkeys(['NicheDummy'])
                     genreid_x_vars = [name1 + '_' + name2 + '_NicheDummy',
@@ -578,7 +586,7 @@ class regression():
         df2.drop(pvaluecols, axis=1, inplace=True)
         return df2
 
-    def set_row_and_column_groups(self, df, result_type):
+    def set_row_and_column_groups(self, df, result_type, table_type):
         """
         The input df is the output of self.add_pvalue_asterisk_to_results(df)
         """
@@ -682,7 +690,11 @@ class regression():
         df2 = df2.groupby(['Samples'], sort=False) \
             .apply(lambda x: x.sort_values(['ind_var_order'], ascending=True)) \
             .reset_index(drop=True).drop(['ind_var_order'], axis=1)
-        df2.set_index(['Samples', 'Independent Vars'], inplace=True)
+        if table_type == 'table_3':
+            df2.drop(['Samples'], axis=1, inplace=True)
+            df2.set_index('Independent Vars', inplace=True)
+        else:
+            df2.set_index(['Samples', 'Independent Vars'], inplace=True)
         return df2
 
     def convert_to_latex(self, df, result_type, table_type):
@@ -697,67 +709,4 @@ class regression():
                    position='h!',
                    escape=False)
         return df
-
-
-########################################################################################################################
-    def output_reg_results_pandas_to_latex(self, df, the_reg_type):
-        """
-        :param df: the output of self.customize_pandas_before_output_latex()
-        :return: df10:
-        """
-        df2 = df.copy(deep=True)
-        # ------------ rename columns ---------------------------------------------
-        for i in df2.columns:
-            z = i.rstrip(the_reg_type).rstrip('_')
-            for j in regression_analysis.var_latex_map.keys():
-                if j == z:
-                    df2.rename(columns={i: regression_analysis.var_latex_map[j]}, inplace=True)
-        # ------------ prepare column for multiindex rows --------------------------
-        df2 = df2.reset_index()
-        def set_row_level_0(x):
-            if x in ['niche_app_coef']:
-                return '\makecell[l]{Niche \\\ Indicators}'
-            elif x in ['const_coef', 'genreIdGame_coef', 'contentRatingAdult_coef', 'DaysSinceReleased_coef']:
-                return '\makecell[l]{Time-invariant \\\ Variables}'
-            elif x in ['DeMeanedscore_coef', 'DeMeanedZSCOREreviews_coef', 'DeMeanedminInstallsTop_coef', 'DeMeanedminInstallsMiddle_coef']:
-                return '\makecell[l]{Time-variant \\\ Variables}'
-            else:
-                return '\makecell[l]{Regression \\\ Statistics}'
-        df2['Variable Groups'] = df2['index'].apply(lambda x: set_row_level_0(x))
-        # ------------ rename rows -------------------------------------------------
-        def set_row_level_1(x):
-            if '_coef' in x:
-                x = x.rstrip('coef').rstrip('_')
-            for i in regression_analysis.var_latex_map.keys():
-                if i == x:
-                    return regression_analysis.var_latex_map[i]
-        df2['Independent Variables'] = df2['index'].apply(lambda x: set_row_level_1(x))
-        # manually set the order of rows you want to present in final latex table
-        def set_row_order_level_0(x):
-            if x == '\makecell[l]{Niche \\\ Indicators}':
-                return 0
-            elif x == '\makecell[l]{Time-invariant \\\ Variables}':
-                return 1
-            elif x == '\makecell[l]{Time-variant \\\ Variables}':
-                return 2
-            elif x == '\makecell[l]{Regression \\\ Statistics}':
-                return 3
-        df2['row_order_level_0'] = df2['Variable Groups'].apply(lambda x: set_row_order_level_0(x))
-        df2.sort_values(by='row_order_level_0', inplace=True)
-        df2.set_index(['Variable Groups', 'Independent Variables'], inplace=True)
-        df2.drop(['index', 'row_order_level_0'], axis=1, inplace=True)
-        df2.columns = pd.MultiIndex.from_product([['pooled OLS with demeaned time-variant variables'],
-                                                  df2.columns.tolist()])
-        # -------------------- save and output to latex -------------------------------
-        filename = self.initial_panel + '_POOLED_OLS_demeaned.tex'
-        df3 = df2.to_latex(buf=regression_analysis.reg_table_path / filename,
-                           multirow=True,
-                           multicolumn=True,
-                           caption=('Regression Results'),
-                           position='h!',
-                           label='table:2',
-                           escape=False)
-        return df2
-
-
 

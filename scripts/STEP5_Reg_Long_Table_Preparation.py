@@ -355,13 +355,13 @@ class reg_preparation():
         # ------------ create niche indicator according to group size (prepare to graph)  -----------
         for name1, content1 in self.niche_kv_dfs.items():
             for name2, df in content1.items():
+                df2 = self._create_index_indicator_based_on_group_size(name1=name1, name2=name2, df=df)
                 # the reason there are nan in niche indicators is because in 202104 the niche labels are generated with different subsamples
                 # because the cutoff points are adjusted in 202105. Thus some previous memebrs were not in this group, thus they were
                 # not accounted for when generating text labels within each sub samples.
                 print(name1, name2, ' BEFORE dropping nan in niche indicators : ', df.shape)
-                df.dropna(subset=['niche_indicators'], inplace=True)
+                df2.dropna(subset=['niche_indicators'], inplace=True)
                 print(name1, name2, ' AFTER dropping nan in niche indicators : ', df.shape)
-                df2 = self._create_index_indicator_based_on_group_size(name1=name1, name2=name2, df=df)
                 fig = self._scatter_graph_niche_indicator_against_a_key_var(name1=name1,
                                                                             name2=name2,
                                                                             df=df2,
@@ -859,15 +859,13 @@ class reg_preparation():
         for name1, content1 in self.ssnames.items():
             if name1 in ['minInstalls', 'genreId']:
                 gathered_list.extend(content1)
-            elif name1 == 'developer':
-                gathered_list.extend(['top_digital_firms'])
+            # you do not need to add top_digital_firms because it is already included in time-invariant variables
+            # adding twice will result in .loc failures
         return gathered_list
 
     def select_all_vars_before_slice_subsamples(self, time_variant_vars, time_invariant_vars, n):
         niche_dummies_cols = self.gather_nicheDummies_into_list(n)
-        allvars = []
-        allvars.extend(niche_dummies_cols)
-        allvars.extend(time_invariant_vars)
+        allvars= niche_dummies_cols + time_invariant_vars
         for var in time_variant_vars:
             varss = [var + '_' + i for i in self.all_panels]
             allvars.extend(varss)
