@@ -1,0 +1,33 @@
+\begin{longtable}[h!]{lll}
+\toprule
+{} &           Variables &                                                                                          Definitions \\
+Type           &                     &                                                                                                      \\
+\midrule
+\endfirsthead
+
+\toprule
+{} &           Variables &                                                                                          Definitions \\
+Type           &                     &                                                                                                      \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{{Continued on next page}} \\
+\midrule
+\endfoot
+
+\bottomrule
+\endlastfoot
+Time Variant   &         ContainsAds &                               Dummy variable equals 1 if an app contains advertisement, 0 otherwise. \\
+Time Variant   &           OffersIAP &                               Dummy variable equals 1 if an app offers in-app-purchase, 0 otherwise. \\
+Time Variant   &                Paid &                               Dummy variable equals 1 if an app offers in-app-purchase, 0 otherwise. \\
+Time Variant   &               Price &                                                                                    App price in USD. \\
+Time Variant   &                Post &  Dummy variable equals 1 if the time is in and after Mar 2020, \nwhen I set as the DiD cutoff, an... \\
+Time Variant   &               Score &                                                             Demeaned rating of an app (from 1 to 5). \\
+Time Variant   &               Tier1 &                                                                                                Tier1 \\
+Time Variant   &               Tier2 &                                                                                                Tier2 \\
+Time Variant   &             Reviews &                                      Demeaned and standardized (zscore) number of reviews of an app. \\
+Time Invariant &  ContentRatingAdult &                                   Dummy variable equals 1 if the app has adult content, 0 otherwise. \\
+Time Invariant &                Size &                                                                                            Size (MB) \\
+Time Invariant &        DaysReleased &                                      Number of days since the app was launched on Google Play Store. \\
+Time Invariant &             TopFirm &                                   Dummy variable equals 1 if the app is owned by a Top Digital Firm  \\
+\end{longtable}

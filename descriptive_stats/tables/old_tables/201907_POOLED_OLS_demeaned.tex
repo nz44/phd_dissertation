@@ -1,0 +1,22 @@
+\begin{tabular}{llllll}
+\toprule
+                      &                 & \multicolumn{4}{l}{pooled OLS with demeaned time-variant variables} \\
+                      &                 &                                     app is paid & app offers in-app-purchase & app contains ads &  app price \\
+row\_index\_level\_0 & row\_index\_level\_1 &                                                 &                            &                  &            \\
+\midrule
+niche app indicators & app is niche &  -0.166*** &  0.143*** &  0.182*** &  -0.782*** \\
+time-invariant variables & constant &  0.311*** &  0.41*** &  0.309*** &  1.964*** \\
+                      & app is hedonic &  0.064*** &  0.171*** &  0.207*** &  -0.413*** \\
+                      & app contains age restrictive contents &  -0.147*** &  0.172*** &  0.091*** &  -0.58*** \\
+                      & number of days since app was released &  0.0*** &  -0.0*** &  -0.0*** &  0.0*** \\
+demeaned time-variant variables & app rating (1-5) demeaned &  0.001 &  -0.0 &  -0.0 &  0.041* \\
+                      & number of consumer reviews (z-score) &  0.0 & -0.0 &  0.0 & -0.002 \\
+                      & app has minimum installs above 10,000,000 &  -0.043* &  0.023* &  0.005 &  -0.055 \\
+                      & app has minimum installs between 10,000 and 10,000,000 &  -0.043* &  0.019 &  0.005 &  -0.055 \\
+regression statistics & F statistic &  507.018 &  731.592 &  867.239 &  39.689 \\
+                      & P Value &  0.0 &  0.0 &  0.0 &  0.0 \\
+                      & R Squared &  0.056 &  0.079 &  0.092 &  0.005 \\
+                      & number of observations &  68432 &  68432 &  68432 &  68432 \\
+                      & covariance type &  Clustered &  Clustered &  Clustered &  Clustered \\
+\bottomrule
+\end{tabular}

@@ -710,3 +710,98 @@ class regression():
                    escape=False)
         return df
 
+
+    # ========================================================================================================
+    # ========================================================================================================
+    def create_var_definition_latex(self):
+        df = pd.DataFrame()
+        # the variable name here are the actual one shown in the paper, not the ones embedded in the code
+        # MAPPING -------------------------------------------------
+        var_names = {
+                    'containsAdsTrue': 'ContainsAds',
+                    'offersIAPTrue': 'OffersIAP',
+                    'paidTrue': 'Paid',
+                    'Imputedprice': 'Price',
+                    'PostDummy': 'Post',
+                    'DeMeanedImputedscore': 'Score',
+                    'DeMeanedminInstallsTop': 'Tier1',
+                    'DeMeanedminInstallsMiddle': 'Tier2',
+                    'ZScoreDeMeanedImputedreviews': 'Reviews',
+                    'contentRatingAdult': 'ContentRatingAdult',
+                    'size': 'Size',
+                    'DaysSinceReleased': 'DaysReleased',
+                    'top_digital_firms': 'TopFirm'}
+
+        var_definitions = {
+                    'containsAdsTrue': 'Dummy variable equals 1 if an app \ncontains advertisement, 0 otherwise.',
+                    'offersIAPTrue': 'Dummy variable equals 1 if an app offers \nin-app-purchase, 0 otherwise.',
+                    'paidTrue': 'Dummy variable equals 1 if an app charges a positive \nprice upfront at installation, 0 otherwise.',
+                    'Imputedprice': 'App price in USD.',
+                    'PostDummy': 'Dummy variable equals 1 if the time is in and after Mar 2020, \nwhen I set as the DiD cutoff, and 0 represents Feb 2020 \nand all panels before.',
+                    'DeMeanedImputedscore': 'Demeaned rating of an app (from 1 to 5).',
+                    'DeMeanedminInstallsTop': 'Dummy variable equals 1 if an app has \nminimum installs above 10,000,000 (inclusive), \n0 otherwise.',
+                    'DeMeanedminInstallsMiddle': 'Dummy variable equals 1 if an app has \nminimum installs below 10,000,000 and \nabove 100,000 (inclusive), 0 otherwise.',
+                    'ZScoreDeMeanedImputedreviews': 'Demeaned and standardized \n(zscore) number of reviews of an app.',
+                    'contentRatingAdult': 'Dummy variable equals 1 if the app has \nadult content, 0 otherwise.',
+                    'size': 'Size (MB)',
+                    'DaysSinceReleased': 'Number of days since the app was \nlaunched on Google Play Store.',
+                    'top_digital_firms': 'Dummy variable equals 1 if the app is \nowned by a Top Digital Firm '}
+
+        time_variancy = {
+            'Time Variant': ['offersIAPTrue',
+                             'containsAdsTrue',
+                             'paidTrue',
+                             'Imputedprice',
+                             'PostDummy',
+                             'DeMeanedImputedscore',
+                             'DeMeanedminInstallsTop',
+                             'DeMeanedminInstallsMiddle',
+                             'ZScoreDeMeanedImputedreviews'],
+            'Time Invariant': ['contentRatingAdult',
+                               'size',
+                               'DaysSinceReleased',
+                               'top_digital_firms']}
+
+        df['reference'] = ['containsAdsTrue',
+                                            'offersIAPTrue',
+                                            'paidTrue',
+                                            'Imputedprice',
+                                            'PostDummy',
+                                            'DeMeanedImputedscore',
+                                            'DeMeanedminInstallsTop',
+                                            'DeMeanedminInstallsMiddle',
+                                            'ZScoreDeMeanedImputedreviews',
+                                            'contentRatingAdult',
+                                            'size',
+                                            'DaysSinceReleased',
+                                            'top_digital_firms']
+
+        df['Variables'] = [var_names[i] for i in df['reference']]
+
+        df['Definitions'] = None
+        for var, definition in var_definitions.items():
+            df.at[df['reference'] == var, 'Definitions'] = definition
+
+        df['Type'] = None
+        for type, var_list in  time_variancy.items():
+            for j in var_list:
+                for i in df['reference']:
+                    if i == j:
+                        df.at[df['reference'] == i, 'Type'] = type
+
+        df.drop('reference', axis=1, inplace=True)
+        df.set_index('Type', inplace=True)
+
+        f_name = 'variable_definition.tex'
+        df.to_latex(buf=regression.descriptive_stats_tables / f_name,
+                    multirow=True,
+                    multicolumn=True,
+                    longtable=True,
+                    position='h!',
+                    escape=False)
+
+        return df
+
+
+
+
