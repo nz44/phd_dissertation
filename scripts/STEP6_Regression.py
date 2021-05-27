@@ -43,6 +43,26 @@ class regression():
                                     'developer top': 'Top (Companies)',
                                     'developer non-top': 'Non-top (Companies)',
                                     'full full': 'Full Sample'}
+    var_names = {
+        'containsAdsTrue': 'ContainsAds',
+        'offersIAPTrue': 'OffersIAP',
+        'paidTrue': 'Paid',
+        'Imputedprice': 'Price',
+        'PostDummy': 'Post',
+        'Imputedscore': 'Score',
+        'DeMeanedImputedscore': 'Score (DeMeaned)',
+        'minInstallsTop': 'Tier1',
+        'DeMeanedminInstallsTop': 'Tier1 (DeMeaned)',
+        'minInstallsMiddle': 'Tier2',
+        'DeMeanedminInstallsMiddle': 'Tier2 (DeMeaned)',
+        'Imputedreviews': 'Reviews',
+        'ZScoreDeMeanedImputedreviews': 'Reviews (DeMeaned ZScore)',
+        'contentRatingAdult': 'ContentRatingAdult',
+        'size': 'Size',
+        'DaysSinceReleased': 'DaysReleased',
+        'top_digital_firms': 'TopFirm',
+        'NicheDummy': 'Niche'}
+
     def __init__(self,
                  initial_panel,
                  all_panels,
@@ -202,7 +222,9 @@ class regression():
             if 'PostX' in i:
                 cols_drop.append(i)
         cols_drop.extend(['panel', 'PostDummy'])
-        df3 = df3.drop(cols_drop, axis=1)
+        for i in cols_drop:
+            if i in df3.columns:
+                df3 = df3.drop(i, axis=1)
         return df3
 
     def correlation_for_single_panel(self):
@@ -717,35 +739,20 @@ class regression():
         df = pd.DataFrame()
         # the variable name here are the actual one shown in the paper, not the ones embedded in the code
         # MAPPING -------------------------------------------------
-        var_names = {
-                    'containsAdsTrue': 'ContainsAds',
-                    'offersIAPTrue': 'OffersIAP',
-                    'paidTrue': 'Paid',
-                    'Imputedprice': 'Price',
-                    'PostDummy': 'Post',
-                    'DeMeanedImputedscore': 'Score',
-                    'DeMeanedminInstallsTop': 'Tier1',
-                    'DeMeanedminInstallsMiddle': 'Tier2',
-                    'ZScoreDeMeanedImputedreviews': 'Reviews',
-                    'contentRatingAdult': 'ContentRatingAdult',
-                    'size': 'Size',
-                    'DaysSinceReleased': 'DaysReleased',
-                    'top_digital_firms': 'TopFirm'}
-
         var_definitions = {
-                    'containsAdsTrue': 'Dummy variable equals 1 if an app \ncontains advertisement, 0 otherwise.',
-                    'offersIAPTrue': 'Dummy variable equals 1 if an app offers \nin-app-purchase, 0 otherwise.',
-                    'paidTrue': 'Dummy variable equals 1 if an app charges a positive \nprice upfront at installation, 0 otherwise.',
-                    'Imputedprice': 'App price in USD.',
-                    'PostDummy': 'Dummy variable equals 1 if the time is in and after Mar 2020, \nwhen I set as the DiD cutoff, and 0 represents Feb 2020 \nand all panels before.',
-                    'DeMeanedImputedscore': 'Demeaned rating of an app (from 1 to 5).',
-                    'DeMeanedminInstallsTop': 'Dummy variable equals 1 if an app has \nminimum installs above 10,000,000 (inclusive), \n0 otherwise.',
-                    'DeMeanedminInstallsMiddle': 'Dummy variable equals 1 if an app has \nminimum installs below 10,000,000 and \nabove 100,000 (inclusive), 0 otherwise.',
-                    'ZScoreDeMeanedImputedreviews': 'Demeaned and standardized \n(zscore) number of reviews of an app.',
-                    'contentRatingAdult': 'Dummy variable equals 1 if the app has \nadult content, 0 otherwise.',
-                    'size': 'Size (MB)',
-                    'DaysSinceReleased': 'Number of days since the app was \nlaunched on Google Play Store.',
-                    'top_digital_firms': 'Dummy variable equals 1 if the app is \nowned by a Top Digital Firm '}
+                    'containsAdsTrue': '\makecell[l]{Dummy variable equals 1 if an app \\\ contains advertisement, 0 otherwise.}',
+                    'offersIAPTrue': '\makecell[l]{Dummy variable equals 1 if an app \\\ offers in-app-purchase, 0 otherwise.}',
+                    'paidTrue': '\makecell[l]{Dummy variable equals 1 if an app charges a positive \\\ price upfront, 0 otherwise.}',
+                    'Imputedprice': '\makecell[l]{App price in USD.}',
+                    'PostDummy': '\makecell[l]{Dummy variable equals 1 if the observation \\\ is after Mar 2020 (inclusive), and 0 if the \\\ observation is before Mar 2020}',
+                    'DeMeanedImputedscore': '\makecell[l]{Demeaned rating of an app (from 1 to 5).}',
+                    'DeMeanedminInstallsTop': '\makecell[l]{Dummy variable equals 1 if an  \\\ app has minimum installs above 10,000,000 (inclusive),  \\\ 0 otherwise.}',
+                    'DeMeanedminInstallsMiddle': '\makecell[l]{Dummy variable equals 1 if an \\\ app has minimum installs below 10,000,000 and \\\ above 100,000 (inclusive), 0 otherwise.}',
+                    'ZScoreDeMeanedImputedreviews': '\makecell[l]{Demeaned and standardized \\\ (zscore) number of reviews of an app.}',
+                    'contentRatingAdult': '\makecell[l]{Dummy variable equals 1 if the app has \\\ adult content, 0 otherwise.}',
+                    'size': '\makecell[l]{Size (MB)}',
+                    'DaysSinceReleased': '\makecell[l]{Number of days since the app was \\\ launched on Google Play Store.}',
+                    'top_digital_firms': '\makecell[l]{Dummy variable equals 1 if the app is \\\ owned by a Top Digital Firm.}'}
 
         time_variancy = {
             'Time Variant': ['offersIAPTrue',
@@ -776,21 +783,21 @@ class regression():
                                             'DaysSinceReleased',
                                             'top_digital_firms']
 
-        df['Variables'] = [var_names[i] for i in df['reference']]
+        df['Variables'] = [regression.var_names[i] for i in df['reference']]
 
         df['Definitions'] = None
         for var, definition in var_definitions.items():
             df.at[df['reference'] == var, 'Definitions'] = definition
 
         df['Type'] = None
-        for type, var_list in  time_variancy.items():
+        for type, var_list in time_variancy.items():
             for j in var_list:
                 for i in df['reference']:
                     if i == j:
                         df.at[df['reference'] == i, 'Type'] = type
 
         df.drop('reference', axis=1, inplace=True)
-        df.set_index('Type', inplace=True)
+        df.set_index(['Type', 'Variables'], inplace=True)
 
         f_name = 'variable_definition.tex'
         df.to_latex(buf=regression.descriptive_stats_tables / f_name,
@@ -799,8 +806,186 @@ class regression():
                     longtable=True,
                     position='h!',
                     escape=False)
-
         return df
+
+    # ========================================================================================================
+    # ========================================================================================================
+
+    def slice_single_panel_descriptive_stats(self, var_list, the_panel):
+        self.reg_dict_xy = dict.fromkeys(self.reg_dict.keys())
+        for name1, content1 in self.reg_dict.items():
+            self.reg_dict_xy[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                NicheDummy = name1 + '_' + name2 + '_NicheDummy'
+                variables = copy.deepcopy(var_list)
+                variables = variables + [NicheDummy]
+                vdf = df[variables]
+                for i in vdf.columns:
+                    if 'NicheDummy' in i:
+                        vdf.rename(columns={i: 'NicheDummy'}, inplace=True)
+                self.reg_dict_xy[name1][name2] = vdf
+        self.single_panel_df = dict.fromkeys(self.reg_dict_xy.keys())
+        for name1, content1 in self.reg_dict_xy.items():
+            self.single_panel_df[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                self.single_panel_df[name1][name2] = self._slice_a_panel_from_long_df(
+                    the_panel=the_panel, df=df)
+        return regression(initial_panel=self.initial_panel,
+                          all_panels=self.all_panels,
+                          dep_vars=self.dep_vars,
+                          independent_vars=self.independent_vars,
+                          subsample_names=self.ssnames,
+                          reg_dict=self.reg_dict,
+                          reg_dict_xy=self.reg_dict_xy,
+                          single_panel_df=self.single_panel_df,
+                          subsample_op_results=self.subsample_op_results)
+
+    def single_panel_descriptive_stats(self, var_list, the_panel, type):
+        """
+        run self.slice_single_panel_descriptive_stats before running this,
+        DO NOT run self.select_x_y_for_subsample() and self.slice_single_panel() before this, because
+        regression need different dataframes from descriptive stats.
+        """
+        for name1, content1 in self.single_panel_df.items():
+            for name2, df in content1.items():
+                df2 = df.copy(deep=True)
+                if type == 'dummy':
+                    df_list = []
+                    for i in var_list:
+                    # some dummy var has been deleted because of they are perfectly correlated with other dummy var
+                        if i in df2.columns:
+                            if df2[i].nunique() == 2:
+                                df3 = df2[i].value_counts()
+                                df3 = df3.rename(i).to_frame().T.rename(columns={0: 'False', 1: 'True'})
+                            else: # sometimes the entire column is 1 or 0
+                                if df2[i].unique() == 1:
+                                    df3 = df2[i].value_counts()
+                                    df3 = df3.rename(i).to_frame().T.rename(columns={1: 'True'})
+                                    df3['False'] = 0
+                                else:
+                                    df3 = df2[i].value_counts()
+                                    df3 = df3.rename(i).to_frame().T.rename(columns={0: 'False'})
+                                    df3['True'] = 0
+                            df3['count'] = df3['False'] + df3['True']
+                            df_list.append(df3)
+                    f_name = self.initial_panel + '_PANEL_' + the_panel + '_' + name1 + '_' + name2  + '_Dummy_Stats.csv'
+                    q = regression.descriptive_stats_tables / 'dummy_stats' / f_name
+                elif type == 'continuous':
+                    df_list = []
+                    for i in var_list:
+                        if i in df2.columns:
+                            df3 = df2[i].describe(include=[np.number])
+                            df3 = df3.rename(i).to_frame().T
+                            df_list.append(df3)
+                    f_name = self.initial_panel + '_PANEL_' + the_panel + '_' + name1 + '_' + name2  + '_Continuous_Stats.csv'
+                    q = regression.descriptive_stats_tables / 'continuous_stats' / f_name
+                else: # for DeMeaned Variables Only (They are continuous)
+                    df_list = []
+                    for i in var_list:
+                        if i in df2.columns:
+                            df3 = df2[i].describe(include=[np.number])
+                            df3 = df3.rename(i).to_frame().T
+                            df_list.append(df3)
+                    f_name = self.initial_panel + '_PANEL_' + the_panel + '_' + name1 + '_' + name2 + '_DeMeaned_Stats.csv'
+                    q = regression.descriptive_stats_tables / 'demeaned_stats' / f_name
+                stats_df = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
+                stats_df.to_csv(q)
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
+
+    def export_descriptive_stats_to_latex(self, the_panel):
+        sample_name = {'_full_full': 'Full',
+                     '_minInstalls_ImputedminInstalls_tier1': 'Tier1',
+                     '_minInstalls_ImputedminInstalls_tier2': 'Tier2',
+                     '_minInstalls_ImputedminInstalls_tier3': 'Tier3',
+                     '_developer_top': 'Top',
+                     '_developer_non-top': 'Non-top'}
+        # =============== DUMMY TABLE ==============================================================
+        df_list = []
+        for name, mapped_name in sample_name.items():
+            f_name = self.initial_panel + '_PANEL_' + the_panel + name + '_Dummy_Stats.csv'
+            q = regression.descriptive_stats_tables / 'dummy_stats' / f_name
+            df = pd.read_csv(q)
+            df['Sample'] = mapped_name
+            df_list.append(df)
+        df2 = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
+        df2['Variables'] = [regression.var_names[i] for i in df2.iloc[:,0]]
+        df2.drop(df2.columns[0], axis=1, inplace=True)
+        df2 = df2[['Sample', 'Variables', 'True', 'False', 'count']]
+        df2.set_index(['Sample', 'Variables'], inplace=True)
+        f_name = self.initial_panel + '_PANEL_' + the_panel + '_dummy_vars_descriptive_stats.tex'
+        df2.to_latex(buf=regression.descriptive_stats_tables / f_name,
+                   multirow=True,
+                   multicolumn=True,
+                   longtable=True,
+                   position='h!',
+                   escape=False)
+        # =============== CONTINUOUS TABLE =========================================================
+        df_list = []
+        for name, mapped_name in sample_name.items():
+            f_name = self.initial_panel + '_PANEL_' + the_panel + name + '_Continuous_Stats.csv'
+            q = regression.descriptive_stats_tables / 'continuous_stats' / f_name
+            df = pd.read_csv(q)
+            df['Sample'] = mapped_name
+            df_list.append(df)
+        df2 = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
+        df2['Variables'] = [regression.var_names[i] for i in df2.iloc[:,0]]
+        df2.drop(df2.columns[0], axis=1, inplace=True)
+        df2.rename(columns={'50%': 'median'}, inplace=True)
+        df2 = df2[['Sample', 'Variables', 'mean', 'std', 'min', 'median', 'max', 'count']]
+        df2.set_index(['Sample', 'Variables'], inplace=True)
+        # --- convert data type and round ----
+        df2['count'] = df2['count'].astype(int)
+        for i in ['mean', 'std', 'min', 'median', 'max']:
+            df2[i] = df2[i].apply(lambda x: round(x, 2))
+        f_name = self.initial_panel + '_PANEL_' + the_panel + '_continuous_vars_descriptive_stats.tex'
+        df2.to_latex(buf=regression.descriptive_stats_tables / f_name,
+                   multirow=True,
+                   multicolumn=True,
+                   longtable=True,
+                   position='h!',
+                   escape=False)
+        # =============== DEMEANED TABLE =========================================================
+        df_list = []
+        for name, mapped_name in sample_name.items():
+            f_name = self.initial_panel + '_PANEL_' + the_panel + name + '_DeMeaned_Stats.csv'
+            q = regression.descriptive_stats_tables / 'demeaned_stats' / f_name
+            df = pd.read_csv(q)
+            df['Sample'] = mapped_name
+            df_list.append(df)
+        df2 = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
+        df2['Variables'] = [regression.var_names[i] for i in df2.iloc[:,0]]
+        df2.drop(df2.columns[0], axis=1, inplace=True)
+        df2.rename(columns={'50%': 'median'}, inplace=True)
+        df2 = df2[['Sample', 'Variables', 'mean', 'std', 'min', 'median', 'max', 'count']]
+        df2.set_index(['Sample', 'Variables'], inplace=True)
+        # --- convert data type and round ----
+        df2['count'] = df2['count'].astype(int)
+        for i in ['mean', 'std', 'min', 'median', 'max']:
+            df2[i] = df2[i].apply(lambda x: round(x, 2))
+        f_name = self.initial_panel + '_PANEL_' + the_panel + '_demeaned_vars_descriptive_stats.tex'
+        df2.to_latex(buf=regression.descriptive_stats_tables / f_name,
+                   multirow=True,
+                   multicolumn=True,
+                   longtable=True,
+                   position='h!',
+                   escape=False)
+        return regression(initial_panel=self.initial_panel,
+                           all_panels=self.all_panels,
+                           dep_vars=self.dep_vars,
+                           independent_vars=self.independent_vars,
+                           subsample_names=self.ssnames,
+                           reg_dict=self.reg_dict,
+                           single_panel_df=self.single_panel_df,
+                           subsample_op_results=self.subsample_op_results)
+
+
 
 
 
