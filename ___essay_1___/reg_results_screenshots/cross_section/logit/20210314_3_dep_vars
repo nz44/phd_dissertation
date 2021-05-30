@@ -1,0 +1,80 @@
+Optimization terminated successfully.
+         Current function value: 0.382403
+         Iterations 13
+                           Logit Regression Results                           
+==============================================================================
+Dep. Variable:        paidTrue_202103   No. Observations:                 9867
+Model:                          Logit   Df Residuals:                     9859
+Method:                           MLE   Df Model:                            7
+Date:                Sun, 14 Mar 2021   Pseudo R-squ.:                  0.3835
+Time:                        23:45:51   Log-Likelihood:                -3773.2
+converged:                       True   LL-Null:                       -6120.8
+Covariance Type:            nonrobust   LLR p-value:                     0.000
+============================================================================================
+                               coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------------------
+const                       -3.8500      0.389     -9.896      0.000      -4.613      -3.088
+score_202103                 0.4450      0.050      8.871      0.000       0.347       0.543
+ZSCOREreviews_202103       -26.1235      1.777    -14.703      0.000     -29.606     -22.641
+minInstallsTop_202103       -8.2016      1.009     -8.129      0.000     -10.179      -6.224
+minInstallsMiddle_202103    -3.2646      0.104    -31.272      0.000      -3.469      -3.060
+niche_app                   -0.5924      0.075     -7.880      0.000      -0.740      -0.445
+genreIdGame                  1.0305      0.062     16.674      0.000       0.909       1.152
+contentRatingEveryone        0.6626      0.082      8.059      0.000       0.501       0.824
+============================================================================================
+
+Possibly complete quasi-separation: A fraction 0.13 of observations can be
+perfectly predicted. This might indicate that there is complete
+quasi-separation. In this case some parameters will not be identified.
+Optimization terminated successfully.
+         Current function value: 0.595517
+         Iterations 6
+
+
+                            Logit Regression Results                            
+================================================================================
+Dep. Variable:     offersIAPTrue_202103   No. Observations:                 9867
+Model:                            Logit   Df Residuals:                     9859
+Method:                             MLE   Df Model:                            7
+Date:                  Sun, 14 Mar 2021   Pseudo R-squ.:                  0.1367
+Time:                          23:45:51   Log-Likelihood:                -5876.0
+converged:                         True   LL-Null:                       -6806.2
+Covariance Type:              nonrobust   LLR p-value:                     0.000
+============================================================================================
+                               coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------------------
+const                       -1.5660      0.187     -8.359      0.000      -1.933      -1.199
+score_202103                -0.0413      0.040     -1.040      0.299      -0.119       0.037
+ZSCOREreviews_202103         0.0175      0.028      0.615      0.539      -0.038       0.073
+minInstallsTop_202103        2.6736      0.094     28.506      0.000       2.490       2.857
+minInstallsMiddle_202103     1.8763      0.079     23.867      0.000       1.722       2.030
+niche_app                    0.5011      0.062      8.084      0.000       0.380       0.623
+genreIdGame                  0.6858      0.048     14.399      0.000       0.592       0.779
+contentRatingEveryone       -0.6681      0.061    -11.017      0.000      -0.787      -0.549
+============================================================================================
+Optimization terminated successfully.
+         Current function value: 0.556383
+         Iterations 7
+
+         
+                             Logit Regression Results                             
+==================================================================================
+Dep. Variable:     containsAdsTrue_202103   No. Observations:                 9867
+Model:                              Logit   Df Residuals:                     9859
+Method:                               MLE   Df Model:                            7
+Date:                    Sun, 14 Mar 2021   Pseudo R-squ.:                  0.1895
+Time:                            23:45:51   Log-Likelihood:                -5489.8
+converged:                           True   LL-Null:                       -6773.6
+Covariance Type:                nonrobust   LLR p-value:                     0.000
+============================================================================================
+                               coef    std err          z      P>|z|      [0.025      0.975]
+--------------------------------------------------------------------------------------------
+const                       -3.7857      0.220    -17.241      0.000      -4.216      -3.355
+score_202103                 0.1060      0.044      2.434      0.015       0.021       0.191
+ZSCOREreviews_202103        -0.0501      0.022     -2.233      0.026      -0.094      -0.006
+minInstallsTop_202103        3.8242      0.123     31.054      0.000       3.583       4.066
+minInstallsMiddle_202103     2.2822      0.111     20.486      0.000       2.064       2.501
+niche_app                    0.7683      0.069     11.171      0.000       0.634       0.903
+genreIdGame                  0.8268      0.048     17.081      0.000       0.732       0.922
+contentRatingEveryone       -0.2671      0.059     -4.528      0.000      -0.383      -0.151
+============================================================================================

@@ -69,9 +69,9 @@ class nlp_pipeline():
             this dummy is only generated once in the entire code.
     """
     nlp_graph_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/nlp/graphs')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/nlp/graphs')
     panel_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
     tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
     # after examining the optimal svd cluster graphs, I write dict here as class attributes for each dataset

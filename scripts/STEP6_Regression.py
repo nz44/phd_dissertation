@@ -26,7 +26,7 @@ yearmonth = today.strftime("%Y%m")
 
 class regression():
     panel_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
     reg_table_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/reg_results_tables')
     descriptive_stats_tables = Path(
@@ -49,6 +49,8 @@ class regression():
         'paidTrue': 'Paid',
         'Imputedprice': 'Price',
         'PostDummy': 'Post',
+        'PostNiche': 'PostNiche',
+        'PostNicheScale' : 'PostNicheScale',
         'Imputedscore': 'Score',
         'DeMeanedImputedscore': 'Score (DeMeaned)',
         'minInstallsTop': 'Tier1',
@@ -61,7 +63,8 @@ class regression():
         'size': 'Size',
         'DaysSinceReleased': 'DaysReleased',
         'top_digital_firms': 'TopFirm',
-        'NicheDummy': 'Niche'}
+        'NicheDummy': 'Niche',
+        'NicheScaleDummies': 'NicheScale （0-19）'}
 
     def __init__(self,
                  initial_panel,
@@ -744,44 +747,83 @@ class regression():
                     'offersIAPTrue': '\makecell[l]{Dummy variable equals 1 if an app \\\ offers in-app-purchase, 0 otherwise.}',
                     'paidTrue': '\makecell[l]{Dummy variable equals 1 if an app charges a positive \\\ price upfront, 0 otherwise.}',
                     'Imputedprice': '\makecell[l]{App price in USD.}',
-                    'PostDummy': '\makecell[l]{Dummy variable equals 1 if the observation \\\ is after Mar 2020 (inclusive), and 0 if the \\\ observation is before Mar 2020}',
-                    'DeMeanedImputedscore': '\makecell[l]{Demeaned rating of an app (from 1 to 5).}',
-                    'DeMeanedminInstallsTop': '\makecell[l]{Dummy variable equals 1 if an  \\\ app has minimum installs above 10,000,000 (inclusive),  \\\ 0 otherwise.}',
-                    'DeMeanedminInstallsMiddle': '\makecell[l]{Dummy variable equals 1 if an \\\ app has minimum installs below 10,000,000 and \\\ above 100,000 (inclusive), 0 otherwise.}',
-                    'ZScoreDeMeanedImputedreviews': '\makecell[l]{Demeaned and standardized \\\ (zscore) number of reviews of an app.}',
+                    'PostDummy': """ \makecell[l]{Dummy variable equals 1 if the observation \\\ 
+                                    is after Mar 2020 (inclusive), and 0 if the \\\ 
+                                    observation is before Mar 2020} """,
+                    'PostNiche': """ \makecell[l]{Interaction variable between Post and Niche,\\\  
+                                    which equals 1 if and only if the observation \\\ 
+                                    equals to 1 for both Post and Niche.} """,
+                    'PostNicheScale': """ \makecell[l]{Interaction variable between Post and NicheScale dummies,\\\  
+                                    which equals 1 if and only if the observation \\\ 
+                                    equals to 1 for both Post and NicheScale.} """,
+                    'Imputedscore': '\makecell[l]{Average score, between 1 and 5, of an app in a period. }',
+                    'DeMeanedImputedscore': """ \makecell[l]{Demeaning the score across all panels \\\ 
+                                            within each app.} """,
+                    'minInstallsTop': """ \makecell[l]{Dummy variable equals 1 if the app \\\ 
+                                            has minimum installs above 10,000,000 \\\ 
+                                            (inclusive) in a panel, 0 otherwise.} """,
+                    'DeMeanedminInstallsTop': '\makecell[l]{Demeaning Tier1 across all panels \\\ within each app.}',
+                    'minInstallsMiddle': """ \makecell[l]{Dummy variable equals 1 if the app \\\ 
+                                            has minimum installs below 10,000,000 and \\\ 
+                                            above 100,000 (inclusive), 0 otherwise.} """,
+                    'DeMeanedminInstallsMiddle': '\makecell[l]{Demeaning Tier2 across all panels \\\ within each app.}',
+                    'Imputedreviews': '\makecell[l]{Number of reviews of an app in a panel.}',
+                    'ZScoreDeMeanedImputedreviews': """ \makecell[l]{Demeaning Z-Score standardized \\\ 
+                                                        number of reviews across all panels within each app.} """,
                     'contentRatingAdult': '\makecell[l]{Dummy variable equals 1 if the app has \\\ adult content, 0 otherwise.}',
                     'size': '\makecell[l]{Size (MB)}',
                     'DaysSinceReleased': '\makecell[l]{Number of days since the app was \\\ launched on Google Play Store.}',
-                    'top_digital_firms': '\makecell[l]{Dummy variable equals 1 if the app is \\\ owned by a Top Digital Firm.}'}
+                    'top_digital_firms': '\makecell[l]{Dummy variable equals 1 if the app is \\\ owned by a Top Digital Firm.}',
+                    'NicheDummy': """ \makecell[l]{Dummy variable equals 1 if an app \\\ 
+                                        is a niche-type app, 0 if an app is broad-type app.}""",
+                    'NicheScaleDummies': """ \makecell[l]{20 dummy variables representing the degree of niche property of an app. \\\ 
+                                            NicheScale_{0} equals to 1 represents that the app is the most broad type, \\\ 
+                                            while NicheScale_{19} equals to 1 represents that the app is the most niche type.} """}
 
         time_variancy = {
-            'Time Variant': ['offersIAPTrue',
-                             'containsAdsTrue',
-                             'paidTrue',
-                             'Imputedprice',
-                             'PostDummy',
-                             'DeMeanedImputedscore',
-                             'DeMeanedminInstallsTop',
-                             'DeMeanedminInstallsMiddle',
-                             'ZScoreDeMeanedImputedreviews'],
+            'Time Variant': ['containsAdsTrue',
+                                     'offersIAPTrue',
+                                     'paidTrue',
+                                     'Imputedprice',
+                                     'PostDummy',
+                                     'PostNiche',
+                                     'PostNicheScale',
+                                     'Imputedscore',
+                                     'DeMeanedImputedscore',
+                                     'minInstallsTop',
+                                     'DeMeanedminInstallsTop',
+                                     'minInstallsMiddle',
+                                     'DeMeanedminInstallsMiddle',
+                                     'Imputedreviews',
+                                     'ZScoreDeMeanedImputedreviews'],
             'Time Invariant': ['contentRatingAdult',
-                               'size',
-                               'DaysSinceReleased',
-                               'top_digital_firms']}
+                                       'size',
+                                       'DaysSinceReleased',
+                                       'top_digital_firms',
+                                       'NicheDummy',
+                                       'NicheScaleDummies']}
 
         df['reference'] = ['containsAdsTrue',
                                             'offersIAPTrue',
                                             'paidTrue',
                                             'Imputedprice',
                                             'PostDummy',
+                                            'PostNiche',
+                                            'PostNicheScale',
+                                            'Imputedscore',
                                             'DeMeanedImputedscore',
+                                            'minInstallsTop',
                                             'DeMeanedminInstallsTop',
+                                            'minInstallsMiddle',
                                             'DeMeanedminInstallsMiddle',
+                                            'Imputedreviews',
                                             'ZScoreDeMeanedImputedreviews',
                                             'contentRatingAdult',
                                             'size',
                                             'DaysSinceReleased',
-                                            'top_digital_firms']
+                                            'top_digital_firms',
+                                            'NicheDummy',
+                                            'NicheScaleDummies']
 
         df['Variables'] = [regression.var_names[i] for i in df['reference']]
 

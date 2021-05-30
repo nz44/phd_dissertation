@@ -32,7 +32,7 @@ The niche text label will be generated within each subsample.
 """
 class divide():
     panel_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
 
     descriptive_stats_tables = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
@@ -284,8 +284,8 @@ class divide():
         self.division_rules = division_rules
         self.subsamples_count_table = subsamples_count_table
 
-    def open_imputed_and_deleted_missing_df(self):
-        f_name = self.initial_panel + '_imputed_and_deleted_missing.pickle'
+    def open_imputed_and_deleted_missing_df(self, name):
+        f_name = self.initial_panel + '_' + name + '.pickle'
         q = divide.panel_path / f_name
         with open(q, 'rb') as f:
             self.df = pickle.load(f)
@@ -321,6 +321,10 @@ class divide():
         c = self.df.groupby(['non-top_digital_firms'], dropna=False).size()
         print(self.initial_panel, ' : non-top digital firms.')
         print(c)
+        # ------------------ save bc this function takes too long ----------------
+        filename = self.initial_panel + '_imputed_deleted_top_firm.pickle'
+        q = divide.panel_path / filename
+        pickle.dump(self.df, open(q, 'wb'))
         return divide(initial_panel=self.initial_panel,
                       all_panels=self.all_panels,
                       df=self.df,

@@ -32,7 +32,7 @@ import copy
 class pre_processing():
     stoplist = nltk.corpus.stopwords.words('english')
     panel_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
 
     def __init__(self,
                  initial_panel,
