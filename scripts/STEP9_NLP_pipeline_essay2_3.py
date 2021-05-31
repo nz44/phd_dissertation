@@ -58,128 +58,35 @@ class nlp_pipeline_essay_2_3():
     # after examining the optimal svd cluster graphs, I write dict here as class attributes for each dataset
     # ------------------------------------------------------------------------
     optimal_svd_components_201907 = {
-        'full':
-                       {'full': 1500},
-        'minInstalls':
-                       {'ImputedminInstalls_tier1': 1000,
-                        'ImputedminInstalls_tier2': 1300,
-                        'ImputedminInstalls_tier3': 1300},
-        'genreId':
-                       {'ART_AND_DESIGN': 150,
-                        'COMICS': 50,
-                        'PERSONALIZATION': 150,
-                        'PHOTOGRAPHY': 150,
-                        'AUTO_AND_VEHICLES': 150,
-                        'GAME_ROLE_PLAYING': 200,
-                        'GAME_ACTION': 50,
-                        'GAME_RACING': 150,
-                        'TRAVEL_AND_LOCAL': 150,
-                        'GAME_ADVENTURE': 150,
-                        'SOCIAL': 150,
-                        'GAME_SIMULATION': 200,
-                        'LIFESTYLE': 150,
-                        'EDUCATION': 200,
-                        'BEAUTY': 50,
-                        'GAME_CASUAL': 200,
-                        'BOOKS_AND_REFERENCE': 150,
-                        'BUSINESS': 200,
-                        'FINANCE': 200,
-                        'GAME_STRATEGY': 150,
-                        'SPORTS': 150,
-                        'COMMUNICATION': 150,
-                        'DATING': 50,
-                        'ENTERTAINMENT': 150,
-                        'GAME_BOARD': 150,
-                        'EVENTS': 50,
-                        'SHOPPING': 150,
-                        'FOOD_AND_DRINK': 150,
-                        'HEALTH_AND_FITNESS': 200,
-                        'HOUSE_AND_HOME': 100,
-                        'TOOLS': 150,
-                        'LIBRARIES_AND_DEMO': 150,
-                        'MAPS_AND_NAVIGATION': 150,
-                        'MEDICAL': 200,
-                        'MUSIC_AND_AUDIO': 150,
-                        'NEWS_AND_MAGAZINES': 150,
-                        'PARENTING': 150,
-                        'GAME_PUZZLE': 250,
-                        'VIDEO_PLAYERS': 150,
-                        'PRODUCTIVITY': 150,
-                        'WEATHER': 150,
-                        'GAME_ARCADE': 150,
-                        'GAME_CASINO': 50,
-                        'GAME_CARD': 150,
-                        'GAME_EDUCATIONAL': 150,
-                        'GAME_MUSIC': 50,
-                        'GAME_SPORTS': 150,
-                        'GAME_TRIVIA': 100,
-                        'GAME_WORD': 150},
-        'developer':
-                       {'top': 316,
-                        'non-top': 1200}}
+        'Leaders': {'full': 860,
+                'category_GAME': 630,
+                'category_BUSINESS': 210,
+                'category_SOCIAL': 200,
+                'category_LIFESTYLE': 300,
+                'category_MEDICAL': 65},
+        'Non-leaders': {'full': 1150,
+                    'category_GAME': 950,
+                    'category_BUSINESS': 750,
+                    'category_SOCIAL': 700,
+                    'category_LIFESTYLE': 850,
+                    'category_MEDICAL': 350}}
+
     # after examining the optimal km cluster graphs (both elbow and sihouette graphs),
     # I write dict here as class attributes for each dataset
     # ------------------------------------------------------------------------
     optimal_km_clusters_201907 = {
-        'full':
-            {'full': 250},
-        'minInstalls':
-            {'ImputedminInstalls_tier1': 240,
-             'ImputedminInstalls_tier2': 300,
-             'ImputedminInstalls_tier3': 80},
-        'genreId':
-            {'ART_AND_DESIGN': 8,
-             'COMICS': 12,
-             'PERSONALIZATION': 25,
-             'PHOTOGRAPHY': 25,
-             'AUTO_AND_VEHICLES': 30,
-             'GAME_ROLE_PLAYING': 30,
-             'GAME_ACTION': 4,
-             'GAME_RACING': 30,
-             'TRAVEL_AND_LOCAL': 30,
-             'GAME_ADVENTURE': 40,
-             'SOCIAL': 25,
-             'GAME_SIMULATION': 35,
-             'LIFESTYLE': 35,
-             'EDUCATION': 35,
-             'BEAUTY': 12,
-             'GAME_CASUAL': 30,
-             'BOOKS_AND_REFERENCE': 20,
-             'BUSINESS': 40,
-             'FINANCE': 35,
-             'GAME_STRATEGY': 35,
-             'SPORTS': 35,
-             'COMMUNICATION': 35,
-             'DATING': 16,
-             'ENTERTAINMENT': 40,
-             'GAME_BOARD': 15,
-             'EVENTS': 10,
-             'SHOPPING': 16,
-             'FOOD_AND_DRINK': 20,
-             'HEALTH_AND_FITNESS': 30,
-             'HOUSE_AND_HOME': 14,
-             'TOOLS': 30,
-             'LIBRARIES_AND_DEMO': 13,
-             'MAPS_AND_NAVIGATION': 30,
-             'MEDICAL': 35,
-             'MUSIC_AND_AUDIO': 30,
-             'NEWS_AND_MAGAZINES': 20,
-             'PARENTING': 10,
-             'GAME_PUZZLE': 35,
-             'VIDEO_PLAYERS': 30,
-             'PRODUCTIVITY': 35,
-             'WEATHER': 10,
-             'GAME_ARCADE': 35,
-             'GAME_CASINO': 4,
-             'GAME_CARD': 17,
-             'GAME_EDUCATIONAL': 40,
-             'GAME_MUSIC': 17,
-             'GAME_SPORTS': 29,
-             'GAME_TRIVIA': 17,
-             'GAME_WORD': 7},
-        'developer':
-            {'top': 60,
-             'non-top': 200}}
+        'Leaders': {'full': 130,
+                    'category_GAME': 50,
+                    'category_BUSINESS': 47,
+                    'category_SOCIAL': 40,
+                    'category_LIFESTYLE': 75,
+                    'category_MEDICAL': 8},
+        'Non-leaders': {'full': 300,
+                        'category_GAME': 50,
+                        'category_BUSINESS': 100,
+                        'category_SOCIAL': 100,
+                        'category_LIFESTYLE': 130,
+                        'category_MEDICAL': 85}}
 
     def __init__(self,
                  tcn,
@@ -200,11 +107,6 @@ class nlp_pipeline_essay_2_3():
         self.output_labels = output_labels
 
     def open_divided_df(self):
-        """
-        The reason to use imputed missing dataframe instead of imputed and deleted missing is that everytime you delete different number of rows
-        (depends on the definition of missig), but not every time you need to re-run text clustering (because it is time-consuming),
-        so I will just use the FULL converted data and you could merged this predicted labels to imputed and deleted missing in combine_dataframes class.
-        """
         f_name = self.initial_panel + '_imputed_deleted_subsamples.pickle'
         q = nlp_pipeline_essay_2_3.panel_essay_2_3_common_path / f_name
         with open(q, 'rb') as f:
@@ -221,36 +123,33 @@ class nlp_pipeline_essay_2_3():
 
     def generate_save_input_text_col(self):
         """
-        Purpose of creating this cell is to avoid creating run_subsample switch in each function below.
-        Everytime you run the full sample NLP, you run the sub samples NLP simultaneously, it would take longer, but anyways.
+        leaders -- five categories
+        non-leaders -- five categories
         """
-        # --------------- full sample text cols ------------------------------------------------------
-        full_sample_text_col = self.df[self.tcn + 'ModeClean'].copy(deep=True)
-        # --------------- minInstalls text cols ------------------------------------------------------
-        minInstall_tier1_text_col = self.df.loc[
-            self.df['ImputedminInstalls_tier1'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
-        minInstall_tier2_text_col = self.df.loc[
-            self.df['ImputedminInstalls_tier2'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
-        minInstall_tier3_text_col = self.df.loc[
-            self.df['ImputedminInstalls_tier3'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
-        # --------------- category text cols ---------------------------------------------------------
-        app_categories = self.df['ImputedgenreId_Mode'].unique().tolist()
-        app_cat_text_cols = dict.fromkeys(app_categories)
-        for i in app_categories:
-            app_cat_text_cols[i] = self.df.loc[self.df[i] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
-        # --------------- star developer text cols ---------------------------------------------------
-        top_digital_firms_text_col = self.df.loc[
-            self.df['top_digital_firms'] == 1, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
-        non_top_digital_firms_text_col = self.df.loc[
-            self.df['top_digital_firms'] == 0, [self.tcn + 'ModeClean']].squeeze().copy(deep=True)
         # --------------- compile text cols ----------------------------------------------------------
-        self.ss_text_cols = {'full': {'full': full_sample_text_col},
-                             'minInstalls': {'ImputedminInstalls_tier1': minInstall_tier1_text_col,
-                                             'ImputedminInstalls_tier2': minInstall_tier2_text_col,
-                                             'ImputedminInstalls_tier3': minInstall_tier3_text_col},
-                             'genreId': app_cat_text_cols,
-                             'developer': {'top': top_digital_firms_text_col,
-                                           'non-top': non_top_digital_firms_text_col}}
+        self.ss_text_cols = {'Leaders': {'full': None,
+                                         'category_GAME': None,
+                                         'category_BUSINESS': None,
+                                         'category_SOCIAL': None,
+                                         'category_LIFESTYLE': None,
+                                         'category_MEDICAL': None},
+                             'Non-leaders': {'full': None,
+                                             'category_GAME': None,
+                                             'category_BUSINESS': None,
+                                             'category_SOCIAL': None,
+                                             'category_LIFESTYLE': None,
+                                             'category_MEDICAL': None}}
+        # --------------- full ------------------------------------------------------
+        for subsample1, content1 in self.ss_text_cols.items():
+            for subsample2, content2 in content1.items():
+                if subsample2 == 'full':
+                    self.ss_text_cols[subsample1][subsample2] = self.df.loc[
+                        self.df[subsample1] == 1,
+                        self.tcn + 'ModeClean'].copy(deep=True)
+                else:
+                    self.ss_text_cols[subsample1][subsample2] = self.df.loc[
+                        (self.df[subsample1] == 1) & (self.df[subsample2] == 1),
+                        self.tcn + 'ModeClean'].copy(deep=True)
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
@@ -266,7 +165,7 @@ class nlp_pipeline_essay_2_3():
                                 TfidfVectorizer(
                                     stop_words='english',
                                     strip_accents='unicode',
-                                    max_features=2000))])
+                                    max_features=1500))])
         matrix_df_dict = dict.fromkeys(self.ss_text_cols.keys())
         for sample, content in matrix_df_dict.items():
             matrix_df_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
@@ -314,9 +213,14 @@ class nlp_pipeline_essay_2_3():
                 ax.grid()
                 plt.xlabel('Number of components')
                 plt.ylabel("Explained Variance")
-                plt.title(self.initial_panel + sample + ss_name + " Plot of Number of components v/s explained variance")
+                plt.title(self.initial_panel + ' ' + sample + ' ' + ss_name + " Plot of Number of components v/s explained variance")
                 filename = self.initial_panel + '_' + sample + '_' + ss_name + '_optimal_svd_graph.png'
-                fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_svd_comp' / filename, facecolor='white', dpi=300)
+                if sample == 'Leaders':
+                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_3_path / 'optimal_svd_comp' / filename,
+                                facecolor='white', dpi=300)
+                else:
+                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_2_path / 'optimal_svd_comp' / filename,
+                                facecolor='white', dpi=300)
                 plt.show()
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
@@ -336,7 +240,7 @@ class nlp_pipeline_essay_2_3():
             for ss_name, matrix in content.items():
                 print('TRUNCATE SVD')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                svd = TruncatedSVD(n_components=nlp_pipeline.optimal_svd_components_201907[sample][ss_name],
+                svd = TruncatedSVD(n_components=nlp_pipeline_essay_2_3.optimal_svd_components_201907[sample][ss_name],
                                    random_state=random_state)
                 matrix_transformed = svd.fit_transform(matrix)
                 print(matrix_transformed.shape)
@@ -382,9 +286,14 @@ class nlp_pipeline_essay_2_3():
                 ax.grid()
                 plt.xlabel('k')
                 plt.ylabel('Sum_of_squared_distances')
-                plt.title(self.initial_panel + sample + ss_name + ' Elbow Method For Optimal k')
+                plt.title(self.initial_panel + ' ' + sample + ' ' + ss_name + ' Elbow Method For Optimal k')
                 filename = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_optimal_cluster.png'
-                fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
+                if sample == 'Leaders':
+                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_3_path / 'optimal_clusters' / filename,
+                                facecolor='white', dpi=300)
+                else:
+                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_2_path / 'optimal_clusters' / filename,
+                                facecolor='white', dpi=300)
                 plt.show()
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
@@ -419,9 +328,14 @@ class nlp_pipeline_essay_2_3():
                 ax.grid()
                 plt.xlabel('k')
                 plt.ylabel('silhouette_scores (cosine distance)')
-                plt.title(self.initial_panel + sample + ss_name + ' Silhouette Scores For Optimal k')
+                plt.title(self.initial_panel + ' ' + sample + ' ' + ss_name + ' Silhouette Scores For Optimal k')
                 filename = self.initial_panel + '_' + sample + '_' + ss_name + '_silhouette_optimal_cluster.png'
-                fig.savefig(nlp_pipeline.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
+                if sample == 'Leaders':
+                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_3_path / 'optimal_clusters' / filename,
+                                facecolor='white', dpi=300)
+                else:
+                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_2_path / 'optimal_clusters' / filename,
+                                facecolor='white', dpi=300)
                 plt.show()
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
@@ -443,7 +357,7 @@ class nlp_pipeline_essay_2_3():
             for ss_name, matrix in content.items():
                 print('KMEANS CLUSTER')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                kmeans = KMeans(n_clusters=nlp_pipeline.optimal_km_clusters_201907[sample][ss_name],
+                kmeans = KMeans(n_clusters=nlp_pipeline_essay_2_3.optimal_km_clusters_201907[sample][ss_name],
                                 init=init,
                                 random_state=random_state)
                 y_kmeans = kmeans.fit_predict(matrix)  # put matrix_transformed_df here would generate same result as put matrix_transformed
@@ -454,7 +368,7 @@ class nlp_pipeline_essay_2_3():
         # --------------------------- save -------------------------------------------------
         # for this one, you do not need to run text cluster label every month when you scraped new data, because they would more or less stay the same
         filename = self.initial_panel + '_predicted_labels_dict.pickle'
-        q = nlp_pipeline.panel_path / 'predicted_text_labels' / filename
+        q = nlp_pipeline_essay_2_3.panel_essay_2_3_common_path / 'predicted_text_labels' / filename
         pickle.dump(self.output_labels, open(q, 'wb'))
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
