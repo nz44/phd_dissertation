@@ -503,41 +503,6 @@ class reg_preparation_essay_2_3():
             print(dfn)
             return dfn
 
-    def create_minInstalls_dummies(self):
-        """
-        minInstalls dummies are time variant
-        This should be the same as dividing rule of sub-samples into ImputedminInstalls_tier1,
-        tier2 and tier3 in STEP3_sub_samples.py
-        """
-        df1 = self.select_vars(time_variant_vars_list=['ImputedminInstalls'])
-        for i in self.all_panels:
-            df1['minInstallsTop_' + i] = df1['ImputedminInstalls_' + i].apply(
-                lambda x: 1 if x >= 1.000000e+07 else 0)
-            df1['minInstallsMiddle_' + i] = df1['ImputedminInstalls_' + i].apply(
-                lambda x: 1 if x < 1.000000e+07 and x >= 1.000000e+05 else 0)
-            df1['minInstallsBottom_' + i] = df1['ImputedminInstalls_' + i].apply(
-                lambda x: 1 if x < 1.000000e+05 else 0)
-            df1['CategoricalminInstalls' + '_' + i] = None
-            df1.loc[df1['minInstallsTop' + '_' + i] == 1, 'CategoricalminInstalls' + '_' + i] = 'Top'
-            df1.loc[df1['minInstallsMiddle' + '_' + i] == 1, 'CategoricalminInstalls' + '_' + i] = 'Middle'
-            df1.loc[df1['minInstallsBottom' + '_' + i] == 1, 'CategoricalminInstalls' + '_' + i] = 'Bottom'
-        dcols = ['ImputedminInstalls_' + i for i in self.all_panels]
-        df1.drop(dcols, axis=1, inplace=True)
-        self.cdf = self.cdf.join(df1, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
-                                   subsample_names=self.ssnames,
-                                   df=self.df,
-                                   text_label_df=self.text_label_df,
-                                   combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
-
     def impute_missingSize_as_zero(self):
         """
         size is time invariant, use the mode size as the time invariant variable.
@@ -740,7 +705,7 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def create_post_dummy_and_interactions(self, n):
+    def create_post_dummy_and_interactions(self):
         start_covid_us = datetime.strptime('202003', "%Y%m")
         nichedummies = self.gather_nicheDummies_into_list()
         created_POST_dummies = []
@@ -855,11 +820,16 @@ class reg_preparation_essay_2_3():
             for name2 in content1:
                 niche_dummy_col = name1 + '_' + name2 +'_NicheDummy'
                 gathered_list.append(niche_dummy_col)
-        # niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(n)]
-        # gathered_list.extend(niche_scale_cols)
-        for i in self.cdf.columns:
-            if 'PostX' in i:
-                gathered_list.append(i)
+        print('Gathered niche variables list (including interactions if exist): ', len(gathered_list))
+        print(gathered_list)
+        return gathered_list
+
+    def gather_PostNicheDummies_into_list(self):
+        gathered_list = []
+        for name1, content1 in self.ssnames.items():
+            for name2 in content1:
+                niche_dummy_cols = ['PostX' + name1 + '_' + name2 +'_NicheDummy_' + i for i in self.all_panels]
+                gathered_list.extend(niche_dummy_cols)
         print('Gathered niche variables list (including interactions if exist): ', len(gathered_list))
         print(gathered_list)
         return gathered_list
@@ -867,15 +837,18 @@ class reg_preparation_essay_2_3():
     def gather_slice_dummies_into_list(self):
         gathered_list = []
         for name1, content1 in self.ssnames.items():
-            if name1 in ['minInstalls', 'genreId']:
-                gathered_list.extend(content1)
-            # you do not need to add top_digital_firms because it is already included in time-invariant variables
-            # adding twice will result in .loc failures
+            gathered_list.append(name1)
+            for i in content1:
+                if i != 'full':
+                    gathered_list.append(i)
+        gathered_list = list(set(gathered_list))
+        print("SLICING DUMMIES : ", gathered_list)
         return gathered_list
 
-    def select_all_vars_before_slice_subsamples(self, time_variant_vars, time_invariant_vars, n):
+    def select_all_vars_before_slice_subsamples(self, time_variant_vars, time_invariant_vars):
         niche_dummies_cols = self.gather_nicheDummies_into_list()
-        allvars= niche_dummies_cols + time_invariant_vars
+        post_niche_dummies_cols = self.gather_PostNicheDummies_into_list()
+        allvars= niche_dummies_cols + post_niche_dummies_cols + time_invariant_vars
         for var in time_variant_vars:
             varss = [var + '_' + i for i in self.all_panels]
             allvars.extend(varss)
@@ -889,32 +862,25 @@ class reg_preparation_essay_2_3():
         print(len(allvars), 'have been selected')
         return df3
 
-    def slice_subsample_dataframes(self, time_variant_vars, time_invariant_vars, n):
+    def slice_subsample_dataframes(self, time_variant_vars, time_invariant_vars):
         """
         Internal function that will be called by graph functions
         """
-        df2 = self.select_all_vars_before_slice_subsamples(time_variant_vars, time_invariant_vars, n)
+        df2 = self.select_all_vars_before_slice_subsamples(time_variant_vars, time_invariant_vars)
         df_dict = dict.fromkeys(self.ssnames.keys())
         for name1, content1 in self.ssnames.items():
-            if name1 in ['minInstalls', 'genreId']:
-                df_dict[name1] = dict.fromkeys(content1)
-                for name2 in df_dict[name1].keys():
-                    df_dict[name1][name2] = df2.loc[df2[name2] == 1]
+            df_dict[name1] = dict.fromkeys(content1)
+            for name2 in df_dict[name1].keys():
+                if name2 == 'full':
+                    df_dict[name1][name2] = df2.loc[df2[name1] == 1]
                     print(name1, ' ', name2, ' sliced ', df_dict[name1][name2].shape)
-            elif name1 == 'full':
-                df_dict[name1] = {'full': None}
-                df_dict[name1]['full'] = df2
-                print(name1, ' full ', ' sliced ', df_dict[name1]['full'].shape)
-            elif name1 == 'developer':
-                df_dict[name1] = {'top': None, 'non-top': None}
-                df_dict[name1]['top'] = df2.loc[df2['top_digital_firms'] == 1]
-                print(name1, ' top ', ' sliced ', df_dict[name1]['top'].shape)
-                df_dict[name1]['non-top'] = df2.loc[df2['top_digital_firms'] == 0]
-                print(name1, ' non-top ', ' sliced ', df_dict[name1]['non-top'].shape)
+                else:
+                    df_dict[name1][name2] = df2.loc[(df2[name1] == 1) & (df2[name2] == 1)]
+                    print(name1, ' ', name2, ' sliced ', df_dict[name1][name2].shape)
         print(self.initial_panel, ' FINISHED Slicing Sub Samples')
         return df_dict
 
-    def convert_df_from_wide_to_long(self, time_variant_vars, time_invariant_vars, n):
+    def convert_df_from_wide_to_long(self, time_variant_vars, time_invariant_vars):
         """
         :param time_variant_vars: includes demeaned and original (imputed), and dependant variables
         :param time_invariant_vars:
@@ -927,12 +893,9 @@ class reg_preparation_essay_2_3():
             for name2 in content:
                 stub_post = 'PostX' + name1 + '_' + name2 + '_' + 'NicheDummy'
                 stub_names.append(stub_post)
-        for i in range(n):
-            stub_post = 'PostXfull_full_NicheScaleDummy_' + str(i)
-            stub_names.append(stub_post)
         print('CREATED stubnames for conversion from wide to long:')
         print(stub_names)
-        df_dict = self.slice_subsample_dataframes(time_variant_vars, time_invariant_vars, n)
+        df_dict = self.slice_subsample_dataframes(time_variant_vars, time_invariant_vars)
         self.long_cdf = dict.fromkeys(df_dict.keys())
         for name1, content1 in df_dict.items():
             self.long_cdf[name1] = dict.fromkeys(content1.keys())
@@ -950,7 +913,7 @@ class reg_preparation_essay_2_3():
         print('FINISHED converting from wide to long')
         # --------------------------- save -------------------------------------------------
         filename = self.initial_panel + '_converted_long_table.pickle'
-        q = reg_preparation_essay_2_3.panel_path / 'converted_long_tables' / filename
+        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'converted_long_tables' / filename
         pickle.dump(self.long_cdf, open(q, 'wb'))
         print(self.initial_panel, ' SAVED LONG TABLES. ')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
