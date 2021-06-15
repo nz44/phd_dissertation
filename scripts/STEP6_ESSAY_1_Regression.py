@@ -115,7 +115,7 @@ class regression():
                            single_panel_df=self.single_panel_df,
                            subsample_op_results=self.subsample_op_results)
 
-    def select_x_y_for_subsample(self, n_niche_scales):
+    def select_x_y_for_subsample(self, n_niche_scales, individual_dummies):
         self.reg_dict_xy = dict.fromkeys(self.reg_dict.keys())
         for name1, content1 in self.reg_dict.items():
             self.reg_dict_xy[name1] = dict.fromkeys(content1.keys())
@@ -133,9 +133,12 @@ class regression():
                     # -------------------------------------------------------------------------------
                     niche_scale_cols = ['full_full_NicheScaleDummy_' + str(i) for i in range(1, n_niche_scales)]
                     x_vars_full_sd = niche_scale_cols \
-                                    + ['PostX' + i for i in niche_scale_cols] \
-                                    + x_vars + self.dep_vars
-                    self.reg_dict_xy['full']['full']['NicheScaleDummies'] = df[x_vars_full_sd]
+                                     + ['PostX' + i for i in niche_scale_cols] \
+                                     + x_vars + self.dep_vars
+                    if individual_dummies is False:
+                        self.reg_dict_xy['full']['full']['NicheScaleDummies'] = df[x_vars_full_sd]
+                    else:
+                        self.reg_dict_xy = df
                 # you can delete this elif block once you've run the may 2021 procedure because sub-sample and minInstallstop dummies are the same
                 elif 'minInstalls' in name2:
                     self.reg_dict_xy['minInstalls'][name2] = dict.fromkeys(['NicheDummy'])

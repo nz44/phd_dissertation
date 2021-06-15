@@ -289,8 +289,25 @@ class divide_essay_2_3():
         self.division_rules = division_rules
         self.subsamples_count_table = subsamples_count_table
 
-    def open_imputed_and_deleted_missing_df(self, name):
-        f_name = self.initial_panel + '_' + name + '.pickle'
+    def open_imputed_and_deleted_missing_df(self):
+        f_name = self.initial_panel + '_imputed_and_deleted_missing.pickle'
+        # use panel 1 path because the previous step, STEP2_pre_processing.py,
+        # saved imputed and deleted missing to panel 1 path
+        q = divide_essay_2_3.panel_path_essay_1 / f_name
+        with open(q, 'rb') as f:
+            self.df = pickle.load(f)
+        return divide_essay_2_3(initial_panel=self.initial_panel,
+                                  all_panels=self.all_panels,
+                                  df=self.df,
+                                  sub_sample_vars_dict=self.ssvard,
+                                  sub_sample_counts=self.sscounts,
+                                  division_rules=self.division_rules,
+                                  subsamples_count_table=self.subsamples_count_table)
+
+    def open_imputed_deleted_top_firm_df(self):
+        f_name = self.initial_panel + '_imputed_deleted_top_firm.pickle'
+        # use panel 1 path because the previous step, STEP2_pre_processing.py,
+        # saved imputed and deleted missing to panel 1 path
         q = divide_essay_2_3.panel_path_essay_2_3_common / f_name
         with open(q, 'rb') as f:
             self.df = pickle.load(f)

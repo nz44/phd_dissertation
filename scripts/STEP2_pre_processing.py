@@ -89,20 +89,6 @@ class pre_processing():
             dfs.append(df2)
         return dfs
 
-    def mean_of_var_panels(self, var):
-        new_df = self.select_the_var(var=var)
-        new_df_mean = new_df.mean(axis=1).to_frame(name=var+'_stats')
-        new_df = new_df.join(new_df_mean, how='inner')
-        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
-        return new_df
-
-    def standard_deviation_of_var_panels(self, var):
-        new_df = self.select_the_var(var=var)
-        new_df_std = new_df.std(axis=1).to_frame(name=var+'_stats')
-        new_df = new_df.join(new_df_std, how='inner')
-        new_df.sort_values(by=var+'_stats', axis=0, ascending=False, inplace=True)
-        return new_df
-
     def count_missing(self, var_list, name, select_one_panel=None):
         dfs = self.select_dfs_from_var_list(var_list=var_list,
                                             select_one_panel=select_one_panel)

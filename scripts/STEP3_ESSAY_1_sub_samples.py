@@ -35,7 +35,7 @@ class divide():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
 
     descriptive_stats_tables = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/descriptive_stats/tables')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/tables')
 
     # https://www.forbes.com/top-digital-companies/list/3/#tab:rank
     # https://companiesmarketcap.com/tech/largest-tech-companies-by-market-cap/

@@ -98,7 +98,7 @@ class convert():
     tracking_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
     imputed_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
     df1_to_combine = ['developerId',
                       'developerWebsite',
                       'developerEmail',
@@ -231,10 +231,13 @@ class convert():
     def merge_panels_into_single_df(self):
         old_data = self.format_cols() # this is a dictionary with panel as keys
         df_list = []
+        print('start merging the dataframe for all the panels below')
         for panel, df in old_data.items():
+            print(panel)
             df = df.add_suffix('_' + panel)
             df_list.append(df)
         merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
+        print('merged dataframe for all the panels above')
         self.merged_df = merged_df
         # --------------------------- save --------------------------------------
         filename = self.initial_panel + '_MERGED.pickle'

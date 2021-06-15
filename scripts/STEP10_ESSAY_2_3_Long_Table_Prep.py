@@ -24,7 +24,11 @@ yearmonth = today.strftime("%Y%m")
 
 class reg_preparation_essay_2_3():
     """by default, regression analysis will either use cross sectional data or panel data with CONSECUTIVE panels,
-    this is because we can calculate t-1 easily."""
+    this is because we can calculate t-1 easily.
+    Two major changes:
+    1. I deleted the old scatter plots of niche text cluster vs. key variables.
+    2. Deleted everything related to nichescale dummies because this does not reveal important information.
+    """
     panel_essay_2_3_common_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_2_3_common_panels___')
     panel_essay_2_path = Path(
@@ -63,7 +67,6 @@ class reg_preparation_essay_2_3():
                  initial_panel,
                  all_panels,
                  tcn,
-                 niche_keyvar_dfs=None,
                  subsample_names=None,
                  df=None,
                  text_label_df=None,
@@ -78,7 +81,6 @@ class reg_preparation_essay_2_3():
         self.initial_panel = initial_panel
         self.all_panels = all_panels
         self.tcn = tcn
-        self.niche_kv_dfs = niche_keyvar_dfs
         self.ssnames = subsample_names
         self.df = df # df is the output of combine_imputed_deleted_missing_with_text_labels
         self.text_label_df = text_label_df
@@ -103,7 +105,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -122,7 +123,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -145,7 +145,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -172,7 +171,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -212,7 +210,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -264,7 +261,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -275,7 +271,37 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def text_cluster_bar_chart(self):
+    def _set_title_and_save_graphs(self, ax, fig, name1, name2, graph_title, relevant_folder_name):
+        """
+        generic internal function to save graphs according to essay 2 (non-leaders) and essay 3 (leaders).
+        name1 and name2 are the key names of self.ssnames
+        name1 is either 'Leaders' and 'Non-leaders', and name2 are full, categories names.
+        graph_title is what is the graph is.
+        """
+        # ------------ set title ----------------------------------------
+        subsample_name = name1 + ' ' + name2
+        title = self.initial_panel + ' ' \
+                + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] \
+                + graph_title
+        title = title.title()
+        ax.set_title(title)
+        filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + graph_title + '.png'
+        if name1 == 'Leaders':
+            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_3 / relevant_folder_name / filename,
+                        facecolor='white',
+                        dpi=300)
+        else:
+            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_2 / relevant_folder_name / filename,
+                        facecolor='white',
+                        dpi=300)
+
+    def text_cluster_bar_chart_numApps_against_rank(self):
+        """
+        This graph has x-axis as the order rank of text clusters, (for example we have 250 text clusters, we order them from 0 to 249, where
+        0th text cluster contains the largest number of apps, as the order rank increases, the number of apps contained in each cluster
+        decreases, the y-axis is the number of apps inside each cluster).
+        Second meeting with Leah discussed that we will use self.text_cluster_bar_chart_numClusters_against_numApps
+        """
         lcc = copy.deepcopy(self.tlc_df)
         for name1, content1 in lcc.items():
             for name2, content2 in content1.items():
@@ -284,7 +310,9 @@ class reg_preparation_essay_2_3():
                 # -------------- plot ----------------------------------------------------------------
                 fig, ax = plt.subplots()
                 # color the top_n bars
+                # after sort descending, the first n ranked clusters (the number in broad_niche_cutoff) is broad
                 color = ['red'] * self.broad_niche_cutoff[name1][name2]
+                # and the rest of all clusters are niche
                 rest = len(df3.index) - self.broad_niche_cutoff[name1][name2]
                 color.extend(['blue'] * rest)
                 ax = df3.plot.bar(x='text clusters',
@@ -310,26 +338,15 @@ class reg_preparation_essay_2_3():
                                 textcoords='offset points')
                 ax.set_xlabel("Text Clusters")
                 ax.set_ylabel("Number of Apps")
-                # ------------ set title ----------------------------------------
-                subsample_name = name1 + ' ' + name2
-                title = self.initial_panel + ' ' \
-                            + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] \
-                            + ' Text Cluster Bar Graph'
-                title = title.title()
-                ax.set_title(title)
-                filename = self.initial_panel + '_' + name1 + '_' + name2 + '_text_cluster_bar.png'
-                if name1 == 'Leaders':
-                    fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_3 / 'text_cluster_bar' / filename,
-                            facecolor='white',
-                            dpi=300)
-                else:
-                    fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_2 / 'text_cluster_bar' / filename,
-                            facecolor='white',
-                            dpi=300)
+                # ------------ set title and save ----------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                ax=ax,
+                                                name1=name1, name2=name2,
+                                                graph_title='Text Cluster Bar Graph',
+                                                relevant_folder_name = 'Text Cluster Rank Bar')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -340,51 +357,117 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def niche_scale_scatter_plot_against_key_vars(self, the_panel):
-        key_vars = ['Imputedprice', 'offersIAPTrue', 'containsAdsTrue', 'paidTrue']
-        selected_vars = [i + '_' + the_panel for i in key_vars]
-        df2 = self.cdf.copy(deep=True)
-        # ------------ fill in self.niche_kv_dfs -----------------------------------------------------
-        self.niche_kv_dfs = {}
-        for key, sub_sample_dummies in self.ssnames.items():
-            self.niche_kv_dfs[key] = {}
-            if key == 'full':
-                svars = copy.deepcopy(selected_vars)
-                svars.extend(['full_full_kmeans_labels'])
-                df = df2.loc[:, svars]
-                self.niche_kv_dfs['full']['full'] = df
-            elif key == 'developer':
-                svars = copy.deepcopy(selected_vars)
-                svars.extend(['top_digital_firms',
-                              'developer_top_kmeans_labels',
-                              'developer_non-top_kmeans_labels'])
-                self.niche_kv_dfs['developer']['top'] = df2.loc[df2['top_digital_firms']==1, svars]
-                self.niche_kv_dfs['developer']['non-top'] = df2.loc[
-                    df2['top_digital_firms'] == 0, svars]
-            else:
-                for ss_dummy in sub_sample_dummies:
-                    svars = copy.deepcopy(selected_vars)
-                    svars.extend([ss_dummy, key + '_' + ss_dummy + '_kmeans_labels'])
-                    self.niche_kv_dfs[key][ss_dummy] = df2.loc[df2[ss_dummy]==1, svars]
-        # ------------ create niche indicator according to group size (prepare to graph)  -----------
-        for name1, content1 in self.niche_kv_dfs.items():
-            for name2, df in content1.items():
-                df2 = self._create_index_indicator_based_on_group_size(name1=name1, name2=name2, df=df)
-                # the reason there are nan in niche indicators is because in 202104 the niche labels are generated with different subsamples
-                # because the cutoff points are adjusted in 202105. Thus some previous memebrs were not in this group, thus they were
-                # not accounted for when generating text labels within each sub samples.
-                print(name1, name2, ' BEFORE dropping nan in niche indicators : ', df.shape)
-                df2.dropna(subset=['niche_indicators'], inplace=True)
-                print(name1, name2, ' AFTER dropping nan in niche indicators : ', df.shape)
-                fig = self._scatter_graph_niche_indicator_against_a_key_var(name1=name1,
-                                                                            name2=name2,
-                                                                            df=df2,
-                                                                            key_vars=selected_vars,
-                                                                            the_panel=the_panel)
+    def _num_clusters_in_each_numApp_range(self):
+        res = dict.fromkeys(self.tlc_df.keys())
+        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
+        for k1, content1 in self.tlc_df.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
+                df3.columns = ['Number of Clusters']
+                df3.reset_index(inplace=True)
+                df3.rename(columns={ df3.columns[0]: 'Apps Contained in One Cluster'}, inplace = True)
+                res[k1][k2] = df3
+        return res
+
+    def text_cluster_bar_chart_numClusters_against_numApps(self):
+        """
+        Create a ranked categorical variable, number of apps interval, and number of clusters in each app number interval
+        """
+        res = self._num_clusters_in_each_numApp_range()
+        for name1, content1 in res.items():
+            for name2, dfres in content1.items():
+                fig, ax = plt.subplots()
+                ax = dfres.plot.bar(x='Apps Contained in One Cluster',
+                                    y='Number of Clusters',
+                                    rot=40, # rot is **kwarg rotation for ticks
+                                    ax=ax)  # make sure to add ax=ax, otherwise this ax subplot is NOT on fig
+                ax.yaxis.set_ticks_position('left')
+                ax.yaxis.grid() # only horizontal grid lines
+                ax.get_legend().remove() # single color bar does not need legend
+                ax.set_xlabel("Apps Contained in One Cluster")
+                ax.set_ylabel("Number of Clusters")
+                fig.subplots_adjust(bottom=0.25) # The position of the bottom edge of the subplots, as a fraction of the figure height.
+                # ------------ set title and save ----------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                ax=ax,
+                                                name1=name1, name2=name2,
+                                                graph_title='Text Cluster Sizes',
+                                                relevant_folder_name='Text Cluster Sizes')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
+                                   subsample_names=self.ssnames,
+                                   df=self.df,
+                                   text_label_df=self.text_label_df,
+                                   combined_df=self.cdf,
+                                   text_label_count_df=self.tlc_df,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    def _select_df_for_key_vars_against_text_clusters(self, key_vars, the_panel):
+        """
+        Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
+        This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
+        """
+        selected_vars = [i + '_' + the_panel for i in key_vars]
+        df2 = self.cdf.copy(deep=True)
+        d = {}
+        for name1, content1 in self.ssnames.items():
+            d[name1] = dict.fromkeys(content1)
+            for name2 in content1:
+                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
+                svars = selected_vars + [text_label_var]
+                if name2 == 'full':
+                    df3 = df2.loc[df2[name1]==1]
+                    d[name1][name2] = df3[svars]
+                else:
+                    df3 = df2.loc[(df2[name2] == 1) & (df2[name1]==1)]
+                    d[name1][name2] = df3[svars]
+        return d
+
+    def _price_in_grouped_text_cluster(self, key_vars, the_panel):
+        d = self._select_df_for_key_vars_against_text_clusters(self, key_vars, the_panel)
+        res = dict.fromkeys(self.tlc_df.keys())
+        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
+        for k1, content1 in self.tlc_df.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
+                df3.columns = ['Number of Clusters']
+                df3.reset_index(inplace=True)
+                df3.rename(columns={ df3.columns[0]: 'Apps Contained in One Cluster'}, inplace = True)
+                res[k1][k2] = df3
+        return res
+
+    def _mean_dep_var_in_grouped_text_cluster(self, key_vars, the_panel):
+        """
+        The dep vars here exclude price because that does not need to be mean, that are left as individual data points
+        """
+        d = self._select_df_for_key_vars_against_text_clusters(self, key_vars, the_panel)
+        res = dict.fromkeys(self.tlc_df.keys())
+        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
+        for k1, content1 in self.tlc_df.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
+                df3.columns = ['Number of Clusters']
+                df3.reset_index(inplace=True)
+                df3.rename(columns={ df3.columns[0]: 'Apps Contained in One Cluster'}, inplace = True)
+                res[k1][k2] = df3
+        return res
+
+    def niche_scale_scatter_plot_against_key_vars_new(self, key_vars, the_panel):
+        res_price = self._price_in_grouped_text_cluster(key_vars, the_panel)
+        res_mean_dep = self._mean_dep_var_in_grouped_text_cluster(key_vars, the_panel)
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -397,7 +480,7 @@ class reg_preparation_essay_2_3():
 
     def _create_index_indicator_based_on_group_size(self, name1, name2, df):
         """
-        :param df: the df stored in self.niche_kv_dfs, after running self.niche_scale_scatter_plot_against_key_vars
+        :param df: the df stored in d, after running self.niche_scale_scatter_plot_against_key_vars
         :return:
         """
         df2 = df.copy(deep=True)
@@ -409,70 +492,6 @@ class reg_preparation_essay_2_3():
         for i in niche_label_and_indicators:
             df2.at[df2[name1 + '_' + name2 + '_kmeans_labels'] == i[0], 'niche_indicators'] = i[1]
         return df2
-
-    def _scatter_graph_niche_indicator_against_a_key_var(self, name1, name2, df, key_vars, the_panel):
-        """
-        :param df: the df output of self._create_index_indicator_based_on_group_size
-        :param key_vars: a list of key variables
-        :return:
-        """
-        fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(11, 8.5))
-        fig.tight_layout(pad=3)
-        for i in range(len(key_vars)):
-            if 'price' in key_vars[i]:
-                pass
-                ax.flat[i] = df.plot.scatter(x='niche_indicators',
-                                        y=key_vars[i], ax=ax.flat[i])
-                ax.flat[i].set_ylabel('Price')
-                np1 = df['niche_indicators'].to_numpy()
-            else:
-                df2 = df.copy(deep=True)
-                df3 = df2[['niche_indicators', key_vars[i]]]
-                df3['Apps'] = 1 # count column
-                df4 = df3.groupby(['niche_indicators', key_vars[i]]).sum().unstack()
-                df4 = df4.fillna(0) # beacuse nan means actually there is no member in the group
-                ax.flat[i] = df4.plot(kind='bar', y='Apps', stacked=True, ax=ax.flat[i])
-                ax.flat[i].set_ylabel('Apps')
-                np1 = df4.index.to_numpy()
-            if name1 == 'full':
-                ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 50.0).astype(int))
-            elif name1 == 'developer':
-                if name2 == 'top':
-                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 10.0).astype(int))
-                else:
-                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 25.0).astype(int))
-            elif name1 == 'minInstalls':
-                if name2 == 'ImputedminInstalls_tier1':
-                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 50.0).astype(int))
-                elif name2 == 'ImputedminInstalls_tier2':
-                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 50.0).astype(int))
-                else:
-                    ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 10.0).astype(int))
-            else:
-                ax.flat[i].set_xticks(np.arange(min(np1), max(np1) + 1, 5.0).astype(int))
-            ax.flat[i].set_xticklabels(ax.flat[i].get_xticks(), rotation=0)
-            ax.flat[i].set_xlabel('Niche Scale (0 is the most broad type)')
-        # ------------ set title --------------------------------------
-        if name1 != 'genreId':
-            subsample_name = name1 + ' ' + name2
-            title = self.initial_panel + ' Dataset -- Panel ' + the_panel + ' ' \
-                     + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] \
-                     + '\nPricing Variables Against Niche Scale'
-        else:
-            title = self.initial_panel + ' Dataset -- Panel ' + the_panel + ' ' \
-                     + name1 + ' ' + name2 \
-                     + '\nPricing Variables Against Niche Scale'
-            title = title.replace("genreId", "Category")
-            title = title.replace("_", " ")
-            title = title.lower()
-        title = title.title()
-        fig.suptitle(title, fontsize=14)
-        plt.subplots_adjust(top=0.9)
-        filename = self.initial_panel + '_' + the_panel + '_' + name1 + '_' + name2 + '_niche_scale_scatter.png'
-        fig.savefig(reg_preparation_essay_2_3.descriptive_stats_graphs / 'niche_scale_scatter' / filename,
-                    facecolor='white',
-                    dpi=300)
-        return fig
 
     ###########################################################################################################
     # Create Variables for Regression / Descriptive Stats
@@ -518,7 +537,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -544,7 +562,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -570,7 +587,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -594,7 +610,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -615,7 +630,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -638,41 +652,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
-                                   subsample_names=self.ssnames,
-                                   df=self.df,
-                                   text_label_df=self.text_label_df,
-                                   combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
-
-    def create_NicheScaleDummies_for_full_sample(self, n):
-        """
-        I am going to skip this step for essay 2 and essay 3 because in essay 1 this does not seem to produce meaningful results.
-        """
-        df2 = self.cdf.copy(deep=True)
-        df3 = df2.groupby(['full_full_kmeans_labels']).size().sort_values(ascending=False)
-        x = round(len(df3) / n)
-        frames = [df3.iloc[j * x:(j + 1) * x].copy() for j in range(n - 1)]
-        last_df = df3.iloc[(n - 1) * x: len(df3)]
-        frames.extend([last_df])
-        labels = [list(dff.index.values) for dff in frames]
-        for z in range(n):
-            self.cdf['full_full_NicheScaleDummy_' + str(z)] = self.cdf['full_full_kmeans_labels'].apply(
-                lambda x: 1 if x in labels[z] else 0)
-        nichescales = []
-        for i in self.cdf.columns:
-            if 'full_full_NicheScaleDummy_' in i:
-                nichescales.append(i)
-        print('FINISHED creating niche scale dummies for full sample: ')
-        print(nichescales)
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -694,7 +673,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -728,7 +706,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -756,7 +733,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -795,7 +771,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
@@ -919,7 +894,6 @@ class reg_preparation_essay_2_3():
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
-                                   niche_keyvar_dfs=self.niche_kv_dfs,
                                    subsample_names=self.ssnames,
                                    df=self.df,
                                    text_label_df=self.text_label_df,
