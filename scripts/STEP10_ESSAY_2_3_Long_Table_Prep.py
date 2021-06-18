@@ -364,6 +364,8 @@ class reg_preparation_essay_2_3():
             res[k1] = dict.fromkeys(content1.keys())
             for k2, df in content1.items():
                 df2 = df.copy(deep=True)
+                # since the min number of apps in a cluster is 1, not 0, so the smallest range (0, 1] is OK.
+                # there is an option include_loweest == True, however, it will return float, but I want integer bins, so I will leave it
                 df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
                 df3.columns = ['Number of Clusters']
                 df3.reset_index(inplace=True)
@@ -429,20 +431,42 @@ class reg_preparation_essay_2_3():
                     d[name1][name2] = df3[svars]
         return d
 
-    def _price_in_grouped_text_cluster(self, key_vars, the_panel):
-        d = self._select_df_for_key_vars_against_text_clusters(self, key_vars, the_panel)
-        res = dict.fromkeys(self.tlc_df.keys())
+    def _create_log_price_groupby_text_cluster_df(self, key_vars, the_panel):
+        d = self._select_df_for_key_vars_against_text_clusters(key_vars, the_panel)
+        res = dict.fromkeys(d.keys())
         ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in self.tlc_df.items():
+        for k1, content1 in d.items():
             res[k1] = dict.fromkeys(content1.keys())
             for k2, df in content1.items():
                 df2 = df.copy(deep=True)
-                df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
-                df3.columns = ['Number of Clusters']
-                df3.reset_index(inplace=True)
-                df3.rename(columns={ df3.columns[0]: 'Apps Contained in One Cluster'}, inplace = True)
-                res[k1][k2] = df3
+                # create price log (since many prices are zeroes, so add 1
+                df2['LogImputedprice_' + the_panel] = np.log2(df2['Imputedprice_' + the_panel]+1)
+                # count number of apps in each text cluster
+                def _number_apps_in_each_text_cluster(df2):
+                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
+                    return s1
+                s1 = _number_apps_in_each_text_cluster(df2)
+                # assign that number to dataframe
+                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
+                # create categorical variable indicating how many number of apps are there in a text cluster
+                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
+                res[k1][k2] = df2
         return res
+
+    def scatter_log_price_text_cluster_categorical_plot(self, key_vars, the_panel):
+        d = self._select_df_for_key_vars_against_text_clusters(self, key_vars, the_panel)
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   df=self.df,
+                                   text_label_df=self.text_label_df,
+                                   combined_df=self.cdf,
+                                   text_label_count_df=self.tlc_df,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
 
     def _mean_dep_var_in_grouped_text_cluster(self, key_vars, the_panel):
         """
