@@ -22,7 +22,7 @@ today = datetime.today()
 yearmonth = today.strftime("%Y%m")
 
 
-class reg_preparation():
+class reg_preparation_old():
     """by default, regression analysis will either use cross sectional data or panel data with CONSECUTIVE panels,
     this is because we can calculate t-1 easily."""
     panel_path = Path(
@@ -92,7 +92,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -111,7 +111,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -133,7 +133,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -160,7 +160,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -200,7 +200,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -252,7 +252,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -320,7 +320,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -375,7 +375,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -518,7 +518,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -544,7 +544,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -570,7 +570,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -596,7 +596,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -620,7 +620,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -641,7 +641,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -664,7 +664,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -702,7 +702,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -724,7 +724,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -758,7 +758,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -786,7 +786,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -825,7 +825,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -951,7 +951,7 @@ class reg_preparation():
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,

@@ -99,7 +99,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -135,7 +135,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -159,7 +159,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -208,7 +208,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -235,7 +235,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -382,7 +382,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
@@ -449,7 +449,7 @@ time_variant_vars = ['score', 'reviews', ]
                                    df=self.df,
                                    text_label_df=self.text_label_df,
                                    combined_df=self.cdf,
-                                   text_label_count_df=self.tlc_df,
+                                   
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
