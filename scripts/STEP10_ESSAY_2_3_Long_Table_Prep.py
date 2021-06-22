@@ -421,10 +421,10 @@ class reg_preparation_essay_2_3():
                 # sns.catplot returns a facetgrid object, not axis subplot object
                 sns.set(style="whitegrid")
                 g = sns.catplot(x="Apps Contained in One Cluster",
-                             y="LogImputedprice_202106",
-                             data=res[name1][name2],
-                             height=6,  # make the plot 6 units high
-                             aspect=2   # width should be two times height
+                                y="LogImputedprice_202106",
+                                data=res[name1][name2],
+                                height=6,  # make the plot 6 units high
+                                aspect=2   # width should be two times height
                                 )
                 plt.xticks(rotation=45)
                 plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
@@ -518,6 +518,52 @@ class reg_preparation_essay_2_3():
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
+
+    def put_4_dep_vars_graphs_into_single_graph(self, key_vars, the_panel):
+        res1 = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
+        # --------------------------- putting into figure ------------------------------------
+        fig, axes = plt.subplots(2, 2, figsize=(24, 12))
+        for i, ax in enumerate(axes.flatten()):
+            for name1, content1 in self.ssnames.items():
+                for name2 in content1:
+                    if key_vars[i] == 'Imputedprice':
+                        ax = sns.stripplot(x="Apps Contained in One Cluster",
+                                           y="LogImputedprice_202106",
+                                           data=res1[name1][name2])
+                        ax.set_xlabel("Number of Apps Contained in One Cluster")
+                        ax.set_ylabel("Log Price")
+                        ax.set_xticklabels(ax.get_xticks(), rotation=45)
+                    else:
+                        res234 = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, key_vars[i])
+                        df3 = res234[name1][name2][0].copy(deep=True)
+                        df3['Apps Contained in One Cluster'] = df3['Apps Contained in One Cluster'].astype(str)
+                        ax = sns.histplot(data=df3,
+                                      x='Apps Contained in One Cluster',
+                                      hue= key_vars[i] + '_' + the_panel,
+                                      stat='probability',
+                                      multiple='stack',
+                                      shrink=0.8)
+                        ax.set_xlabel("Number of Apps Contained in One Cluster")
+                        ax.set_ylabel('Percentage Points')
+                        top_bar = mpatches.Patch(label=key_vars[i] + ' : No')
+                        bottom_bar = mpatches.Patch(label=key_vars[i] + ' : Yes')
+                        ax.legend(handles=[top_bar, bottom_bar])
+                        ax.set_xticklabels(ax.get_xticks(), rotation=45)
+                    # ------------ set title and save ---------------------------------------------
+                    self._set_title_and_save_graphs(fig=fig,
+                                                    name1=name1, name2=name2,
+                                                    graph_title= "Pricing Variables in Niche or Broad App Clusters",
+                                                    relevant_folder_name='four_dep_vars_in_one_graph')
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
 
     ################# functions to graph parallel trend with beta on the y-axis ###############################
 
