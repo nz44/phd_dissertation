@@ -493,8 +493,8 @@ class reg_preparation_essay_2_3():
                 bar2 = sns.barplot(x='Apps Contained in One Cluster', y=var + '_true_percentage', data=dfres[2], color='darkturquoise')
                 # add legend
                 sns.despine(right=True, top=True)
-                top_bar = mpatches.Patch(color='paleturquoise',  label = var + ' : No')
-                bottom_bar = mpatches.Patch(color='darkturquoise', label = var + ' : Yes')
+                top_bar = mpatches.Patch(color='paleturquoise',  label = var.replace("True", "") + ' : No')
+                bottom_bar = mpatches.Patch(color='darkturquoise', label = var.replace("True", "") + ' : Yes')
                 plt.legend(handles=[top_bar, bottom_bar])
                 # set title and save
                 plt.xticks(rotation=45)
@@ -522,38 +522,55 @@ class reg_preparation_essay_2_3():
     def put_4_dep_vars_graphs_into_single_graph(self, key_vars, the_panel):
         res1 = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
         # --------------------------- putting into figure ------------------------------------
-        fig, axes = plt.subplots(2, 2, figsize=(24, 12))
-        for i, ax in enumerate(axes.flatten()):
-            for name1, content1 in self.ssnames.items():
-                for name2 in content1:
+        for name1, content1 in self.ssnames.items():
+            for name2 in content1:
+                fig, ax = plt.subplots(nrows=2, ncols=2,
+                                       figsize=(11, 8.5),
+                                       sharex='col')
+                for i in range(len(key_vars)):
                     if key_vars[i] == 'Imputedprice':
-                        ax = sns.stripplot(x="Apps Contained in One Cluster",
-                                           y="LogImputedprice_202106",
-                                           data=res1[name1][name2])
-                        ax.set_xlabel("Number of Apps Contained in One Cluster")
-                        ax.set_ylabel("Log Price")
-                        ax.set_xticklabels(ax.get_xticks(), rotation=45)
+                        sns.set(style="whitegrid")
+                        sns.stripplot(  x="Apps Contained in One Cluster",
+                                        y="LogImputedprice_202106",
+                                        data=res1[name1][name2],
+                                        ax = ax.flat[i]) # you cannot do ax.flat[i] = sns.histplot, because it will not draw on axes.
+                        ax.flat[i].set_xlabel("Number of Apps Contained in One Cluster")
+                        ax.flat[i].set_ylabel("Log Price")
+                        ax.flat[i].xaxis.set_visible(True)
+                        for tick in ax.flat[i].get_xticklabels():
+                            tick.set_rotation(45)
                     else:
                         res234 = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, key_vars[i])
-                        df3 = res234[name1][name2][0].copy(deep=True)
-                        df3['Apps Contained in One Cluster'] = df3['Apps Contained in One Cluster'].astype(str)
-                        ax = sns.histplot(data=df3,
-                                      x='Apps Contained in One Cluster',
-                                      hue= key_vars[i] + '_' + the_panel,
-                                      stat='probability',
-                                      multiple='stack',
-                                      shrink=0.8)
-                        ax.set_xlabel("Number of Apps Contained in One Cluster")
-                        ax.set_ylabel('Percentage Points')
-                        top_bar = mpatches.Patch(label=key_vars[i] + ' : No')
-                        bottom_bar = mpatches.Patch(label=key_vars[i] + ' : Yes')
-                        ax.legend(handles=[top_bar, bottom_bar])
-                        ax.set_xticklabels(ax.get_xticks(), rotation=45)
-                    # ------------ set title and save ---------------------------------------------
-                    self._set_title_and_save_graphs(fig=fig,
-                                                    name1=name1, name2=name2,
-                                                    graph_title= "Pricing Variables in Niche or Broad App Clusters",
-                                                    relevant_folder_name='four_dep_vars_in_one_graph')
+                        # bar chart 1 -> is 1 because this is total value
+                        sns.set(style="whitegrid")
+                        sns.barplot(x='Apps Contained in One Cluster',
+                                    y=key_vars[i] + '_total_percentage',
+                                    data=res234[name1][name2][1],
+                                    color='paleturquoise',
+                                    ax = ax.flat[i])
+                        # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
+                        # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
+                        sns.barplot(x='Apps Contained in One Cluster',
+                                    y=key_vars[i] + '_true_percentage',
+                                    data=res234[name1][name2][2],
+                                    color='darkturquoise',
+                                    ax = ax.flat[i])
+                        ax.flat[i].set_xlabel("Number of Apps Contained in One Cluster")
+                        ax.flat[i].set_ylabel("Percentage Points")
+                        # add legend
+                        sns.despine(right=True, top=True)
+                        top_bar = mpatches.Patch(color='paleturquoise', label=key_vars[i].replace("True", "") + ' : No')
+                        bottom_bar = mpatches.Patch(color='darkturquoise', label=key_vars[i].replace("True", "") + ' : Yes')
+                        ax.flat[i].legend(handles=[top_bar, bottom_bar], ncol=2)
+                        ax.flat[i].xaxis.set_visible(True)
+                        for tick in ax.flat[i].get_xticklabels():
+                            tick.set_rotation(45)
+                # ------------ set title and save ---------------------------------------------
+                fig.subplots_adjust(bottom=0.15)
+                self._set_title_and_save_graphs(fig=fig,
+                                                name1=name1, name2=name2,
+                                                graph_title= "Pricing Variables in Niche or Broad App Clusters",
+                                                relevant_folder_name='four_dep_vars_in_one_graph')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
@@ -563,7 +580,6 @@ class reg_preparation_essay_2_3():
                                    nicheDummy_labels=self.nicheDummy_labels,
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
-
 
     ################# functions to graph parallel trend with beta on the y-axis ###############################
 
