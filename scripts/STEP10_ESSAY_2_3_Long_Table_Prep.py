@@ -105,6 +105,21 @@ class reg_preparation_essay_2_3():
             d = pickle.load(f)
         return d
 
+    def open_cross_section_reg_df(self):
+        filename = self.initial_panel + '_cross_section_df.pickle'
+        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'cross_section_dfs' / filename
+        with open(q, 'rb') as f:
+            self.cdf = pickle.load(f)
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
     def combine_text_labels_with_df(self):
         df = self._open_imputed_deleted_divided_df()
         d = self._open_predicted_labels_dict()
@@ -412,26 +427,33 @@ class reg_preparation_essay_2_3():
                 res[k1][k2] = df2
         return res
 
-    def scatter_log_price_text_cluster_categorical_plot(self, key_vars, the_panel):
+    def strip_violin_log_price_text_cluster_categorical_plot(self, key_vars, the_panel):
         res = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
         for name1, content1 in res.items():
             for name2, dfres in content1.items():
-                # seborn catplot is plt level plot, not axes subplot object
-                # https://drawingfromdata.com/pandas/seaborn/matplotlib/visualization/setting-figure-size-matplotlib-seaborn.html
-                # sns.catplot returns a facetgrid object, not axis subplot object
+                fig = plt.figure(figsize=(12, 6))
                 sns.set(style="whitegrid")
-                g = sns.catplot(x="Apps Contained in One Cluster",
-                                y="LogImputedprice_202106",
-                                data=res[name1][name2],
-                                height=6,  # make the plot 6 units high
-                                aspect=2   # width should be two times height
-                                )
+                fig.subplots_adjust(bottom=0.2)
+                sns.violinplot(
+                        x="Apps Contained in One Cluster",
+                        y="LogImputedprice_" + the_panel,
+                        data=res[name1][name2],
+                        color=".8",
+                        inner=None, # because you are overlaying stripplot
+                        cut=0
+                        )
+                # overlay swamp plot with box plot
+                sns.stripplot(
+                        x="Apps Contained in One Cluster",
+                        y="LogImputedprice_" + the_panel,
+                        data=res[name1][name2],
+                        jitter=True)
                 plt.xticks(rotation=45)
                 plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
-                g.set_axis_labels("Number of Apps Contained in One Cluster", "Log Price")
-                g.fig.subplots_adjust(left=0.06, bottom = 0.2)
+                plt.xlabel("Number of Apps Contained in One Cluster")
+                plt.ylabel("Log Price")
                 # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=g.fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
+                self._set_title_and_save_graphs(fig=fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
                                                 name1=name1, name2=name2,
                                                 graph_title="Log Prices in Niche or Broad App Clusters",
                                                 relevant_folder_name='niche_scale_scatter_new')
@@ -445,7 +467,72 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ####################### functions for offerIAP, containsAds, paidTrue ###########################################
+    ########################### functions for minInstalls graphs #############################################################
+    def _create_LogminInstalls_groupby_text_cluster_df(self, key_vars, the_panel):
+        d = self._select_df_for_key_vars_against_text_clusters(key_vars, the_panel)
+        res = dict.fromkeys(d.keys())
+        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                df2['LogminInstalls_' + the_panel] = np.log2(df2['ImputedminInstalls_' + the_panel] + 1)
+                # count number of apps in each text cluster
+                def _number_apps_in_each_text_cluster(df2):
+                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
+                    return s1
+                s1 = _number_apps_in_each_text_cluster(df2)
+                # assign that number to dataframe
+                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
+                # create categorical variable indicating how many number of apps are there in a text cluster
+                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
+                res[k1][k2] = df2
+        return res
+
+    def strip_violin_LogminInstalls_text_cluster_categorical_plot(self, key_vars, the_panel):
+        res = self._create_LogminInstalls_groupby_text_cluster_df(key_vars, the_panel)
+        for name1, content1 in res.items():
+            for name2, dfres in content1.items():
+                fig = plt.figure(figsize=(12, 6))
+                sns.set(style="whitegrid")
+                fig.subplots_adjust(bottom=0.2)
+                sns.violinplot(
+                            x="Apps Contained in One Cluster",
+                            y="LogminInstalls_" + the_panel,
+                            data=res[name1][name2],
+                            color="0.8",
+                            inner=None,
+                            cut=0 # Distance, in units of bandwidth size, to extend the density past the extreme datapoints.
+                                  # Set to 0 to limit the violin range within the range of the observed data
+                                  # (i.e., to have the same effect as trim=True in ggplot.
+                            )
+                # overlay swamp plot with box plot
+                sns.stripplot(
+                        x="Apps Contained in One Cluster",
+                        y="LogminInstalls_" + the_panel,
+                        data=res[name1][name2],
+                        jitter=True)
+                plt.xticks(rotation=45)
+                plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
+                plt.xlabel("Number of Apps Contained in One Cluster")
+                plt.ylabel("Log Minimum Installs")
+                # ------------ set title and save ----------------------------------------
+                self._set_title_and_save_graphs(fig=fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
+                                                name1=name1,
+                                                name2=name2,
+                                                graph_title="Log Minimum Installs in Niche or Broad App Clusters",
+                                                relevant_folder_name='niche_scale_scatter_new')
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    ####################### functions for offerIAP, containsAds, paidTrue ####################################################
     def _percentage_of_true_false_groupby_text_cluster(self, key_vars, the_panel, var):
         """
         On the y axis, we are going to graph percentage instead of number of apps (still stacked bar graph)
@@ -581,9 +668,6 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ################# functions to graph parallel trend with beta on the y-axis ###############################
-
-
     ###########################################################################################################
     # Create Variables for Regression / Descriptive Stats
     ###########################################################################################################
@@ -717,9 +801,7 @@ class reg_preparation_essay_2_3():
                                    individual_dummies_df=self.i_dummies_df)
 
     def create_NicheDummy(self):
-        """
-        make sure to run this after self.text_cluster_group_count()
-        """
+        d = self._text_cluster_group_count()
         for name1, content1 in self.ssnames.items():
             for name2 in content1:
                 label_col_name = name1 + '_' + name2 + '_kmeans_labels'
@@ -773,6 +855,22 @@ class reg_preparation_essay_2_3():
                     created_POST_dummies.append('PostX' + j + '_' + i)
         print('CREATED the following post and niche interactions:')
         print(created_POST_dummies)
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    # ----------------------- after creating above variables, save the dataframe as cross section -----------------
+    def save_cross_section_reg_df(self):
+        filename = self.initial_panel + '_cross_section_df.pickle'
+        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'cross_section_dfs' / filename
+        pickle.dump(self.cdf, open(q, 'wb'))
+        print(self.initial_panel, ' SAVED CROSS SECTION DFS. ')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
