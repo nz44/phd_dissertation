@@ -388,7 +388,8 @@ class reg_preparation_essay_2_3():
     def _select_df_for_key_vars_against_text_clusters(self, key_vars,
                                                       the_panel=None,
                                                       includeNicheDummy=False,
-                                                      convert_to_long=False):
+                                                      convert_to_long=False,
+                                                      percentage_true_df=False):
         """
         Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
         This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
@@ -413,13 +414,25 @@ class reg_preparation_essay_2_3():
                     if convert_to_long is False:
                         d[name1][name2] = df3[svars]
                     else:
-                        d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
+                        if percentage_true_df is False:
+                            d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
+                        else:
+                            df4 = self._convert_to_long_form(df=df3[svars], var=key_vars)
+                            d[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
+                                                                                          ldf=df4,
+                                                                                          nichedummy=niche_dummy)
                 else:
                     df3 = df2.loc[(df2[name2]==1) & (df2[name1]==1)]
                     if convert_to_long is False:
                         d[name1][name2] = df3[svars]
                     else:
-                        d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
+                        if percentage_true_df is False:
+                            d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
+                        else:
+                            df4 = self._convert_to_long_form(df=df3[svars], var=key_vars)
+                            d[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
+                                                                                          ldf=df4,
+                                                                                          nichedummy=niche_dummy)
         return d
     ########################### functions for price graphs #############################################################
     def _create_log_price_groupby_text_cluster_df(self, key_vars, the_panel):
@@ -729,7 +742,14 @@ class reg_preparation_essay_2_3():
     ################### graph box plots for minInstalls, price for parallel trends ############################
     def _convert_to_long_form(self, df, var):
         """
-        :param df:
+        The function is used inside self._select_df_for_key_vars_against_text_clusters(
+        key_vars=['offersIAPTrue'],
+        the_panel=None,
+        includeNicheDummy=True,
+        convert_to_long=True,
+        percentage_true_df=True)
+        where you have to turn convert_to_long to True.
+        :param df: wide form dataframe
         :param var: should be inside a list
         :return:
         """
@@ -744,42 +764,92 @@ class reg_preparation_essay_2_3():
         ldf = ldf.sort_values(by=["index", "panel"]).set_index('index')
         return ldf
 
+    def _create_percentage_true_df_from_longdf(self, var, ldf, nichedummy):
+        """
+        The function is used inside self._select_df_for_key_vars_against_text_clusters(
+            key_vars=['offersIAPTrue'],
+            the_panel=None,
+            includeNicheDummy=True,
+            convert_to_long=True,
+            percentage_true_df=True)
+            where you have to turn both convert_to_long and percentage_true to True.
+        :param var should be inside a list, just like its outer function var=['containsAds'] or ['offersIAP']
+        :param ldf: it is the output of self._convert_to_long_form(var=['containsAds'] or ['offersIAP'])
+        :param nichedummy is string name1 + "_" + name2 + "_NicheDummy"
+        :return: df ready for graphing parallel trends for offers IAP and contains ads
+        """
+        # here we assume var list contains only one string variable
+        for i in var:
+            str_var = i
+        res_true = ldf.groupby(by=["panel", nichedummy]).sum().reset_index().rename(columns={str_var: "TRUE"})
+        res_total = ldf.groupby(by=["panel", nichedummy]).count().reset_index().rename(columns={str_var: "TOTAL"})
+        res_merge = pd.merge(
+                        res_true,
+                        res_total,
+                        how="inner",
+                        on=['panel', nichedummy])
+        res_merge['percentage_true'] = res_merge['TRUE']/res_merge['TOTAL'] * 100
+        res_merge = res_merge.round({'percentage_true': 0})
+        # convert back to wide form in order to pass into sns.lineplot
+        res_merge = res_merge.drop(['TRUE', 'TOTAL'], axis=1)
+        res_merge = res_merge.pivot_table(index=['panel'],
+                                          columns=nichedummy,
+                                          values='percentage_true')
+        return res_merge
+
     def graph_line_plot_parallel_trend(self, var):
         """
         https://seaborn.pydata.org/generated/seaborn.lineplot.html
-        :param var: could either be 'ImputedminInstalls' or 'Imputedprice'
+        :param var: could either be 'ImputedminInstalls' or 'Imputedprice' or 'offersIAPTrue' or 'containsAdsTrue'
         :return:
         """
-        res = self._select_df_for_key_vars_against_text_clusters(
-            key_vars=[var],
-            the_panel=None,
-            includeNicheDummy=True,
-            convert_to_long=True)
+        if var in ['ImputedminInstalls', 'Imputedprice']:
+            res = self._select_df_for_key_vars_against_text_clusters(
+                key_vars=[var],
+                the_panel=None,
+                includeNicheDummy=True,
+                convert_to_long=True)
+        else: # for 'offersIAPTrue' or 'containsAdsTrue'
+            res = self._select_df_for_key_vars_against_text_clusters(
+                key_vars=[var],
+                the_panel=None,
+                includeNicheDummy=True,
+                convert_to_long=True,
+                percentage_true_df=True)
         for name1, content1 in res.items():
             for name2, dfres in content1.items():
                 nichedummy = name1 + "_" + name2 + "_NicheDummy"
-                dfres['Log' + var] = np.log2(dfres[var] + 1)
                 # barplot returns ax subplots, but we are overlapping them
                 fig = plt.figure(figsize=(12, 6))
                 sns.set(style="whitegrid")
                 sns.despine(right=True, top=True)
                 fig.subplots_adjust(bottom=0.2)
-                hue_order = [1, 0]
-                sns.lineplot(
-                    data=dfres,
-                    x="panel",
-                    y="Log" + var,
-                    hue= nichedummy,
-                    hue_order=hue_order,
-                    style = nichedummy,
-                    markers=True,
-                    dashes=False)
+                hue_order = [1, 0] # Niche yes comes first, then broad apps
+                if var in ['ImputedminInstalls', 'Imputedprice']:
+                    dfres['Log' + var] = np.log2(dfres[var] + 1)
+                    sns.lineplot(
+                        data=dfres,
+                        x="panel",
+                        y="Log" + var,
+                        hue= nichedummy,
+                        hue_order=hue_order,
+                        style = nichedummy,
+                        markers=True,
+                        dashes=False)
+                else:
+                    sns.lineplot(
+                        data=dfres,
+                        hue_order=hue_order,
+                        markers=True,
+                        dashes=False)
                 plt.xticks(rotation=45)
                 # ------------------
                 plt.axvline(x='2020-03', linewidth=2, color='red')
                 plt.xlabel("Time")
                 y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
-                                'Imputedprice': 'Log Price'}
+                                'Imputedprice': 'Log Price',
+                                'offersIAPTrue': 'Percentage of Apps Offers IAP',
+                                'containsAdsTrue': 'Percentage of Apps Contains Ads'}
                 plt.ylabel(y_label_dict[var])
                 # change label according to hue order
                 plt.legend(labels=['Niche App : Yes', 'Niche App : No'],
