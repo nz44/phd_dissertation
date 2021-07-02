@@ -244,23 +244,36 @@ class reg_preparation_essay_2_3():
                     ).sort_values(ascending=False).rename(name1 + '_' + name2 + '_Apps_Count').to_frame()
         return d
 
-    def _set_title_and_save_graphs(self, fig, name1, name2, graph_title, relevant_folder_name):
+    def _set_title_and_save_graphs(self, fig, name1, graph_title, relevant_folder_name,
+                                   name2=None,
+                                   subsample_one_graph=False):
         """
         generic internal function to save graphs according to essay 2 (non-leaders) and essay 3 (leaders).
         name1 and name2 are the key names of self.ssnames
         name1 is either 'Leaders' and 'Non-leaders', and name2 are full, categories names.
         graph_title is what is the graph is.
         """
-        # ------------ set title -------------------------------------------------------------------------
-        subsample_name = name1 + ' ' + name2
-        title = self.initial_panel + ' ' \
-                + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] + ' ' \
-                + graph_title
-        title = title.title()
-        fig.suptitle(title, fontsize='medium')
-        # ------------------ save file with name (tolower and replace whitespace with underscores) ------
-        file_title = graph_title.lower().replace(" ", "_")
-        filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
+        if subsample_one_graph is False:
+            # ------------ set title -------------------------------------------------------------------------
+            subsample_name = name1 + ' ' + name2
+            title = self.initial_panel + ' ' \
+                    + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] + ' ' \
+                    + graph_title
+            title = title.title()
+            fig.suptitle(title, fontsize='medium')
+            # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+            file_title = graph_title.lower().replace(" ", "_")
+            filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
+        else:
+            # ------------ set title -------------------------------------------------------------------------
+            title = self.initial_panel + ' ' + name1 \
+                    + ' ' \
+                    + graph_title + ' In All Subsamples'
+            title = title.title()
+            fig.suptitle(title, fontsize='medium')
+            # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+            file_title = graph_title.lower().replace(" ", "_")
+            filename = self.initial_panel + '_' + name1 + '_' + file_title + '.png'
         if name1 == 'Leaders':
             fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_3 / relevant_folder_name / filename,
                         facecolor='white',
@@ -646,7 +659,7 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def put_4_dep_vars_graphs_into_single_graph(self, key_vars, the_panel):
+    def put_4_dep_vars_in_1_graph(self, key_vars, the_panel):
         """
         :param key_vars: 'Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'
         I will delete paidTrue, because the information is already reflected in logImputedPrice
@@ -729,6 +742,96 @@ class reg_preparation_essay_2_3():
                                                 name1=name1, name2=name2,
                                                 graph_title= "Pricing Variables in Niche or Broad App Clusters",
                                                 relevant_folder_name='four_dep_vars_in_one_graph')
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    def put_6_subsamples_dep_vars_in_1_graph(self, key_vars, the_panel):
+        res1 = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
+        res2 = self._create_LogminInstalls_groupby_text_cluster_df(key_vars, the_panel)
+        for i in range(len(key_vars)):
+            for name1, content1 in self.ssnames.items():
+                fig, ax = plt.subplots(nrows=2, ncols=3,
+                                       figsize=(16, 8.5),
+                                       sharex='col',
+                                       sharey='row')
+                fig.subplots_adjust(bottom=0.2)
+                for j in range(len(content1)):
+                    sns.set(style="whitegrid")
+                    sns.despine(right=True, top=True)
+                    if key_vars[i] == 'Imputedprice':
+                        sns.violinplot(
+                            x="Apps Contained in One Cluster",
+                            y="LogImputedprice_" + the_panel,
+                            data=res1[name1][content1[j]],
+                            color=".8",
+                            inner=None,  # because you are overlaying stripplot
+                            cut=0,
+                            ax=ax.flat[j])
+                        # overlay swamp plot with box plot
+                        sns.stripplot(
+                            x="Apps Contained in One Cluster",
+                            y="LogImputedprice_" + the_panel,
+                            data=res1[name1][content1[j]],
+                            jitter=True,
+                            ax=ax.flat[j])
+                        ax.flat[j].set_ylabel("Log Price")
+                    elif key_vars[i] == 'ImputedminInstalls':
+                        sns.violinplot(
+                            x="Apps Contained in One Cluster",
+                            y="LogminInstalls_" + the_panel,
+                            data=res2[name1][content1[j]],
+                            color="0.8",
+                            inner=None,
+                            cut=0,
+                            ax = ax.flat[j])
+                        # overlay swamp plot with box plot
+                        sns.stripplot(
+                            x="Apps Contained in One Cluster",
+                            y="LogminInstalls_" + the_panel,
+                            data=res2[name1][content1[j]],
+                            jitter=True,
+                            ax = ax.flat[j])
+                        ax.flat[j].set_ylabel("Log Minimum Installs")
+                    else:
+                        res34 = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, key_vars[i])
+                        # bar chart 1 -> is 1 because this is total value
+                        sns.barplot(x='Apps Contained in One Cluster',
+                                    y=key_vars[i] + '_total_percentage',
+                                    data=res34[name1][content1[j]][1],
+                                    color='paleturquoise',
+                                    ax=ax.flat[j])
+                        # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
+                        # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
+                        sns.barplot(x='Apps Contained in One Cluster',
+                                    y=key_vars[i] + '_true_percentage',
+                                    data=res34[name1][content1[j]][2],
+                                    color='darkturquoise',
+                                    ax=ax.flat[j])
+                        ax.flat[j].set_ylabel("Percentage Points")
+                        # add legend
+                        sns.despine(right=True, top=True)
+                        top_bar = mpatches.Patch(color='paleturquoise', label=key_vars[i].replace("True", "") + ' : No')
+                        bottom_bar = mpatches.Patch(color='darkturquoise',
+                                                    label=key_vars[i].replace("True", "") + ' : Yes')
+                        ax.flat[j].legend(handles=[top_bar, bottom_bar], ncol=2)
+                    ax.flat[j].set_xlabel("Number of Apps Contained in One Cluster")
+                    ax.flat[j].set_ylim(bottom=0)
+                    ax.flat[j].xaxis.set_visible(True)
+                    for tick in ax.flat[j].get_xticklabels():
+                        tick.set_rotation(45)
+                # ------------ set title and save ---------------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                name1=name1,
+                                                subsample_one_graph=True,
+                                                graph_title=key_vars[i] + " Descriptive Statistics",
+                                                relevant_folder_name='subgroups_in_one_graph')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
@@ -859,6 +962,165 @@ class reg_preparation_essay_2_3():
                                                 name1=name1, name2=name2,
                                                 graph_title=y_label_dict[var] + " Before And After Covid-19 Stay-at-Home Orders",
                                                 relevant_folder_name='parallel_trend')
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    def put_4_parallel_trends_in_1_graph(self, key_vars):
+        """
+        :param key_vars: 'Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'
+        I will delete paidTrue, because the information is already reflected in logImputedPrice
+        :param the_panel:
+        :return:
+        """
+        for name1, content1 in self.ssnames.items():
+            for name2 in content1:
+                nichedummy = name1 + "_" + name2 + "_NicheDummy"
+                fig, ax = plt.subplots(nrows=2, ncols=2,
+                                       figsize=(11, 8.5),
+                                       sharex='col')
+                fig.subplots_adjust(bottom=0.2)
+                hue_order = [1, 0]
+                for i in range(len(key_vars)):
+                    sns.set(style="whitegrid")
+                    sns.despine(right=True, top=True)
+                    if key_vars[i] in ['ImputedminInstalls', 'Imputedprice']:
+                        res = self._select_df_for_key_vars_against_text_clusters(
+                            key_vars=[key_vars[i]],
+                            the_panel=None,
+                            includeNicheDummy=True,
+                            convert_to_long=True)
+                        res[name1][name2]['Log' + key_vars[i]] = np.log2(res[name1][name2][key_vars[i]] + 1)
+                        sns.lineplot(
+                            data=res[name1][name2],
+                            x="panel",
+                            y="Log" + key_vars[i],
+                            hue=nichedummy,
+                            hue_order=hue_order,
+                            style=nichedummy,
+                            markers=True,
+                            dashes=False,
+                            ax = ax.flat[i])
+                    else:
+                        res = self._select_df_for_key_vars_against_text_clusters(
+                            key_vars=[key_vars[i]],
+                            the_panel=None,
+                            includeNicheDummy=True,
+                            convert_to_long=True,
+                            percentage_true_df=True)
+                        sns.lineplot(
+                            data=res[name1][name2],
+                            hue_order=hue_order,
+                            markers=True,
+                            dashes=False,
+                            ax = ax.flat[i])
+                    ax.flat[i].legend(labels=['Niche App : Yes', 'Niche App : No'],
+                               ncol=2)
+                    ax.flat[i].set_xlabel("Time")
+                    y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                                    'Imputedprice': 'Log Price',
+                                    'offersIAPTrue': 'Percentage of Apps Offers IAP',
+                                    'containsAdsTrue': 'Percentage of Apps Contains Ads'}
+                    ax.flat[i].set_ylabel(y_label_dict[key_vars[i]])
+                    ax.flat[i].set_ylim(bottom=0)
+                    ax.flat[i].xaxis.set_visible(True)
+                    for tick in ax.flat[i].get_xticklabels():
+                        tick.set_rotation(45)
+                # ------------ set title and save ---------------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                name1=name1, name2=name2,
+                                                graph_title="Pricing Variables Parallel Trends",
+                                                relevant_folder_name='four_dep_vars_parallel_trends')
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    def put_6_subsamples_parallel_trends_in_1_graph(self, key_vars):
+        for i in range(len(key_vars)):
+            if key_vars[i] in ['ImputedminInstalls', 'Imputedprice']:
+                res = self._select_df_for_key_vars_against_text_clusters(
+                    key_vars=[key_vars[i]],
+                    the_panel=None,
+                    includeNicheDummy=True,
+                    convert_to_long=True)
+            else:
+                res = self._select_df_for_key_vars_against_text_clusters(
+                    key_vars=[key_vars[i]],
+                    the_panel=None,
+                    includeNicheDummy=True,
+                    convert_to_long=True,
+                    percentage_true_df=True)
+            for name1, content1 in self.ssnames.items():
+                fig, ax = plt.subplots(nrows=2, ncols=3,
+                                       figsize=(16, 8.5),
+                                       sharex='col',
+                                       sharey='row')
+                fig.subplots_adjust(bottom=0.2)
+                for j in range(len(content1)):
+                    nichedummy = name1 + "_" + content1[j] + "_NicheDummy"
+                    sns.set(style="whitegrid")
+                    sns.despine(right=True, top=True)
+                    hue_order = [1, 0]
+                    if key_vars[i] in ['ImputedminInstalls', 'Imputedprice']:
+                        res[name1][content1[j]]['Log' + key_vars[i]] = np.log2(res[name1][content1[j]][key_vars[i]] + 1)
+                        sns.lineplot(
+                            data=res[name1][content1[j]],
+                            x="panel",
+                            y="Log" + key_vars[i],
+                            hue=nichedummy,
+                            hue_order=hue_order,
+                            style=nichedummy,
+                            markers=True,
+                            dashes=False,
+                            ax = ax.flat[j])
+                        y_bottom_lim = {'ImputedminInstalls': {'Leaders': 20, 'Non-leaders': 10},
+                                        'Imputedprice': {'Leaders': 0, 'Non-leaders': 0}}
+                        y_top_lim = {'ImputedminInstalls': {'Leaders': 28, 'Non-leaders': 20},
+                                     'Imputedprice': {'Leaders': 0.3, 'Non-leaders': 1.4}}
+                        ax.flat[j].set_ylim(bottom=y_bottom_lim[key_vars[i]][name1],
+                                            top=y_top_lim[key_vars[i]][name1])
+                    else:
+                        sns.lineplot(
+                            data=res[name1][content1[j]],
+                            hue_order=hue_order,
+                            markers=True,
+                            dashes=False,
+                            ax = ax.flat[j])
+                        ax.flat[j].set_ylim(bottom=0, top=100)
+                    if content1[j] == 'full':
+                        ax.flat[j].set_title('Full Sample')
+                    else:
+                        sample_name = content1[j].replace("category_", "").lower().title() + " Sub-sample"
+                        ax.flat[j].set_title(sample_name)
+                    ax.flat[j].legend(labels=['Niche App : Yes', 'Niche App : No'],
+                                      ncol=2)
+                    ax.flat[j].set_xlabel("Time")
+                    y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                                    'Imputedprice': 'Log Price',
+                                    'offersIAPTrue': 'Percentage of Apps Offers IAP',
+                                    'containsAdsTrue': 'Percentage of Apps Contains Ads'}
+                    ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
+                    ax.flat[j].xaxis.set_visible(True)
+                    for tick in ax.flat[j].get_xticklabels():
+                        tick.set_rotation(45)
+                # ------------ set title and save ---------------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                name1=name1,
+                                                subsample_one_graph=True,
+                                                graph_title=key_vars[i] + " Parallel Trends",
+                                                relevant_folder_name='subgroups_in_one_graph')
         return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
