@@ -1,5 +1,5 @@
 import pandas as pd
-import copy
+# import copy
 from pathlib import Path
 import pickle
 pd.set_option('display.max_colwidth', -1)
@@ -47,6 +47,8 @@ class reg_preparation_essay_2_3():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_2___/descriptive_stats/graphs')
     des_stats_graphs_essay_3 = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_3___/descriptive_stats/graphs')
+    des_stats_graphs_overall = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/overall_graphs')
     graph_ylabel_dict = {'containsAdsTrue': 'ContainsAds',
                          'offersIAPTrue': 'OffersIAP',
                          'paidTrue': 'Paid',
@@ -246,42 +248,53 @@ class reg_preparation_essay_2_3():
 
     def _set_title_and_save_graphs(self, fig, name1, graph_title, relevant_folder_name,
                                    name2=None,
-                                   subsample_one_graph=False):
+                                   subsample_one_graph=False,
+                                   essay_2_and_3_overall=False):
         """
         generic internal function to save graphs according to essay 2 (non-leaders) and essay 3 (leaders).
         name1 and name2 are the key names of self.ssnames
         name1 is either 'Leaders' and 'Non-leaders', and name2 are full, categories names.
         graph_title is what is the graph is.
         """
-        if subsample_one_graph is False:
-            # ------------ set title -------------------------------------------------------------------------
-            subsample_name = name1 + ' ' + name2
-            title = self.initial_panel + ' ' \
-                    + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] + ' ' \
-                    + graph_title
+        if essay_2_and_3_overall is True:
+            title = self.initial_panel + ' ' + graph_title
             title = title.title()
             fig.suptitle(title, fontsize='medium')
-            # ------------------ save file with name (tolower and replace whitespace with underscores) ------
             file_title = graph_title.lower().replace(" ", "_")
-            filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
-        else:
-            # ------------ set title -------------------------------------------------------------------------
-            title = self.initial_panel + ' ' + name1 \
-                    + ' ' \
-                    + graph_title + ' In All Subsamples'
-            title = title.title()
-            fig.suptitle(title, fontsize='medium')
-            # ------------------ save file with name (tolower and replace whitespace with underscores) ------
-            file_title = graph_title.lower().replace(" ", "_")
-            filename = self.initial_panel + '_' + name1 + '_' + file_title + '.png'
-        if name1 == 'Leaders':
-            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_3 / relevant_folder_name / filename,
+            filename = self.initial_panel + '_' + file_title + '.png'
+            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_overall / filename,
                         facecolor='white',
                         dpi=300)
         else:
-            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_2 / relevant_folder_name / filename,
-                        facecolor='white',
-                        dpi=300)
+            if subsample_one_graph is False:
+                # ------------ set title -------------------------------------------------------------------------
+                subsample_name = name1 + ' ' + name2
+                title = self.initial_panel + ' ' \
+                        + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] + ' ' \
+                        + graph_title
+                title = title.title()
+                fig.suptitle(title, fontsize='medium')
+                # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+                file_title = graph_title.lower().replace(" ", "_")
+                filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
+            else:
+                # ------------ set title -------------------------------------------------------------------------
+                title = self.initial_panel + ' ' + name1 \
+                        + ' ' \
+                        + graph_title + ' In All Subsamples'
+                title = title.title()
+                fig.suptitle(title, fontsize='medium')
+                # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+                file_title = graph_title.lower().replace(" ", "_")
+                filename = self.initial_panel + '_' + name1 + '_' + file_title + '.png'
+            if name1 == 'Leaders':
+                fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_3 / relevant_folder_name / filename,
+                            facecolor='white',
+                            dpi=300)
+            else:
+                fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_2 / relevant_folder_name / filename,
+                            facecolor='white',
+                            dpi=300)
 
     def text_cluster_bar_graph_old(self):
         """
@@ -398,6 +411,41 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
+    def _slice_subsamples_dict(self):
+        df = self.cdf.copy(deep=True)
+        d = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in self.ssnames.items():
+            d[name1] = dict.fromkeys(content1)
+            df2 = df.loc[df[name1]==1]
+            for name2 in content1:
+                if name2 == 'full':
+                    d[name1][name2] = df2
+                else:
+                    d[name1][name2] = df2.loc[df2[name2]==1]
+        return d
+
+    def _groupby_subsample_dfs_by_nichedummy(self):
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
+                df2 = df.groupby([niche_dummy]).size().to_frame()
+                df2.rename(columns={0: name1 + '_' + name2}, index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
+                res[name1][name2] = df2
+        return res
+
+    def _combine_groupbyed_category_subdfs_into_leader_df(self, d):
+        res = dict.fromkeys(d.keys())
+        for name1, content1 in d.items():
+            df_list = []
+            for name2, df in content1.items():
+                if name2 != 'full': # exclude the full sample because each column represent a category
+                    df_list.append(df)
+            res[name1] = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        return res
+
     def _select_df_for_key_vars_against_text_clusters(self, key_vars,
                                                       the_panel=None,
                                                       includeNicheDummy=False,
@@ -411,42 +459,88 @@ class reg_preparation_essay_2_3():
             selected_vars = [i + '_' + the_panel for i in key_vars]
         else:
             selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
-        df2 = self.cdf.copy(deep=True)
-        d = {}
-        for name1, content1 in self.ssnames.items():
-            d[name1] = dict.fromkeys(content1)
-            for name2 in content1:
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
                 text_label_var = name1 + '_' + name2 + '_kmeans_labels'
                 niche_dummy = name1 + '_' + name2 + '_NicheDummy'
                 if includeNicheDummy is True:
                     svars = selected_vars + [niche_dummy]
                 else:
                     svars = selected_vars + [text_label_var]
-                if name2 == 'full':
-                    df3 = df2.loc[df2[name1]==1]
-                    if convert_to_long is False:
-                        d[name1][name2] = df3[svars]
-                    else:
-                        if percentage_true_df is False:
-                            d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                        else:
-                            df4 = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                            d[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
-                                                                                          ldf=df4,
-                                                                                          nichedummy=niche_dummy)
+                if convert_to_long is False:
+                    res[name1][name2] = df[svars]
                 else:
-                    df3 = df2.loc[(df2[name2]==1) & (df2[name1]==1)]
-                    if convert_to_long is False:
-                        d[name1][name2] = df3[svars]
+                    if percentage_true_df is False:
+                        res[name1][name2] = self._convert_to_long_form(df=df[svars], var=key_vars)
                     else:
-                        if percentage_true_df is False:
-                            d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                        else:
-                            df4 = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                            d[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
-                                                                                          ldf=df4,
-                                                                                          nichedummy=niche_dummy)
-        return d
+                        df2 = self._convert_to_long_form(df=df[svars], var=key_vars)
+                        res[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
+                                                                                        ldf=df2,
+                                                                                        nichedummy=niche_dummy)
+        return res
+
+    def _sort_df_descending_left_to_right(self, df):
+        df = df.append(df.sum(numeric_only=True), ignore_index=True)
+        df = df.sort_values(by=2, axis=1)
+        df = df.drop([df.index[2]])
+        df.rename(index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
+        return df
+
+    def niche_by_subsamples_bar_graph(self):
+        """
+        Create a single graph is the histogram by group
+        """
+        res = self._groupby_subsample_dfs_by_nichedummy()
+        res2 = self._combine_groupbyed_category_subdfs_into_leader_df(d=res)
+        fig, ax = plt.subplots(nrows=2, ncols=1,
+                               figsize=(5, 11),
+                               sharey='row')
+        fig.subplots_adjust(left=0.2)
+        name1_dict = {'Leaders': 'Market Leaders', 'Non-leaders': 'Market Followers'}
+        name1_list = list(res.keys())
+        for i in range(len(name1_list)):
+            ytick_labels = []
+            df = self._sort_df_descending_left_to_right(df=res2[name1_list[i]])
+            for col_name in df.columns:
+                str_to_remove = name1_list[i] + '_category_'
+                label_text = col_name.replace(str_to_remove, '').lower().title()
+                ytick_labels.append(label_text)
+                ax.flat[i].xaxis.grid()
+                ax.flat[i].barh(col_name, df.loc['Niche Apps', col_name],
+                                label=label_text + ' Niche Apps',
+                                color = 'lightsalmon')
+                ax.flat[i].barh(col_name, df.loc['Broad Apps', col_name],
+                                left = df.loc['Niche Apps', col_name],
+                                label=label_text + ' Broad Apps',
+                                color = 'orangered')
+            ax.flat[i].spines['top'].set_visible(False)
+            ax.flat[i].spines['right'].set_visible(False)
+            ax.flat[i].set_xlabel('Count')
+            ax.flat[i].set_yticks(np.arange(len(ytick_labels)))
+            ax.flat[i].set_yticklabels(ytick_labels)
+            ax.flat[i].set_title(name1_dict[name1_list[i]])
+            left_bar = mpatches.Patch(color='lightsalmon', label='Niche Apps')
+            right_bar = mpatches.Patch(color='orangered', label='Broad Apps')
+            ax.flat[i].legend(handles=[left_bar, right_bar], ncol=2)
+        # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+        self._set_title_and_save_graphs(fig=fig,
+                                        name1=None,
+                                        graph_title="Niche and Broad Apps Count By Sub-samples",
+                                        relevant_folder_name=None,
+                                        essay_2_and_3_overall=True)
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
     ########################### functions for price graphs #############################################################
     def _create_log_price_groupby_text_cluster_df(self, key_vars, the_panel):
         d = self._select_df_for_key_vars_against_text_clusters(key_vars=key_vars,
@@ -781,7 +875,6 @@ class reg_preparation_essay_2_3():
                             data=res1[name1][content1[j]],
                             jitter=True,
                             ax=ax.flat[j])
-                        ax.flat[j].set_ylabel("Log Price")
                     elif key_vars[i] == 'ImputedminInstalls':
                         sns.violinplot(
                             x="Apps Contained in One Cluster",
@@ -798,7 +891,6 @@ class reg_preparation_essay_2_3():
                             data=res2[name1][content1[j]],
                             jitter=True,
                             ax = ax.flat[j])
-                        ax.flat[j].set_ylabel("Log Minimum Installs")
                     else:
                         res34 = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, key_vars[i])
                         # bar chart 1 -> is 1 because this is total value
@@ -821,8 +913,18 @@ class reg_preparation_essay_2_3():
                         bottom_bar = mpatches.Patch(color='darkturquoise',
                                                     label=key_vars[i].replace("True", "") + ' : Yes')
                         ax.flat[j].legend(handles=[top_bar, bottom_bar], ncol=2)
-                    ax.flat[j].set_xlabel("Number of Apps Contained in One Cluster")
+                    if content1[j] == 'full':
+                        ax.flat[j].set_title('Full Sample')
+                    else:
+                        sample_name = content1[j].replace("category_", "").lower().title() + " Sub-sample"
+                        ax.flat[j].set_title(sample_name)
                     ax.flat[j].set_ylim(bottom=0)
+                    ax.flat[j].set_xlabel("Number of Apps Contained in One Cluster")
+                    y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                                    'Imputedprice': 'Log Price',
+                                    'offersIAPTrue': 'Percentage of Apps Offers IAP',
+                                    'containsAdsTrue': 'Percentage of Apps Contains Ads'}
+                    ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
                     ax.flat[j].xaxis.set_visible(True)
                     for tick in ax.flat[j].get_xticklabels():
                         tick.set_rotation(45)

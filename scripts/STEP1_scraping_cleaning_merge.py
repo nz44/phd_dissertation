@@ -11,6 +11,7 @@ import collections
 import operator
 import functools
 import re
+import os
 import math
 import pickle
 from collections.abc import Iterable
@@ -67,21 +68,28 @@ class scrape():
         scraping using google_play_scraper app function
         for unknown reason,, self.id_list in weird tuple, so first turn it into list and flatten it
         """
-        d2list = list(self.id_list)
-        appids = [i for sublist in d2list for i in sublist]
-        app_details = dict.fromkeys(appids)
-        print('start scraping apps with initial panel', self.initial_panel)
-        for j in tqdm(range(len(appids)), desc="scraping..."):
-            try:
-                app_details[appids[j]] = app(appids[j])
-            except:
-                pass
-        # ---------------------- save --------------------------------------
-        self.scraped_dict = app_details
+        ispath = os.path.join(scrape.tracking_path, self.current_panel)
+        if ispath is False:
+            os.mkdir(ispath)
         filename = 'TRACKING_' + self.initial_panel + '.pickle'
         q = scrape.tracking_path / self.current_panel / filename
-        pickle.dump(self.scraped_dict, open(q, 'wb'))
-        print('Saved scarped app details with initial panel', self.initial_panel)
+        isfile = os.path.isfile(q)
+        if isfile is True:
+            print(self.current_panel, ' tracking ', self.initial_panel, ' has already been scraped.')
+        else:
+            d2list = list(self.id_list)
+            appids = [i for sublist in d2list for i in sublist]
+            app_details = dict.fromkeys(appids)
+            print('start scraping apps with initial panel', self.initial_panel)
+            for j in tqdm(range(len(appids)), desc="scraping..."):
+                try:
+                    app_details[appids[j]] = app(appids[j])
+                except:
+                    pass
+            # ---------------------- save --------------------------------------
+            self.scraped_dict = app_details
+            pickle.dump(self.scraped_dict, open(q, 'wb'))
+            print('Saved scarped app details with initial panel', self.initial_panel)
         return scrape(initial_panel=self.initial_panel,
                       current_panel=self.current_panel,
                       initial_panel_data=self.initial_panel_data,
