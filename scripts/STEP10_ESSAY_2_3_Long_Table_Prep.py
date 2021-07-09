@@ -173,29 +173,7 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def select_vars(self, the_panel=None, **kwargs):
-        """
-        one input can have both time variant variables list and time invariants vars list, not if else relationship
-        """
-        selected_cols = []
-        if 'time_variant_vars_list' in kwargs.keys():
-            time_variables = kwargs['time_variant_vars_list']
-            if the_panel is None:
-                for p in self.all_panels:
-                    selected_cols.extend([item + '_' + p for item in time_variables])
-            else:
-                selected_cols.extend([item + '_' + the_panel for item in time_variables])
-        if 'time_invariant_vars_list' in kwargs.keys():
-            selected_cols.extend(kwargs['time_invariant_vars_list'])
-        print('The following columns will be selected : ')
-        print(selected_cols)
-        new_df = self.cdf.copy(deep=True)
-        selected_df = new_df[selected_cols]
-        return selected_df
-
-    ###########################################################################################################
-    # Count and Graph NLP Label for all sub samples
-    ###########################################################################################################
+    # Count and Graph NLP Label for all sub samples ###########################################################
 
     def create_subsample_name_dict(self):
         d = self._open_predicted_labels_dict()
@@ -252,6 +230,105 @@ class reg_preparation_essay_2_3():
                     ).sort_values(ascending=False).rename(name1 + '_' + name2 + '_Apps_Count').to_frame()
         return d
 
+    ##############################################################################################################
+    ###################  GRAPHING ################################################################################
+    ##############################################################################################################
+
+    ############## General functions you use in graphing #########################################################
+    def _get_xy_var_list(self, name1, name2, y_var, the_panel=None):
+        """
+        :param name1: leaders non-leaders
+        :param name2: all categories
+        :param y_var: 'Imputedprice','ImputedminInstalls','offersIAPTrue','containsAdsTrue'
+        :param log_y: for price and mininstalls, log = True
+        :return:
+        """
+        time_invar_controls = ['size', 'DaysSinceReleased']
+        x_var = [name1 + '_' + name2 + '_NicheDummy']
+        if the_panel is None:
+            time_var_controls = ['Imputedscore_' + i for i in self.all_panels] + \
+                                ['Imputedreviews_' + i for i in self.all_panels]
+            y_var = [y_var + '_' + i for i in self.all_panels]
+        else:
+            time_var_controls = ['Imputedscore_' + the_panel, 'Imputedreviews_' + the_panel]
+            y_var = [y_var + '_' + the_panel]
+        all_vars = y_var + x_var + time_invar_controls + time_var_controls
+        return all_vars
+
+    def _slice_xy_df_for_subsamples(self, y_var, the_panel=None, log_y=False):
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                var_list = self._get_xy_var_list(name1=name1, name2=name2, y_var=y_var, the_panel=the_panel)
+                if log_y is False:
+                    res[name1][name2] = df[var_list]
+                else:
+                    df2 = df[var_list]
+                    if the_panel is None:
+                        for i in self.all_panels:
+                            df2['Log' + y_var + '_' + i] = np.log2(df2[y_var + '_' + i] + 1)
+                            df2.drop([y_var + '_' + i], axis=1, inplace=True)
+                    else:
+                        df2['Log' + y_var + '_' + the_panel] = np.log2(df2[y_var + '_' + the_panel] + 1)
+                        df2.drop([y_var + '_' + the_panel], axis=1, inplace=True)
+                    res[name1][name2] = df2
+        return res
+
+    def _slice_subsamples_dict(self):
+        """
+        :param vars: a list of variables you want to subset
+        :return:
+        """
+        df = self.cdf.copy(deep=True)
+        d = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in self.ssnames.items():
+            d[name1] = dict.fromkeys(content1)
+            df2 = df.loc[df[name1]==1]
+            for name2 in content1:
+                if name2 == 'full':
+                    d[name1][name2] = df2
+                else:
+                    d[name1][name2] = df2.loc[df2[name2]==1]
+        return d
+
+    def _select_df_for_key_vars_against_text_clusters(self, key_vars,
+                                                      the_panel=None,
+                                                      includeNicheDummy=False,
+                                                      convert_to_long=False,
+                                                      percentage_true_df=False):
+        """
+        Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
+        This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
+        """
+        if the_panel is not None:
+            selected_vars = [i + '_' + the_panel for i in key_vars]
+        else:
+            selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
+                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
+                if includeNicheDummy is True:
+                    svars = selected_vars + [niche_dummy]
+                else:
+                    svars = selected_vars + [text_label_var]
+                if convert_to_long is False:
+                    res[name1][name2] = df[svars]
+                else:
+                    if percentage_true_df is False:
+                        res[name1][name2] = self._convert_to_long_form(df=df[svars], var=key_vars)
+                    else:
+                        df2 = self._convert_to_long_form(df=df[svars], var=key_vars)
+                        res[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
+                                                                                        ldf=df2,
+                                                                                        nichedummy=niche_dummy)
+        return res
+
     def _set_title_and_save_graphs(self, fig, name1, graph_title, relevant_folder_name,
                                    name2=None,
                                    subsample_one_graph=False,
@@ -302,6 +379,7 @@ class reg_preparation_essay_2_3():
                             facecolor='white',
                             dpi=300)
 
+    ########## count number of text clusters in each cluster size bin ####################################
     def text_cluster_bar_graph_old(self):
         """
         This graph has x-axis as the order rank of text clusters, (for example we have 250 text clusters, we order them from 0 to 249, where
@@ -374,7 +452,7 @@ class reg_preparation_essay_2_3():
                 df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
                 df3.columns = ['Number of Clusters']
                 df3.reset_index(inplace=True)
-                df3.rename(columns={ df3.columns[0]: 'Apps Contained in One Cluster'}, inplace = True)
+                df3.rename(columns={ df3.columns[0]: 'Text Cluster Sizes'}, inplace = True)
                 res[k1][k2] = df3
         return res
 
@@ -390,8 +468,8 @@ class reg_preparation_essay_2_3():
                 # DO NOT DO ax = df.plot.bar(ax=ax), the real thing worked to assign this pandas plot to ax and
                 # return an ax object is ax=ax in the parameters,
                 # not the ax = df.plot at the front
-                dfres.plot.bar( x='Apps Contained in One Cluster',
-                                xlabel = 'Number of Apps Contained in One Cluster',
+                dfres.plot.bar( x='Text Cluster Sizes',
+                                xlabel = 'Text Cluster Sizes Bins',
                                 y='Number of Clusters',
                                 ylabel = 'Number of Clusters', # default will show no y-label
                                 rot=40, # rot is **kwarg rotation for ticks
@@ -417,63 +495,144 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def _get_xy_var_list(self, name1, name2, y_var, the_panel=None):
+    ############ Count number of apps in each text cluster sized bin, group_by leaders and non-leaders ##############
+    def _df_text_cluster_sizes(self, d):
         """
-        :param name1: leaders non-leaders
-        :param name2: all categories
-        :param y_var: 'Imputedprice','ImputedminInstalls','offersIAPTrue','containsAdsTrue'
-        :param log_y: for price and mininstalls, log = True
-        :return:
+        :param d: a nested dictionary with name1, and name 2 where name 2 contains dfs, either obtained from
+        self._slice_subsamples_dict for from self._select_df_for_key_vars_against_text_clusters
+        :return: it will return three more new columns that show each row (an app) belong to a text cluster with its size bin,
+        whether it is a large text cluster (500, 1000], a broad app, or a small text cluster (1,2], a niche app.
         """
-        time_invar_controls = ['size', 'DaysSinceReleased']
-        x_var = [name1 + '_' + name2 + '_NicheDummy']
-        if the_panel is None:
-            time_var_controls = ['Imputedscore_' + i for i in self.all_panels] + \
-                                ['Imputedreviews_' + i for i in self.all_panels]
-            y_var = [y_var + '_' + i for i in self.all_panels]
-        else:
-            time_var_controls = ['Imputedscore_' + the_panel, 'Imputedreviews_' + the_panel]
-            y_var = [y_var + '_' + the_panel]
-        all_vars = y_var + x_var + time_invar_controls + time_var_controls
-        return all_vars
-
-    def _slice_xy_df_for_subsamples(self, y_var, the_panel=None, log_y=False):
-        d = self._slice_subsamples_dict()
-        res = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in d.items():
-            res[name1] = dict.fromkeys(content1.keys())
-            for name2, df in content1.items():
-                var_list = self._get_xy_var_list(name1=name1, name2=name2, y_var=y_var, the_panel=the_panel)
-                if log_y is False:
-                    res[name1][name2] = df[var_list]
-                else:
-                    df2 = df[var_list]
-                    if the_panel is None:
-                        for i in self.all_panels:
-                            df2['Log' + y_var + '_' + i] = np.log2(df2[y_var + '_' + i] + 1)
-                            df2.drop([y_var + '_' + i], axis=1, inplace=True)
-                    else:
-                        df2['Log' + y_var + '_' + the_panel] = np.log2(df2[y_var + '_' + the_panel] + 1)
-                        df2.drop([y_var + '_' + the_panel], axis=1, inplace=True)
-                    res[name1][name2] = df2
+        res = dict.fromkeys(d.keys())
+        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                def _number_apps_in_each_text_cluster(df2):
+                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
+                    return s1
+                s1 = _number_apps_in_each_text_cluster(df2)
+                # assign that number to dataframe
+                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
+                # create categorical variable indicating how many number of apps are there in a text cluster
+                df2['Text Cluster Sizes'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
+                res[k1][k2] = df2
         return res
 
-    def _slice_subsamples_dict(self):
+    def _groupby_text_size_bins_count(self, d):
         """
-        :param vars: a list of variables you want to subset
+        :param d: is the output of self._df_text_cluster_sizes(d)
         :return:
         """
-        df = self.cdf.copy(deep=True)
-        d = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in self.ssnames.items():
-            d[name1] = dict.fromkeys(content1)
-            df2 = df.loc[df[name1]==1]
-            for name2 in content1:
-                if name2 == 'full':
-                    d[name1][name2] = df2
-                else:
-                    d[name1][name2] = df2.loc[df2[name2]==1]
-        return d
+        res = dict.fromkeys(d.keys())
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                count_df = df.groupby('Text Cluster Sizes').count().reset_index()
+                count_df = count_df.iloc[:, 0:2]
+                count_df.rename(columns={count_df.columns[1]: "Apps Count in Text Clusters with the Same Size"}, inplace = True)
+                res[k1][k2] = count_df
+        return res
+
+    def _place_leader_vs_nonleader_in_same_df(self, d):
+        """
+        This function aims to graph bar chart of apps count in text cluster with same sizes with leader as a bar and non-leader as a bar
+        d is the output of self._groupby_text_size_bins_count(d)
+        :return:
+        """
+        res = dict.fromkeys(d['Leaders'].keys())
+        for name2 in res.keys():
+            df_list = []
+            for name1, content1 in d.items():
+                df = content1[name2]
+                df.set_index('Text Cluster Sizes', inplace=True)
+                for i in df.columns:
+                    df.rename(columns={i: i + '_' + name1}, inplace=True)
+                df_list.append(df)
+            df2 = functools.reduce(lambda a, b:  a.join(b, how='inner'), df_list)
+            df2.reset_index(inplace=True)
+            # conver to long to have hue in seaborn plotting
+            df3 = pd.melt(df2,
+                          id_vars=['Text Cluster Sizes'],
+                          value_vars=["Apps Count in Text Clusters with the Same Size_Leaders",
+                                      "Apps Count in Text Clusters with the Same Size_Non-leaders"])
+            df3.rename(columns={'value': 'Apps Count in Text Clusters with the Same Size',
+                                'variable': 'sub_samples'}, inplace=True)
+            df3['sub_samples'] = df3['sub_samples'].str.replace('Apps Count in Text Clusters with the Same Size_', '', regex=False)
+            res[name2] = df3
+        return res
+
+    def _groupby_text_size_bins_count_percentage(self, d, the_panel, count_by_var_list):
+        """
+        :param d: is the output of self._df_text_cluster_sizes(d)
+        :param count_by_var: the variable to count by, generally == ['offersIAPTrue', 'containsAdsTrue']
+        :return:
+        """
+        res = dict.fromkeys(d.keys())
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                # create percentage by group, ca is containsAds, of is offersIAP
+                df_list = []
+                for var in count_by_var_list:
+                    total = df.groupby('Text Cluster Sizes')[var + '_' + the_panel].count().reset_index()
+                    yes = df.loc[df[var + '_' + the_panel] == 1].groupby('Text Cluster Sizes')[
+                        var + '_' + the_panel].count().reset_index()
+                    # if you only have if statement, you can write it at the very end,[ for i, j in zip() if ...]
+                    # but if you have both if and else statements, you must write them before for, [ X if .. else Y for i, j in zip() ]
+                    yes['TRUE%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in
+                                           zip(yes[var + '_' + the_panel], total[var + '_' + the_panel])]
+                    total['TOTAL%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in
+                                              zip(total[var + '_' + the_panel], total[var + '_' + the_panel])]
+                    yes.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
+                    yes.set_index('Text Cluster Sizes', inplace=True)
+                    total.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
+                    total.set_index('Text Cluster Sizes', inplace=True)
+                    per_df = yes.join(total, how='inner')
+                    df_list.append(per_df)
+                df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+                df3.reset_index(inplace=True)
+                res[k1][k2] = df3
+        return res
+
+    def graph_number_of_apps_leaders_vs_nonleaders_in_text_cluster_size_bin(self):
+        """
+        This is based on the dataframe self.open_cross_section_reg_df
+        :return:
+        """
+        d = self._slice_subsamples_dict()
+        d2 = self._df_text_cluster_sizes(d=d)
+        d3 = self._groupby_text_size_bins_count(d=d2)
+        d4 = self._place_leader_vs_nonleader_in_same_df(d=d3)
+        fig, ax = plt.subplots(nrows=2, ncols=3,
+                               figsize=(16, 8.5),
+                               sharex='col',
+                               sharey='row')
+        fig.subplots_adjust(bottom=0.2)
+        sub_sample_names = list(d4.keys())
+        for i in range(len(sub_sample_names)):
+            sns.set(style="whitegrid")
+            sns.despine(right=True, top=True)
+            sub_sample_palette = {'Leaders': 'royalblue', 'Non-leaders': 'orchid'}
+            sns.barplot(x='Text Cluster Sizes',
+                        y='Apps Count in Text Clusters with the Same Size',
+                        data=d4[sub_sample_names[i]],
+                        hue="sub_samples",
+                        palette=sub_sample_palette,
+                        ax=ax.flat[i])
+            ax.flat[i].set_ylabel("Apps Count")
+            # add legend
+            sns.despine(right=True, top=True)
+        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
 
     def _groupby_subsample_dfs_by_nichedummy(self):
         d = self._slice_subsamples_dict()
@@ -505,42 +664,6 @@ class reg_preparation_essay_2_3():
                     df_list.append(df)
         res = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
         res.rename(columns={'Leaders_full':'Leaders', 'Non-leaders_full':'Non-leaders'}, inplace=True)
-        return res
-
-    def _select_df_for_key_vars_against_text_clusters(self, key_vars,
-                                                      the_panel=None,
-                                                      includeNicheDummy=False,
-                                                      convert_to_long=False,
-                                                      percentage_true_df=False):
-        """
-        Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
-        This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
-        """
-        if the_panel is not None:
-            selected_vars = [i + '_' + the_panel for i in key_vars]
-        else:
-            selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
-        d = self._slice_subsamples_dict()
-        res = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in d.items():
-            res[name1] = dict.fromkeys(content1.keys())
-            for name2, df in content1.items():
-                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
-                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
-                if includeNicheDummy is True:
-                    svars = selected_vars + [niche_dummy]
-                else:
-                    svars = selected_vars + [text_label_var]
-                if convert_to_long is False:
-                    res[name1][name2] = df[svars]
-                else:
-                    if percentage_true_df is False:
-                        res[name1][name2] = self._convert_to_long_form(df=df[svars], var=key_vars)
-                    else:
-                        df2 = self._convert_to_long_form(df=df[svars], var=key_vars)
-                        res[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
-                                                                                        ldf=df2,
-                                                                                        nichedummy=niche_dummy)
         return res
 
     def _sort_df_descending_left_to_right(self, df):
@@ -619,42 +742,32 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ########################### functions for price graphs #############################################################
-    def _create_log_price_groupby_text_cluster_df(self, the_panel):
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=['Imputedprice'],
+    ############## functions for strip violin plots for price and minInstalls graphs #############################
+    def _create_log_dep_var_groupby_text_cluster_df(self, the_panel, dep_var):
+        """
+        :param the_panel: '202106'
+        :param dep_var: either 'Imputedprice' or 'ImputedminInstalls'
+        :return:
+        """
+        d = self._select_df_for_key_vars_against_text_clusters(key_vars=[dep_var],
                                                                the_panel=the_panel,
                                                                includeNicheDummy=False,
                                                                convert_to_long=False)
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
+        res = self._df_text_cluster_sizes(d=d)
+        for k1, content1 in res.items():
             for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                # create price log (since many prices are zeroes, or below 1, so add 1)
-                # so that the log price cannot go below 0
-                df2['LogImputedprice_' + the_panel] = np.log2(df2['Imputedprice_' + the_panel]+1)
-                # count number of apps in each text cluster
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
-                res[k1][k2] = df2
+                df['Log' + dep_var + '_' + the_panel] = np.log2(df[dep_var + '_' + the_panel]+1)
         return res
 
     def strip_violin_log_price_text_cluster_categorical_plot(self, the_panel):
-        res = self._create_log_price_groupby_text_cluster_df(the_panel)
+        res = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var='Imputedprice')
         for name1, content1 in res.items():
             for name2, dfres in content1.items():
                 fig = plt.figure(figsize=(12, 6))
                 sns.set(style="whitegrid")
                 fig.subplots_adjust(bottom=0.2)
                 sns.violinplot(
-                        x="Apps Contained in One Cluster",
+                        x='Text Cluster Sizes',
                         y="LogImputedprice_" + the_panel,
                         data=res[name1][name2],
                         color=".8",
@@ -663,13 +776,13 @@ class reg_preparation_essay_2_3():
                         )
                 # overlay swamp plot with box plot
                 sns.stripplot(
-                        x="Apps Contained in One Cluster",
+                        x='Text Cluster Sizes',
                         y="LogImputedprice_" + the_panel,
                         data=res[name1][name2],
                         jitter=True)
                 plt.xticks(rotation=45)
                 plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
-                plt.xlabel("Number of Apps Contained in One Cluster")
+                plt.xlabel('Text Cluster Sizes Bins')
                 plt.ylabel("Log Price")
                 # ------------ set title and save ----------------------------------------
                 self._set_title_and_save_graphs(fig=fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
@@ -686,40 +799,15 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ########################### functions for minInstalls graphs #############################################################
-    def _create_LogminInstalls_groupby_text_cluster_df(self, the_panel):
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=['ImputedminInstalls'],
-                                                               the_panel=the_panel,
-                                                               includeNicheDummy=False,
-                                                               convert_to_long=False)
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
-            for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                df2['LogminInstalls_' + the_panel] = np.log2(df2['ImputedminInstalls_' + the_panel] + 1)
-                # count number of apps in each text cluster
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
-                res[k1][k2] = df2
-        return res
-
     def strip_violin_LogminInstalls_text_cluster_categorical_plot(self, the_panel):
-        res = self._create_LogminInstalls_groupby_text_cluster_df(the_panel)
+        res = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var='ImputedminInstalls')
         for name1, content1 in res.items():
             for name2, dfres in content1.items():
                 fig = plt.figure(figsize=(12, 6))
                 sns.set(style="whitegrid")
                 fig.subplots_adjust(bottom=0.2)
                 sns.violinplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogminInstalls_" + the_panel,
                             data=res[name1][name2],
                             color="0.8",
@@ -730,13 +818,13 @@ class reg_preparation_essay_2_3():
                             )
                 # overlay swamp plot with box plot
                 sns.stripplot(
-                        x="Apps Contained in One Cluster",
+                        x='Text Cluster Sizes',
                         y="LogminInstalls_" + the_panel,
                         data=res[name1][name2],
                         jitter=True)
                 plt.xticks(rotation=45)
                 plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
-                plt.xlabel("Number of Apps Contained in One Cluster")
+                plt.xlabel('Text Cluster Sizes Bins')
                 plt.ylabel("Log Minimum Installs")
                 # ------------ set title and save ----------------------------------------
                 self._set_title_and_save_graphs(fig=fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
@@ -755,6 +843,7 @@ class reg_preparation_essay_2_3():
                                    individual_dummies_df=self.i_dummies_df)
 
     ####################### functions for offerIAP, containsAds, paidTrue ####################################################
+
     def _percentage_of_true_false_groupby_text_cluster(self, the_panel):
         """
         On the y axis, we are going to graph percentage instead of number of apps (still stacked bar graph)
@@ -765,48 +854,21 @@ class reg_preparation_essay_2_3():
                                                                the_panel=the_panel,
                                                                includeNicheDummy=False,
                                                                convert_to_long=False)
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
+        res = self._df_text_cluster_sizes(d=d)
+        res2 = self._groupby_text_size_bins_count_percentage(d=res, the_panel=the_panel,
+                                                             count_by_var_list=['offersIAPTrue', 'containsAdsTrue'])
+        for k1, content1 in res2.items():
             for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                # count number of apps in each text cluster
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
-                # create percentage by group, ca is containsAds, of is offersIAP
-                df_list = []
-                for var in ['offersIAPTrue', 'containsAdsTrue']:
-                    total = df2.groupby('Apps Contained in One Cluster')[var + '_' + the_panel].count().reset_index()
-                    yes = df2.loc[df2[var + '_' + the_panel] == 1].groupby('Apps Contained in One Cluster')[var + '_' + the_panel].count().reset_index()
-                    # if you only have if statement, you can write it at the very end,[ for i, j in zip() if ...]
-                    # but if you have both if and else statements, you must write them before for, [ X if .. else Y for i, j in zip() ]
-                    yes['TRUE%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in zip(yes[var + '_' + the_panel], total[var + '_' + the_panel])]
-                    total['TOTAL%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in zip(total[var + '_' + the_panel], total[var + '_' + the_panel])]
-                    yes.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
-                    yes.set_index('Apps Contained in One Cluster', inplace=True)
-                    total.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
-                    total.set_index('Apps Contained in One Cluster', inplace=True)
-                    per_df = yes.join(total, how='inner')
-                    df_list.append(per_df)
-                df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-                df3.reset_index(inplace=True)
                 # remove one total percentage column because they are the same
-                df3.drop(columns=['TOTAL%_offersIAPTrue'], axis=1, inplace=True)
-                df3.rename(columns={'TOTAL%_containsAdsTrue': 'TOTAL%'}, inplace=True)
+                df.drop(columns=['TOTAL%_offersIAPTrue'], axis=1, inplace=True)
+                df.rename(columns={'TOTAL%_containsAdsTrue': 'TOTAL%'}, inplace=True)
                 # conver to long to have hue in seaborn plotting
-                df4 = pd.melt(df3,
-                              id_vars=["Apps Contained in One Cluster", "TOTAL%"],
+                df2 = pd.melt(df,
+                              id_vars=['Text Cluster Sizes', "TOTAL%"],
                               value_vars=['TRUE%_containsAdsTrue', 'TRUE%_offersIAPTrue'])
-                df4.rename(columns={'value': 'TRUE%', 'variable': 'dep_var'}, inplace=True)
-                df4['dep_var'] = df4['dep_var'].str.replace('TRUE%_', '', regex=False)
-                res[k1][k2] = df4
+                df2.rename(columns={'value': 'TRUE%', 'variable': 'dep_var'}, inplace=True)
+                df2['dep_var'] = df2['dep_var'].str.replace('TRUE%_', '', regex=False)
+                res[k1][k2] = df2
         return res
 
     def stacked_percentage_bar_graph_groupby_text_cluster(self, the_panel):
@@ -821,10 +883,10 @@ class reg_preparation_essay_2_3():
                 sns.set(style="whitegrid")
                 fig.subplots_adjust(bottom=0.2)
                 # bar chart 1 -> is 1 because this is total value
-                bar1 = sns.barplot(x='Apps Contained in One Cluster', y=var + '_total_percentage', data=dfres, color='paleturquoise')
+                bar1 = sns.barplot(x='Text Cluster Sizes', y=var + '_total_percentage', data=dfres, color='paleturquoise')
                 # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
                 # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
-                bar2 = sns.barplot(x='Apps Contained in One Cluster', y=var + '_true_percentage', data=dfres, color='darkturquoise')
+                bar2 = sns.barplot(x='Text Cluster Sizes', y=var + '_true_percentage', data=dfres, color='darkturquoise')
                 # add legend
                 sns.despine(right=True, top=True)
                 top_bar = mpatches.Patch(color='paleturquoise',  label = var.replace("True", "") + ' : No')
@@ -833,7 +895,7 @@ class reg_preparation_essay_2_3():
                 # set title and save
                 plt.xticks(rotation=45)
                 # ------------------
-                plt.xlabel("Number of Apps Contained in One Cluster")
+                plt.xlabel('Text Cluster Sizes Bins')
                 var_title = {'offersIAPTrue': 'Percentage of Apps Offer IAP',
                              'containsAdsTrue': 'Percentage of Apps Contain Ads'}
                 plt.ylabel('Percentage Points')
@@ -859,8 +921,8 @@ class reg_preparation_essay_2_3():
         :param the_panel:
         :return:
         """
-        res1 = self._create_log_price_groupby_text_cluster_df(the_panel)
-        res2 = self._create_LogminInstalls_groupby_text_cluster_df(the_panel)
+        res1 = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var='Imputedprice')
+        res2 = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var='ImputedminInstalls')
         # --------------------------- putting into figure ------------------------------------
         for name1, content1 in self.ssnames.items():
             for name2 in content1:
@@ -871,7 +933,7 @@ class reg_preparation_essay_2_3():
                     sns.set(style="whitegrid")
                     if key_vars[i] == 'Imputedprice':
                         sns.violinplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogImputedprice_" + the_panel,
                             data=res1[name1][name2],
                             color=".8",
@@ -880,7 +942,7 @@ class reg_preparation_essay_2_3():
                             ax = ax.flat[i])
                         # overlay swamp plot with box plot
                         sns.stripplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogImputedprice_" + the_panel,
                             data=res1[name1][name2],
                             jitter=True,
@@ -888,7 +950,7 @@ class reg_preparation_essay_2_3():
                         ax.flat[i].set_ylabel("Log Price")
                     elif key_vars[i] == 'ImputedminInstalls':
                         sns.violinplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogminInstalls_" + the_panel,
                             data=res2[name1][name2],
                             color="0.8",
@@ -897,7 +959,7 @@ class reg_preparation_essay_2_3():
                             ax = ax.flat[i])
                         # overlay swamp plot with box plot
                         sns.stripplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogminInstalls_" + the_panel,
                             data=res2[name1][name2],
                             jitter=True,
@@ -906,14 +968,14 @@ class reg_preparation_essay_2_3():
                     else:
                         res34 = self._percentage_of_true_false_groupby_text_cluster(the_panel)
                         # bar chart 1 -> is 1 because this is total value
-                        sns.barplot(x='Apps Contained in One Cluster',
+                        sns.barplot(x='Text Cluster Sizes',
                                     y=key_vars[i] + '_total_percentage',
                                     data=res34[name1][name2][1],
                                     color='paleturquoise',
                                     ax = ax.flat[i])
                         # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
                         # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
-                        sns.barplot(x='Apps Contained in One Cluster',
+                        sns.barplot(x='Text Cluster Sizes',
                                     y=key_vars[i] + '_true_percentage',
                                     data=res34[name1][name2][2],
                                     color='darkturquoise',
@@ -924,7 +986,7 @@ class reg_preparation_essay_2_3():
                         top_bar = mpatches.Patch(color='paleturquoise', label=key_vars[i].replace("True", "") + ' : No')
                         bottom_bar = mpatches.Patch(color='darkturquoise', label=key_vars[i].replace("True", "") + ' : Yes')
                         ax.flat[i].legend(handles=[top_bar, bottom_bar], ncol=2)
-                    ax.flat[i].set_xlabel("Number of Apps Contained in One Cluster")
+                    ax.flat[i].set_xlabel('Text Cluster Sizes Bins')
                     ax.flat[i].set_ylim(bottom=0)
                     ax.flat[i].xaxis.set_visible(True)
                     for tick in ax.flat[i].get_xticklabels():
@@ -952,8 +1014,8 @@ class reg_preparation_essay_2_3():
         :param the_panel: '202106'
         :return:
         """
-        res1 = self._create_log_price_groupby_text_cluster_df(the_panel)
-        res2 = self._create_LogminInstalls_groupby_text_cluster_df(the_panel)
+        res1 = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var='Imputedprice')
+        res2 = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var='ImputedminInstalls')
         for i in range(len(key_vars)):
             for name1, content1 in self.ssnames.items():
                 fig, ax = plt.subplots(nrows=2, ncols=3,
@@ -966,7 +1028,7 @@ class reg_preparation_essay_2_3():
                     sns.despine(right=True, top=True)
                     if key_vars[i] == 'Imputedprice':
                         sns.violinplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogImputedprice_" + the_panel,
                             data=res1[name1][content1[j]],
                             color=".8",
@@ -975,14 +1037,14 @@ class reg_preparation_essay_2_3():
                             ax=ax.flat[j])
                         # overlay swamp plot with box plot
                         sns.stripplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogImputedprice_" + the_panel,
                             data=res1[name1][content1[j]],
                             jitter=True,
                             ax=ax.flat[j])
                     elif key_vars[i] == 'ImputedminInstalls':
                         sns.violinplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogminInstalls_" + the_panel,
                             data=res2[name1][content1[j]],
                             color="0.8",
@@ -991,7 +1053,7 @@ class reg_preparation_essay_2_3():
                             ax = ax.flat[j])
                         # overlay swamp plot with box plot
                         sns.stripplot(
-                            x="Apps Contained in One Cluster",
+                            x='Text Cluster Sizes',
                             y="LogminInstalls_" + the_panel,
                             data=res2[name1][content1[j]],
                             jitter=True,
@@ -1000,7 +1062,7 @@ class reg_preparation_essay_2_3():
                         res34 = self._percentage_of_true_false_groupby_text_cluster(the_panel)
                         # bar chart 1 -> is 1 because this is total value
                         total_palette = {"containsAdsTrue": 'paleturquoise', "offersIAPTrue": 'paleturquoise'}
-                        sns.barplot(x='Apps Contained in One Cluster',
+                        sns.barplot(x='Text Cluster Sizes',
                                     y='TOTAL%', # total does not matter since if the subsample does not have any apps in a text cluster, the total will always be 0
                                     data=res34[name1][content1[j]],
                                     hue="dep_var",
@@ -1009,7 +1071,7 @@ class reg_preparation_essay_2_3():
                         # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
                         # chart 2 represents the contains ads True group, thus the remaining backdrop chart 1 represents the False group
                         true_palette = {"containsAdsTrue": 'darkturquoise', "offersIAPTrue": 'teal'}
-                        sns.barplot(x='Apps Contained in One Cluster',
+                        sns.barplot(x='Text Cluster Sizes',
                                     y='TRUE%',
                                     data=res34[name1][content1[j]],
                                     hue="dep_var",
@@ -1024,7 +1086,7 @@ class reg_preparation_essay_2_3():
                         sample_name = content1[j].replace("category_", "").lower().title() + " Sub-sample"
                         ax.flat[j].set_title(sample_name)
                     ax.flat[j].set_ylim(bottom=0)
-                    ax.flat[j].set_xlabel("Number of Apps Contained in One Cluster")
+                    ax.flat[j].set_xlabel('Text Cluster Sizes Bins')
                     y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
                                     'Imputedprice': 'Log Price',
                                     'both_IAP_and_ADS': 'Percentage Points'}
