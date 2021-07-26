@@ -2,6 +2,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from pathlib import Path
 import pickle
+import copy
 import re
 from tqdm import tqdm
 tqdm.pandas()
@@ -47,6 +48,8 @@ class nlp_pipeline_essay_2_3():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_2___/nlp/graphs')
     nlp_graph_essay_3_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_3___/nlp/graphs')
+    nlp_stats_essay_2_3_common_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_2_3_common___/nlp/stats')
     panel_essay_2_3_common_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_2_3_common_panels___')
     panel_essay_2_path = Path(
@@ -55,55 +58,28 @@ class nlp_pipeline_essay_2_3():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_3_panels___')
     tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
-    # after examining the optimal svd cluster graphs, I write dict here as class attributes for each dataset
-    # ------------------------------------------------------------------------
-    optimal_svd_components_201907 = {
-        'Leaders': {'full': 860,
-                'category_GAME': 630,
-                'category_BUSINESS': 210,
-                'category_SOCIAL': 200,
-                'category_LIFESTYLE': 300,
-                'category_MEDICAL': 65},
-        'Non-leaders': {'full': 1150,
-                    'category_GAME': 950,
-                    'category_BUSINESS': 750,
-                    'category_SOCIAL': 700,
-                    'category_LIFESTYLE': 850,
-                    'category_MEDICAL': 350}}
-
-    # after examining the optimal km cluster graphs (both elbow and sihouette graphs),
-    # I write dict here as class attributes for each dataset
-    # ------------------------------------------------------------------------
-    optimal_km_clusters_201907 = {
-        'Leaders': {'full': 130,
-                    'category_GAME': 50,
-                    'category_BUSINESS': 47,
-                    'category_SOCIAL': 40,
-                    'category_LIFESTYLE': 75,
-                    'category_MEDICAL': 8},
-        'Non-leaders': {'full': 300,
-                        'category_GAME': 50,
-                        'category_BUSINESS': 100,
-                        'category_SOCIAL': 100,
-                        'category_LIFESTYLE': 130,
-                        'category_MEDICAL': 85}}
-
     def __init__(self,
                  tcn,
                  initial_panel,
                  all_panels,
+                 ssvars=None,
                  df=None,
                  sub_sample_text_cols=None,
                  tf_idf_matrices=None,
+                 optimal_svd_dict=None,
                  svd_matrices=None,
+                 optimal_k_cluster_dict=None,
                  output_labels=None):
         self.tcn = tcn
         self.initial_panel = initial_panel
         self.all_panels = all_panels
+        self.ssvars = ssvars
         self.df = df
         self.ss_text_cols = sub_sample_text_cols
         self.tf_idf_matrices = tf_idf_matrices
+        self.optimal_svd_dict = optimal_svd_dict
         self.svd_matrices = svd_matrices
+        self.optimal_k_cluster_dict = optimal_k_cluster_dict
         self.output_labels = output_labels
 
     def open_divided_df(self):
@@ -117,47 +93,60 @@ class nlp_pipeline_essay_2_3():
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)
 
-    def generate_save_input_text_col(self):
-        """
-        leaders -- five categories
-        non-leaders -- five categories
-        """
-        # --------------- compile text cols ----------------------------------------------------------
-        self.ss_text_cols = {'Leaders': {'full': None,
-                                         'category_GAME': None,
-                                         'category_BUSINESS': None,
-                                         'category_SOCIAL': None,
-                                         'category_LIFESTYLE': None,
-                                         'category_MEDICAL': None},
-                             'Non-leaders': {'full': None,
-                                             'category_GAME': None,
-                                             'category_BUSINESS': None,
-                                             'category_SOCIAL': None,
-                                             'category_LIFESTYLE': None,
-                                             'category_MEDICAL': None}}
-        # --------------- full ------------------------------------------------------
-        for subsample1, content1 in self.ss_text_cols.items():
-            for subsample2, content2 in content1.items():
-                if subsample2 == 'full':
-                    self.ss_text_cols[subsample1][subsample2] = self.df.loc[
-                        self.df[subsample1] == 1,
-                        self.tcn + 'ModeClean'].copy(deep=True)
-                else:
-                    self.ss_text_cols[subsample1][subsample2] = self.df.loc[
-                        (self.df[subsample1] == 1) & (self.df[subsample2] == 1),
-                        self.tcn + 'ModeClean'].copy(deep=True)
+    def create_subsample_slice_vars(self):
+        sub_categories = ['full', 'category_GAME', 'category_BUSINESS', 'category_SOCIAL',
+                          'category_LIFESTYLE', 'category_MEDICAL']
+        self.ssvars = {'Leaders': sub_categories,
+                       'Non-leaders': sub_categories}
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
+                 output_labels=self.output_labels)
+
+    def slice_text_cols_for_sub_samples(self):
+        """
+        leaders -- five categories
+        non-leaders -- five categories
+        """
+        d = dict.fromkeys(self.ssvars.keys())
+        for subsample1, content1 in self.ssvars.items():
+            d[subsample1] = dict.fromkeys(content1)
+            for subsample2 in content1:
+                if subsample2 == 'full':
+                    d[subsample1][subsample2] = self.df.loc[
+                        self.df[subsample1] == 1,
+                        self.tcn + 'ModeClean'].copy(deep=True)
+                else:
+                    d[subsample1][subsample2] = self.df.loc[
+                        (self.df[subsample1] == 1) & (self.df[subsample2] == 1),
+                        self.tcn + 'ModeClean'].copy(deep=True)
+        self.ss_text_cols = d
+        return nlp_pipeline_essay_2_3(
+                 tcn=self.tcn,
+                 initial_panel=self.initial_panel,
+                 all_panels=self.all_panels,
+                 df=self.df,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
+                 tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
+                 svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)
 
     def tf_idf_transformation(self):
@@ -187,8 +176,11 @@ class nlp_pipeline_essay_2_3():
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)
 
     def find_optimal_svd_component_plot(self):
@@ -228,107 +220,122 @@ class nlp_pipeline_essay_2_3():
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
+                 output_labels=self.output_labels)
+
+    def find_optimal_svd_component_dict(self, cutoff_percent_explained):
+        d = dict.fromkeys(self.ssvars)
+        for k, ss in self.ssvars.items():
+            d[k] = dict.fromkeys(ss)
+            for i in ss:
+                print('FIND OPTIMAL SVD COMPONENTS')
+                matrix = self.tf_idf_matrices[k][i]
+                n_comp = np.round(np.linspace(0, matrix.shape[1] - 1, 40))
+                n_comp = n_comp.astype(int)
+                x = 0
+                while x <= len(n_comp)-1:
+                    svd = TruncatedSVD(n_components=n_comp[x])
+                    svd.fit(matrix)
+                    print(self.initial_panel, ' -- ', k, ' -- ', i)
+                    print('Number of Components: ', n_comp[x])
+                    print('Explained Variance Ratio: ', svd.explained_variance_ratio_.sum())
+                    if svd.explained_variance_ratio_.sum() < cutoff_percent_explained:
+                        x += 1 # continue the while loop to test next ncomp
+                    else:
+                        d[k][i] = n_comp[x]
+                        print("The Optimal SVD Component is = %r and the explained variance = %r" % (
+                        n_comp[x], svd.explained_variance_ratio_.sum()))
+                        x = len(n_comp) # set the x value so to break the while loop
+        self.optimal_svd_dict = d
+        # ----------------- save -----------------------------------------------
+        filename = self.initial_panel + '_optimal_svd_dict.pickle'
+        q = nlp_pipeline_essay_2_3.nlp_stats_essay_2_3_common_path / filename
+        pickle.dump(d, open(q, 'wb'))
+        return nlp_pipeline_essay_2_3(
+                 tcn=self.tcn,
+                 initial_panel=self.initial_panel,
+                 all_panels=self.all_panels,
+                 df=self.df,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
+                 tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
+                 svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)
 
     def truncate_svd(self, random_state):
-        matrix_df_dict = dict.fromkeys(self.ss_text_cols.keys())
-        for sample, content in matrix_df_dict.items():
-            matrix_df_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
+        f_name = self.initial_panel + '_optimal_svd_dict.pickle'
+        q = nlp_pipeline_essay_2_3.nlp_stats_essay_2_3_common_path / f_name
+        with open(q, 'rb') as f:
+            self.optimal_svd_dict = pickle.load(f)
+        # -------------------------------------------------------------------------
+        d = dict.fromkeys(self.tf_idf_matrices.keys())
         for sample, content in self.tf_idf_matrices.items():
+            d[sample] = dict.fromkeys(content.keys())
             for ss_name, matrix in content.items():
                 print('TRUNCATE SVD')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                svd = TruncatedSVD(n_components=nlp_pipeline_essay_2_3.optimal_svd_components_201907[sample][ss_name],
+                svd = TruncatedSVD(n_components=self.optimal_svd_dict[sample][ss_name],
                                    random_state=random_state)
                 matrix_transformed = svd.fit_transform(matrix)
                 print(matrix_transformed.shape)
                 matrix_transformed_df = pd.DataFrame(matrix_transformed)  # do not need to assign column names because those do not correspond to each topic words (they have been transformed)
                 matrix_transformed_df['app_ids'] = matrix.index.tolist()
                 matrix_transformed_df.set_index('app_ids', inplace=True)
-                matrix_df_dict[sample][ss_name] = matrix_transformed_df
-        self.svd_matrices = matrix_df_dict
+                d[sample][ss_name] = matrix_transformed_df
+        self.svd_matrices = d
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)
 
-    def find_optimal_cluster_elbow(self):
-        """
-        https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f
-        https://scikit-learn.org/stable/modules/clustering.html
-        """
-        for sample, content in self.svd_matrices.items():
-            for ss_name, matrix in content.items():
-                print('ELBOW METHOD TO FIND OPTIMAL KM CLUSTERS')
-                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                # note here, for svd comps, the maximum components are the total number of features (columns)
-                # here, the total number of clusters are the total number of apps (at extreme, 1 app per cluster)
-                # starts from 1 because this is only within cluster sum of squared distances
-                # the maximum number of clusters is controlled below 1/5 of total number of points because first it would
-                # take extremely long time to compute without controlling for maximum number of clusters, second,
-                # it is reasonable to assume that one would not want only 4 points in a cluster.
-                n_cluster_list = np.round(np.linspace(1, matrix.shape[0] - 0.8 * matrix.shape[0], 10))
-                n_cluster_list = n_cluster_list.astype(int)
-                sum_of_squared_distances = []
-                for k in tqdm(n_cluster_list):
-                    km = KMeans(n_clusters=k)
-                    km = km.fit(matrix)
-                    sum_of_squared_distances.append(km.inertia_)
-                fig, ax = plt.subplots()
-                ax.plot(n_cluster_list, sum_of_squared_distances, 'bx-')
-                ax.grid()
-                plt.xlabel('k')
-                plt.ylabel('Sum_of_squared_distances')
-                plt.title(self.initial_panel + ' ' + sample + ' ' + ss_name + ' Elbow Method For Optimal k')
-                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_optimal_cluster.png'
-                if sample == 'Leaders':
-                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_3_path / 'optimal_clusters' / filename,
-                                facecolor='white', dpi=300)
-                else:
-                    fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_2_path / 'optimal_clusters' / filename,
-                                facecolor='white', dpi=300)
-                plt.show()
-        return nlp_pipeline_essay_2_3(
-                 tcn=self.tcn,
-                 initial_panel=self.initial_panel,
-                 all_panels=self.all_panels,
-                 df=self.df,
-                 sub_sample_text_cols=self.ss_text_cols,
-                 tf_idf_matrices=self.tf_idf_matrices,
-                 svd_matrices=self.svd_matrices,
-                 output_labels=self.output_labels)
-
-    def find_optimal_cluster_silhouette(self):
+    def optimal_k_silhouette(self):
         """
         https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
         https://medium.com/@kunal_gohrani/different-types-of-distance-metrics-used-in-machine-learning-e9928c5e26c7
+        I think it is just better off using sihouette score because global maximum is better to find out than the elbow point.
+        The Silhouette Coefficient is calculated using the mean intra-cluster distance (a)
+        and the mean nearest-cluster distance (b) for each sample. The Silhouette Coefficient for a sample is (b - a) / max(a, b).
+        To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of.
+        Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
         """
+        d = dict.fromkeys(self.ssvars.keys())
         for sample, content in self.svd_matrices.items():
+            d[sample] = dict.fromkeys(content.keys())
             for ss_name, matrix in content.items():
-                print('SILHOUETTE SCORE TO FIND OPTIMAL KM CLUSTERS')
-                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
                 # starting from 2 because this score need to calculate between cluster estimators
-                n_cluster_list = np.round(np.linspace(2, matrix.shape[0] - 0.8 * matrix.shape[0], 10))
+                n_cluster_list = np.round(np.linspace(2, matrix.shape[0] - 0.9 * matrix.shape[0], 10))
                 n_cluster_list = n_cluster_list.astype(int)
                 silhouette_scores = []
+                silhouette_scores_dict = {}
+                print('SILHOUETTE SCORE -- ', self.initial_panel, ' -- ', sample, ' -- ', ss_name)
                 for k in tqdm(n_cluster_list):
                     km = KMeans(n_clusters=k)
                     km = km.fit(matrix)
                     labels = km.labels_
-                    silhouette_scores.append(silhouette_score(matrix, labels, metric='cosine'))
+                    s_score = silhouette_score(matrix, labels, metric='cosine')
+                    silhouette_scores.append(s_score)
+                    silhouette_scores_dict[k] = s_score
+                d[sample][ss_name] = silhouette_scores_dict
                 fig, ax = plt.subplots()
                 ax.plot(n_cluster_list, silhouette_scores, 'bx-')
                 ax.grid()
                 plt.xlabel('k')
                 plt.ylabel('silhouette_scores (cosine distance)')
-                plt.title(self.initial_panel + ' ' + sample + ' ' + ss_name + ' Silhouette Scores For Optimal k')
+                plt.title(self.initial_panel + sample + ss_name + ' Silhouette Scores For Optimal k')
                 filename = self.initial_panel + '_' + sample + '_' + ss_name + '_silhouette_optimal_cluster.png'
                 if sample == 'Leaders':
                     fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_3_path / 'optimal_clusters' / filename,
@@ -337,30 +344,96 @@ class nlp_pipeline_essay_2_3():
                     fig.savefig(nlp_pipeline_essay_2_3.nlp_graph_essay_2_path / 'optimal_clusters' / filename,
                                 facecolor='white', dpi=300)
                 plt.show()
+        # ----------------- save -----------------------------------------------
+        dict_f_name = self.initial_panel + '_silhouette_score_dict.pickle'
+        q = nlp_pipeline_essay_2_3.nlp_stats_essay_2_3_common_path / dict_f_name
+        pickle.dump(d, open(q, 'wb'))
         return nlp_pipeline_essay_2_3(
                  tcn=self.tcn,
                  initial_panel=self.initial_panel,
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
+                 output_labels=self.output_labels)
+
+    def determine_optimal_k_from_silhouette(self):
+        dict_f_name = self.initial_panel + '_silhouette_score_dict.pickle'
+        q = nlp_pipeline_essay_2_3.nlp_stats_essay_2_3_common_path / dict_f_name
+        with open(q, 'rb') as f:
+            res = pickle.load(f)
+        d = dict.fromkeys(self.ssvars.keys())
+        for sample1, content in self.ssvars.items():
+            d[sample1] = dict.fromkeys(content)
+            for sample2 in content:
+                df = copy.deepcopy(res[sample1][sample2])
+                df2 = pd.DataFrame(df, index=[0])
+                df3 = df2.T
+                optimal_k = df3.idxmax(axis=0)
+                print(self.initial_panel, ' -- ', sample1, ' -- ', sample2, ' -- ',
+                      ' Optimal K From Global Max of Silhouette Score')
+                print(optimal_k)
+                print()
+                d[sample1][sample2] = optimal_k
+        self.optimal_k_cluster_dict = d
+        # ----------------- save -----------------------------------------------
+        dict_f_name = self.initial_panel + '_optimal_k_from_global_max_of_silhouette_score.pickle'
+        q = nlp_pipeline_essay_2_3.nlp_stats_essay_2_3_common_path / dict_f_name
+        pickle.dump(d, open(q, 'wb'))
+        return nlp_pipeline_essay_2_3(
+                 tcn=self.tcn,
+                 initial_panel=self.initial_panel,
+                 all_panels=self.all_panels,
+                 df=self.df,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
+                 tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
+                 svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
+                 output_labels=self.output_labels)
+
+    def open_optimal_k(self):
+        dict_f_name = self.initial_panel + '_optimal_k_from_global_max_of_silhouette_score.pickle'
+        q = nlp_pipeline_essay_2_3.nlp_stats_essay_2_3_common_path / dict_f_name
+        with open(q, 'rb') as f:
+            self.optimal_k_cluster_dict = pickle.load(f)
+        return nlp_pipeline_essay_2_3(
+                 tcn=self.tcn,
+                 initial_panel=self.initial_panel,
+                 all_panels=self.all_panels,
+                 df=self.df,
+                 sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
+                 tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
+                 svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)
 
     def kmeans_cluster(self,
-                       init,
                        random_state):
-        label_dict = dict.fromkeys(self.ss_text_cols.keys())
-        for sample, content in label_dict.items():
-            label_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
+        label_dict = dict.fromkeys(self.svd_matrices.keys())
         for sample, content in self.svd_matrices.items():
+            label_dict[sample] = dict.fromkeys(self.svd_matrices[sample].keys())
             for ss_name, matrix in content.items():
                 print('KMEANS CLUSTER')
                 print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                kmeans = KMeans(n_clusters=nlp_pipeline_essay_2_3.optimal_km_clusters_201907[sample][ss_name],
-                                init=init,
-                                random_state=random_state)
-                y_kmeans = kmeans.fit_predict(matrix)  # put matrix_transformed_df here would generate same result as put matrix_transformed
+                print('input matrix shape')
+                print(matrix.shape)
+                print('optimal k clusters')
+                k = self.optimal_k_cluster_dict[sample][ss_name]
+                print(k)
+                y_kmeans = KMeans(
+                    n_clusters=int(k),
+                    random_state=random_state
+                ).fit_predict(
+                    matrix
+                )  # it is equivalent as using fit then .label_.
                 matrix[sample + '_' + ss_name + '_kmeans_labels'] = y_kmeans
                 label_single = matrix[[sample + '_' + ss_name + '_kmeans_labels']]
                 label_dict[sample][ss_name] = label_single
@@ -376,6 +449,9 @@ class nlp_pipeline_essay_2_3():
                  all_panels=self.all_panels,
                  df=self.df,
                  sub_sample_text_cols=self.ss_text_cols,
+                 ssvars=self.ssvars,
                  tf_idf_matrices=self.tf_idf_matrices,
+                 optimal_svd_dict=self.optimal_svd_dict,
                  svd_matrices=self.svd_matrices,
+                 optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                  output_labels=self.output_labels)

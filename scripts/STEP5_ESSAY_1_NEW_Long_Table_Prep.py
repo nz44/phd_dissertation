@@ -1,15 +1,10 @@
-"""
-This file is to bring the content of long_table_prep in line with STEP10_Essay_2_3_Long_Table_Prep.py
-Tow major chanegs from STEP5_ESSAY_1_Long_Table_Prep.py are:
-    1. I deleted the old scatter plots of niche text cluster vs. key variables.
-    2. Deleted everything related to nichescale dummies because this does not reveal important information.
-"""
 import pandas as pd
-import copy
+# import copy
 from pathlib import Path
 import pickle
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
+pd.options.mode.chained_assignment = None
 import numpy as np
 import math
 import seaborn as sns
@@ -28,36 +23,25 @@ today = datetime.today()
 yearmonth = today.strftime("%Y%m")
 
 
-class reg_preparation_essay_2_3():
-    """by default, regression analysis will either use cross sectional data or panel data with CONSECUTIVE panels,
-    this is because we can calculate t-1 easily.
-    Two major changes:
-    1. I deleted the old scatter plots of niche text cluster vs. key variables.
-    2. Deleted everything related to nichescale dummies because this does not reveal important information.
+class reg_preparation_essay_1():
+    """2021 July 18
+    This is the new version written based on the STEP10_ESSAY_2_3_Long_Table_Prep.py
     """
-    panel_essay_2_3_common_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_2_3_common_panels___')
-    panel_essay_2_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_2_panels___')
-    panel_essay_3_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_3_panels___')
-    reg_table_essay_2_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_2___/reg_results_tables')
-    reg_table_essay_3_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_3___/reg_results_tables')
-    des_stats_tables_essay_2 = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_2___/descriptive_stats/tables')
-    des_stats_tables_essay_3 = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_3___/descriptive_stats/tables')
-    des_stats_graphs_essay_2 = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_2___/descriptive_stats/graphs')
-    des_stats_graphs_essay_3 = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_3___/descriptive_stats/graphs')
+    panel_essay_1_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
+    reg_table_essay_1_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/reg_results_tables')
+    des_stats_tables_essay_1 = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/tables')
+    des_stats_graphs_essay_1 = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/graphs')
+    des_stats_graphs_overall = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/overall_graphs')
     graph_ylabel_dict = {'containsAdsTrue': 'ContainsAds',
                          'offersIAPTrue': 'OffersIAP',
                          'paidTrue': 'Paid',
                          'Imputedprice': 'Price'}
-    graph_subsample_title_dict = {'Leaders full': 'Market Leaders Full Sample',
+    graph_subsample_title_dict = {'full': 'Full Sample',
                                     'Leaders category_GAME': 'Market Leaders Game Apps',
                                     'Leaders category_BUSINESS': 'Market Leaders Business Apps',
                                     'Leaders category_SOCIAL': 'Market Leaders Social Apps',
@@ -69,6 +53,11 @@ class reg_preparation_essay_2_3():
                                   'Non-leaders category_SOCIAL': 'Market Followers Social Apps',
                                   'Non-leaders category_LIFESTYLE': 'Market Followers Lifestyle Apps',
                                   'Non-leaders category_MEDICAL': 'Market Followers Medical Apps'}
+    var_title_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                      'Imputedprice': 'Log Price',
+                      'offersIAPTrue': 'Percentage of Apps Offers IAP',
+                      'containsAdsTrue': 'Percentage of Apps Contains Ads',
+                      'both_IAP_and_ADS': 'Percentage of Apps Contains Ads and Offers IAP'}
     def __init__(self,
                  initial_panel,
                  all_panels,
@@ -99,24 +88,24 @@ class reg_preparation_essay_2_3():
 
     def _open_imputed_deleted_divided_df(self):
         f_name = self.initial_panel + '_imputed_deleted_subsamples.pickle'
-        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / f_name
+        q = reg_preparation_essay_1.panel_essay_1_path / f_name
         with open(q, 'rb') as f:
             df = pickle.load(f)
         return df
 
     def _open_predicted_labels_dict(self):
         f_name = self.initial_panel + '_predicted_labels_dict.pickle'
-        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'predicted_text_labels' / f_name
+        q = reg_preparation_essay_1.panel_essay_1_path / 'predicted_text_labels' / f_name
         with open(q, 'rb') as f:
             d = pickle.load(f)
         return d
 
     def open_cross_section_reg_df(self):
         filename = self.initial_panel + '_cross_section_df.pickle'
-        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'cross_section_dfs' / filename
+        q = reg_preparation_essay_1.panel_essay_1_path / 'cross_section_dfs' / filename
         with open(q, 'rb') as f:
             self.cdf = pickle.load(f)
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -137,7 +126,7 @@ class reg_preparation_essay_2_3():
                     list_of_text_label_cols.append(text_label_col)
         combined_label_df = functools.reduce(lambda a, b: a.join(b, how='left'), list_of_text_label_cols)
         self.cdf = df.join(combined_label_df, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -159,9 +148,9 @@ class reg_preparation_essay_2_3():
                     if len(df3.index) >= 10:
                         df3 = df3.sample(n=10)
                     f_name = self.initial_panel + '_' + name1 + '_' + name2 + '_' + 'TL_' + str(label_num) + '_' + self.tcn + '_sample.csv'
-                    q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'check_predicted_label_text_cols' / f_name
+                    q = reg_preparation_essay_1.panel_essay_1_path / 'check_predicted_label_text_cols' / f_name
                     df3.to_csv(q)
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -171,36 +160,14 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def select_vars(self, the_panel=None, **kwargs):
-        """
-        one input can have both time variant variables list and time invariants vars list, not if else relationship
-        """
-        selected_cols = []
-        if 'time_variant_vars_list' in kwargs.keys():
-            time_variables = kwargs['time_variant_vars_list']
-            if the_panel is None:
-                for p in self.all_panels:
-                    selected_cols.extend([item + '_' + p for item in time_variables])
-            else:
-                selected_cols.extend([item + '_' + the_panel for item in time_variables])
-        if 'time_invariant_vars_list' in kwargs.keys():
-            selected_cols.extend(kwargs['time_invariant_vars_list'])
-        print('The following columns will be selected : ')
-        print(selected_cols)
-        new_df = self.cdf.copy(deep=True)
-        selected_df = new_df[selected_cols]
-        return selected_df
-
-    ###########################################################################################################
-    # Count and Graph NLP Label for all sub samples
-    ###########################################################################################################
+    # Count and Graph NLP Label for all sub samples ###########################################################
 
     def create_subsample_name_dict(self):
         d = self._open_predicted_labels_dict()
         self.ssnames = dict.fromkeys(d.keys())
         for name1, content in d.items():
             self.ssnames[name1] = list(content.keys())
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -250,45 +217,156 @@ class reg_preparation_essay_2_3():
                     ).sort_values(ascending=False).rename(name1 + '_' + name2 + '_Apps_Count').to_frame()
         return d
 
+    ##############################################################################################################
+    ###################  GRAPHING ################################################################################
+    ##############################################################################################################
+
+    ############## General functions you use in graphing #########################################################
+    def _get_xy_var_list(self, name1, name2, y_var, the_panel=None):
+        """
+        :param name1: leaders non-leaders
+        :param name2: all categories
+        :param y_var: 'Imputedprice','ImputedminInstalls','offersIAPTrue','containsAdsTrue'
+        :param log_y: for price and mininstalls, log = True
+        :return:
+        """
+        time_invar_controls = ['size', 'DaysSinceReleased']
+        x_var = [name1 + '_' + name2 + '_NicheDummy']
+        if the_panel is None:
+            time_var_controls = ['Imputedscore_' + i for i in self.all_panels] + \
+                                ['Imputedreviews_' + i for i in self.all_panels]
+            y_var = [y_var + '_' + i for i in self.all_panels]
+        else:
+            time_var_controls = ['Imputedscore_' + the_panel, 'Imputedreviews_' + the_panel]
+            y_var = [y_var + '_' + the_panel]
+        all_vars = y_var + x_var + time_invar_controls + time_var_controls
+        return all_vars
+
+    def _slice_xy_df_for_subsamples(self, y_var, the_panel=None, log_y=False):
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                var_list = self._get_xy_var_list(name1=name1, name2=name2, y_var=y_var, the_panel=the_panel)
+                if log_y is False:
+                    res[name1][name2] = df[var_list]
+                else:
+                    df2 = df[var_list]
+                    if the_panel is None:
+                        for i in self.all_panels:
+                            df2['Log' + y_var + '_' + i] = np.log2(df2[y_var + '_' + i] + 1)
+                            df2.drop([y_var + '_' + i], axis=1, inplace=True)
+                    else:
+                        df2['Log' + y_var + '_' + the_panel] = np.log2(df2[y_var + '_' + the_panel] + 1)
+                        df2.drop([y_var + '_' + the_panel], axis=1, inplace=True)
+                    res[name1][name2] = df2
+        return res
+
+    def _slice_subsamples_dict(self):
+        """
+        :param vars: a list of variables you want to subset
+        :return:
+        """
+        df = self.cdf.copy(deep=True)
+        d = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in self.ssnames.items():
+            d[name1] = dict.fromkeys(content1)
+            df2 = df.loc[df[name1]==1]
+            for name2 in content1:
+                if name2 == 'full':
+                    d[name1][name2] = df2
+                else:
+                    d[name1][name2] = df2.loc[df2[name2]==1]
+        return d
+
+    def _select_df_for_key_vars_against_text_clusters(self, key_vars,
+                                                      the_panel=None,
+                                                      includeNicheDummy=False,
+                                                      convert_to_long=False,
+                                                      percentage_true_df=False):
+        """
+        Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
+        This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
+        """
+        if the_panel is not None:
+            selected_vars = [i + '_' + the_panel for i in key_vars]
+        else:
+            selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
+                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
+                if includeNicheDummy is True:
+                    svars = selected_vars + [niche_dummy]
+                else:
+                    svars = selected_vars + [text_label_var]
+                if convert_to_long is False:
+                    res[name1][name2] = df[svars]
+                else:
+                    if percentage_true_df is False:
+                        res[name1][name2] = self._convert_to_long_form(df=df[svars], var=key_vars)
+                    else:
+                        df2 = self._convert_to_long_form(df=df[svars], var=key_vars)
+                        res[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
+                                                                                        ldf=df2,
+                                                                                        nichedummy=niche_dummy)
+        return res
+
     def _set_title_and_save_graphs(self, fig, name1, graph_title, relevant_folder_name,
                                    name2=None,
-                                   subsample_one_graph=False):
+                                   subsample_one_graph=False,
+                                   essay_2_and_3_overall=False):
         """
         generic internal function to save graphs according to essay 2 (non-leaders) and essay 3 (leaders).
         name1 and name2 are the key names of self.ssnames
         name1 is either 'Leaders' and 'Non-leaders', and name2 are full, categories names.
         graph_title is what is the graph is.
         """
-        if subsample_one_graph is False:
-            # ------------ set title -------------------------------------------------------------------------
-            subsample_name = name1 + ' ' + name2
-            title = self.initial_panel + ' ' \
-                    + reg_preparation_essay_2_3.graph_subsample_title_dict[subsample_name] + ' ' \
-                    + graph_title
+        if essay_2_and_3_overall is True:
+            title = self.initial_panel + ' ' + graph_title
             title = title.title()
             fig.suptitle(title, fontsize='medium')
-            # ------------------ save file with name (tolower and replace whitespace with underscores) ------
             file_title = graph_title.lower().replace(" ", "_")
-            filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
-        else:
-            # ------------ set title -------------------------------------------------------------------------
-            title = self.initial_panel + ' ' + name1 \
-                    + ' ' \
-                    + graph_title + ' In All Subsamples'
-            title = title.title()
-            fig.suptitle(title, fontsize='medium')
-            # ------------------ save file with name (tolower and replace whitespace with underscores) ------
-            file_title = graph_title.lower().replace(" ", "_")
-            filename = self.initial_panel + '_' + name1 + '_' + file_title + '.png'
-        if name1 == 'Leaders':
-            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_3 / relevant_folder_name / filename,
+            filename = self.initial_panel + '_' + file_title + '.png'
+            fig.savefig(reg_preparation_essay_1.des_stats_graphs_overall / filename,
                         facecolor='white',
                         dpi=300)
         else:
-            fig.savefig(reg_preparation_essay_2_3.des_stats_graphs_essay_2 / relevant_folder_name / filename,
-                        facecolor='white',
-                        dpi=300)
+            if subsample_one_graph is False:
+                # ------------ set title -------------------------------------------------------------------------
+                subsample_name = name1 + ' ' + name2
+                title = self.initial_panel + ' ' \
+                        + reg_preparation_essay_1.graph_subsample_title_dict[subsample_name] + ' ' \
+                        + graph_title
+                title = title.title()
+                fig.suptitle(title, fontsize='medium')
+                # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+                file_title = graph_title.lower().replace(" ", "_")
+                filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
+            else:
+                # ------------ set title -------------------------------------------------------------------------
+                title = self.initial_panel + ' ' + name1 \
+                        + ' ' \
+                        + graph_title + ' In All Subsamples'
+                title = title.title()
+                fig.suptitle(title, fontsize='medium')
+                # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+                file_title = graph_title.lower().replace(" ", "_")
+                filename = self.initial_panel + '_' + name1 + '_' + file_title + '.png'
+            if name1 == 'Leaders':
+                fig.savefig(reg_preparation_essay_1.des_stats_graphs_essay_3 / relevant_folder_name / filename,
+                            facecolor='white',
+                            dpi=300)
+            else:
+                fig.savefig(reg_preparation_essay_1.des_stats_graphs_essay_2 / relevant_folder_name / filename,
+                            facecolor='white',
+                            dpi=300)
 
+    ########## count number of text clusters in each cluster size bin ####################################
     def text_cluster_bar_graph_old(self):
         """
         This graph has x-axis as the order rank of text clusters, (for example we have 250 text clusters, we order them from 0 to 249, where
@@ -338,7 +416,7 @@ class reg_preparation_essay_2_3():
                                                 name1=name1, name2=name2,
                                                 graph_title='Text Cluster Bar Graph',
                                                 relevant_folder_name = 'text_cluster_old')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -361,7 +439,7 @@ class reg_preparation_essay_2_3():
                 df3 = df2.groupby(pd.cut(df2.iloc[:, 0], ranges)).count()
                 df3.columns = ['Number of Clusters']
                 df3.reset_index(inplace=True)
-                df3.rename(columns={ df3.columns[0]: 'Apps Contained in One Cluster'}, inplace = True)
+                df3.rename(columns={ df3.columns[0]: 'Text Cluster Sizes'}, inplace = True)
                 res[k1][k2] = df3
         return res
 
@@ -377,8 +455,8 @@ class reg_preparation_essay_2_3():
                 # DO NOT DO ax = df.plot.bar(ax=ax), the real thing worked to assign this pandas plot to ax and
                 # return an ax object is ax=ax in the parameters,
                 # not the ax = df.plot at the front
-                dfres.plot.bar( x='Apps Contained in One Cluster',
-                                xlabel = 'Number of Apps Contained in One Cluster',
+                dfres.plot.bar( x='Text Cluster Sizes',
+                                xlabel = 'Text Cluster Sizes Bins',
                                 y='Number of Clusters',
                                 ylabel = 'Number of Clusters', # default will show no y-label
                                 rot=40, # rot is **kwarg rotation for ticks
@@ -394,7 +472,7 @@ class reg_preparation_essay_2_3():
                                                 name1=name1, name2=name2,
                                                 graph_title='Text Cluster Sizes',
                                                 relevant_folder_name='text_cluster_new')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -404,113 +482,262 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def _select_df_for_key_vars_against_text_clusters(self, key_vars,
-                                                      the_panel=None,
-                                                      includeNicheDummy=False,
-                                                      convert_to_long=False,
-                                                      percentage_true_df=False):
+    ############ Count number of apps in each text cluster sized bin, group_by leaders and non-leaders ##############
+    def _df_text_cluster_sizes(self, d):
         """
-        Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
-        This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
+        :param d: a nested dictionary with name1, and name 2 where name 2 contains dfs, either obtained from
+        self._slice_subsamples_dict for from self._select_df_for_key_vars_against_text_clusters
+        :return: it will return three more new columns that show each row (an app) belong to a text cluster with its size bin,
+        whether it is a large text cluster (500, 1000], a broad app, or a small text cluster (1,2], a niche app.
         """
-        if the_panel is not None:
-            selected_vars = [i + '_' + the_panel for i in key_vars]
-        else:
-            selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
-        df2 = self.cdf.copy(deep=True)
-        d = {}
-        for name1, content1 in self.ssnames.items():
-            d[name1] = dict.fromkeys(content1)
-            for name2 in content1:
-                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
+        res = dict.fromkeys(d.keys())
+        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                def _number_apps_in_each_text_cluster(df2):
+                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
+                    return s1
+                s1 = _number_apps_in_each_text_cluster(df2)
+                # assign that number to dataframe
+                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
+                # create categorical variable indicating how many number of apps are there in a text cluster
+                df2['Text Cluster Sizes'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
+                res[k1][k2] = df2
+        return res
+
+    def _groupby_text_size_bins_count(self, d):
+        """
+        :param d: is the output of self._df_text_cluster_sizes(d)
+        :return:
+        """
+        res = dict.fromkeys(d.keys())
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                count_df = df.groupby('Text Cluster Sizes').count().reset_index()
+                count_df = count_df.iloc[:, 0:2]
+                count_df.rename(columns={count_df.columns[1]: "Apps Count in Text Clusters with the Same Size"}, inplace = True)
+                res[k1][k2] = count_df
+        return res
+
+    def _place_leader_vs_nonleader_in_same_df(self, d):
+        """
+        This function aims to graph bar chart of apps count in text cluster with same sizes with leader as a bar and non-leader as a bar
+        d is the output of self._groupby_text_size_bins_count(d)
+        :return:
+        """
+        res = dict.fromkeys(d['Leaders'].keys())
+        for name2 in res.keys():
+            df_list = []
+            for name1, content1 in d.items():
+                df = content1[name2]
+                df.set_index('Text Cluster Sizes', inplace=True)
+                for i in df.columns:
+                    df.rename(columns={i: i + '_' + name1}, inplace=True)
+                df_list.append(df)
+            df2 = functools.reduce(lambda a, b:  a.join(b, how='inner'), df_list)
+            df2.reset_index(inplace=True)
+            # conver to long to have hue in seaborn plotting
+            df3 = pd.melt(df2,
+                          id_vars=['Text Cluster Sizes'],
+                          value_vars=["Apps Count in Text Clusters with the Same Size_Leaders",
+                                      "Apps Count in Text Clusters with the Same Size_Non-leaders"])
+            df3.rename(columns={'value': 'Apps Count in Text Clusters with the Same Size',
+                                'variable': 'sub_samples'}, inplace=True)
+            df3['sub_samples'] = df3['sub_samples'].str.replace('Apps Count in Text Clusters with the Same Size_', '', regex=False)
+            res[name2] = df3
+        return res
+
+    def _groupby_text_size_bins_count_percentage(self, d, the_panel, count_by_var_list):
+        """
+        :param d: is the output of self._df_text_cluster_sizes(d)
+        :param count_by_var: the variable to count by, generally == ['offersIAPTrue', 'containsAdsTrue']
+        :return:
+        """
+        res = dict.fromkeys(d.keys())
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                # create percentage by group, ca is containsAds, of is offersIAP
+                df_list = []
+                for var in count_by_var_list:
+                    total = df.groupby('Text Cluster Sizes')[var + '_' + the_panel].count().reset_index()
+                    yes = df.loc[df[var + '_' + the_panel] == 1].groupby('Text Cluster Sizes')[
+                        var + '_' + the_panel].count().reset_index()
+                    # if you only have if statement, you can write it at the very end,[ for i, j in zip() if ...]
+                    # but if you have both if and else statements, you must write them before for, [ X if .. else Y for i, j in zip() ]
+                    yes['TRUE%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in
+                                           zip(yes[var + '_' + the_panel], total[var + '_' + the_panel])]
+                    total['TOTAL%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in
+                                              zip(total[var + '_' + the_panel], total[var + '_' + the_panel])]
+                    yes.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
+                    yes.set_index('Text Cluster Sizes', inplace=True)
+                    total.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
+                    total.set_index('Text Cluster Sizes', inplace=True)
+                    per_df = yes.join(total, how='inner')
+                    df_list.append(per_df)
+                df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+                df3.reset_index(inplace=True)
+                res[k1][k2] = df3
+        return res
+
+    def graph_number_of_apps_leaders_vs_nonleaders_in_text_cluster_size_bin(self):
+        """
+        This is based on the dataframe self.open_cross_section_reg_df
+        :return:
+        """
+        d = self._slice_subsamples_dict()
+        d2 = self._df_text_cluster_sizes(d=d)
+        d3 = self._groupby_text_size_bins_count(d=d2)
+        d4 = self._place_leader_vs_nonleader_in_same_df(d=d3)
+        fig, ax = plt.subplots(nrows=2, ncols=3,
+                               figsize=(16, 8.5),
+                               sharex='col',
+                               sharey='row')
+        fig.subplots_adjust(bottom=0.2)
+        sub_sample_names = list(d4.keys())
+        for i in range(len(sub_sample_names)):
+            sns.set(style="whitegrid")
+            sns.despine(right=True, top=True)
+            sub_sample_palette = {'Leaders': 'royalblue', 'Non-leaders': 'orchid'}
+            sns.barplot(x='Text Cluster Sizes',
+                        y='Apps Count in Text Clusters with the Same Size',
+                        data=d4[sub_sample_names[i]],
+                        hue="sub_samples",
+                        palette=sub_sample_palette,
+                        ax=ax.flat[i])
+            title_name = sub_sample_names[i].replace("category_", "").lower().title()
+            ax.flat[i].set_title(title_name)
+            ax.flat[i].set_ylabel("Apps Count")
+            ax.flat[i].set_ylim(bottom=0)
+            ax.flat[i].set_xlabel('Text Cluster Sizes Bins')
+            ax.flat[i].yaxis.grid(True)
+            ax.flat[i].xaxis.set_visible(True)
+            for tick in ax.flat[i].get_xticklabels():
+                tick.set_rotation(45)
+            ax.flat[i].legend().set_visible(False)
+            top_bar = mpatches.Patch(color='royalblue',
+                                     label='Leaders')
+            bottom_bar = mpatches.Patch(color='orchid',
+                                        label='Non-leaders')
+            fig.legend(handles=[top_bar, bottom_bar], loc='upper right', ncol=1)
+        # ------------ set title and save ---------------------------------------------
+        self._set_title_and_save_graphs(fig=fig,
+                                        name1=None,
+                                        graph_title="Leaders and Non-leaders Apps Count By Text Cluster Size Bins",
+                                        relevant_folder_name=None,
+                                        essay_2_and_3_overall=True)
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    def _groupby_subsample_dfs_by_nichedummy(self):
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
                 niche_dummy = name1 + '_' + name2 + '_NicheDummy'
-                if includeNicheDummy is True:
-                    svars = selected_vars + [niche_dummy]
-                else:
-                    svars = selected_vars + [text_label_var]
-                if name2 == 'full':
-                    df3 = df2.loc[df2[name1]==1]
-                    if convert_to_long is False:
-                        d[name1][name2] = df3[svars]
-                    else:
-                        if percentage_true_df is False:
-                            d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                        else:
-                            df4 = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                            d[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
-                                                                                          ldf=df4,
-                                                                                          nichedummy=niche_dummy)
-                else:
-                    df3 = df2.loc[(df2[name2]==1) & (df2[name1]==1)]
-                    if convert_to_long is False:
-                        d[name1][name2] = df3[svars]
-                    else:
-                        if percentage_true_df is False:
-                            d[name1][name2] = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                        else:
-                            df4 = self._convert_to_long_form(df=df3[svars], var=key_vars)
-                            d[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
-                                                                                          ldf=df4,
-                                                                                          nichedummy=niche_dummy)
-        return d
-    ########################### functions for price graphs #############################################################
-    def _create_log_price_groupby_text_cluster_df(self, key_vars, the_panel):
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=key_vars,
-                                                               the_panel=the_panel,
-                                                               includeNicheDummy=False,
-                                                               convert_to_long=False)
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
-            for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                # create price log (since many prices are zeroes, or below 1, so add 1)
-                # so that the log price cannot go below 0
-                df2['LogImputedprice_' + the_panel] = np.log2(df2['Imputedprice_' + the_panel]+1)
-                # count number of apps in each text cluster
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
-                res[k1][k2] = df2
+                df2 = df.groupby([niche_dummy]).size().to_frame()
+                df2.rename(columns={0: name1 + '_' + name2}, index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
+                res[name1][name2] = df2
         return res
 
-    def strip_violin_log_price_text_cluster_categorical_plot(self, key_vars, the_panel):
-        res = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
-        for name1, content1 in res.items():
-            for name2, dfres in content1.items():
-                fig = plt.figure(figsize=(12, 6))
-                sns.set(style="whitegrid")
-                fig.subplots_adjust(bottom=0.2)
-                sns.violinplot(
-                        x="Apps Contained in One Cluster",
-                        y="LogImputedprice_" + the_panel,
-                        data=res[name1][name2],
-                        color=".8",
-                        inner=None, # because you are overlaying stripplot
-                        cut=0
-                        )
-                # overlay swamp plot with box plot
-                sns.stripplot(
-                        x="Apps Contained in One Cluster",
-                        y="LogImputedprice_" + the_panel,
-                        data=res[name1][name2],
-                        jitter=True)
-                plt.xticks(rotation=45)
-                plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
-                plt.xlabel("Number of Apps Contained in One Cluster")
-                plt.ylabel("Log Price")
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
-                                                name1=name1, name2=name2,
-                                                graph_title="Log Prices in Niche or Broad App Clusters",
-                                                relevant_folder_name='niche_scale_scatter_new')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+    def _combine_groupbyed_category_subdfs_into_leader_df(self, d):
+        res = dict.fromkeys(d.keys())
+        for name1, content1 in d.items():
+            df_list = []
+            for name2, df in content1.items():
+                if name2 != 'full': # exclude the full sample because each column represent a category
+                    df_list.append(df)
+            res[name1] = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        return res
+
+    def _combine_groupbyed_leaders_subdfs_into_overall_df(self, d):
+        df_list = []
+        for name1, content1 in d.items():
+            for name2, df in content1.items():
+                if name2 == 'full': # exclude the full sample because each column represent a category
+                    df_list.append(df)
+        res = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        res.rename(columns={'Leaders_full':'Leaders', 'Non-leaders_full':'Non-leaders'}, inplace=True)
+        return res
+
+    def _sort_df_descending_left_to_right(self, df):
+        df = df.append(df.sum(numeric_only=True), ignore_index=True)
+        df = df.sort_values(by=2, axis=1)
+        df = df.drop([df.index[2]])
+        df.rename(index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
+        return df
+
+    def niche_by_subsamples_bar_graph(self):
+        """
+        Create a single graph is the histogram by group
+        """
+        res = self._groupby_subsample_dfs_by_nichedummy()
+        res2 = self._combine_groupbyed_category_subdfs_into_leader_df(d=res)
+        res3 = self._combine_groupbyed_leaders_subdfs_into_overall_df(d=res)
+        fig, ax = plt.subplots(nrows=3, ncols=1,
+                               figsize=(7.5, 13),
+                               sharex='col')
+        fig.subplots_adjust(left=0.2)
+        name1_dict = {'Leaders': 'Market Leaders', 'Non-leaders': 'Market Followers'}
+        name1_list = list(res.keys())
+        for i in range(len(name1_list)+1):
+            if i in range(len(name1_list)):
+                ytick_labels = []
+                df = self._sort_df_descending_left_to_right(df=res2[name1_list[i]])
+                for col_name in df.columns:
+                    str_to_remove = name1_list[i] + '_category_'
+                    label_text = col_name.replace(str_to_remove, '').lower().title()
+                    ytick_labels.append(label_text)
+                    ax.flat[i].barh(col_name, df.loc['Niche Apps', col_name],
+                                    label=label_text + ' Niche Apps',
+                                    color='lightsalmon')
+                    ax.flat[i].barh(col_name, df.loc['Broad Apps', col_name],
+                                    left=df.loc['Niche Apps', col_name],
+                                    label=label_text + ' Broad Apps',
+                                    color='orangered')
+                    ax.flat[i].set_yticks(np.arange(len(ytick_labels)))
+                    ax.flat[i].set_yticklabels(ytick_labels)
+                    ax.flat[i].set_title(name1_dict[name1_list[i]])
+            else:
+                ytick_labels = []
+                df = self._sort_df_descending_left_to_right(df=res3)
+                for col_name in df.columns:
+                    ytick_labels.append(name1_dict[col_name])
+                    ax.flat[i].barh(col_name, df.loc['Niche Apps', col_name],
+                                    label=col_name + ' Niche Apps',
+                                    color='lightsalmon')
+                    ax.flat[i].barh(col_name, df.loc['Broad Apps', col_name],
+                                    left=df.loc['Niche Apps', col_name],
+                                    label=col_name + ' Broad Apps',
+                                    color='orangered')
+                    ax.flat[i].set_yticks(np.arange(len(ytick_labels)))
+                    ax.flat[i].set_yticklabels(ytick_labels)
+                    ax.flat[i].set_title('Entire Sample')
+            ax.flat[i].spines['top'].set_visible(False)
+            ax.flat[i].spines['right'].set_visible(False)
+            ax.flat[i].xaxis.grid(True)
+            ax.flat[i].set_xlabel('Count')
+        left_bar = mpatches.Patch(color='lightsalmon', label='Niche Apps')
+        right_bar = mpatches.Patch(color='orangered', label='Broad Apps')
+        fig.legend(handles=[left_bar, right_bar], loc='lower center', ncol=2)
+        # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+        self._set_title_and_save_graphs(fig=fig,
+                                        name1=None,
+                                        graph_title="Niche and Broad Apps Count By Sub-samples",
+                                        relevant_folder_name=None,
+                                        essay_2_and_3_overall=True)
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -520,247 +747,59 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ########################### functions for minInstalls graphs #############################################################
-    def _create_LogminInstalls_groupby_text_cluster_df(self, key_vars, the_panel):
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=key_vars,
+    ############## functions for strip violin plots for price and minInstalls graphs #############################
+    def _create_log_dep_var_groupby_text_cluster_df(self, the_panel, dep_var):
+        """
+        :param the_panel: '202106'
+        :param dep_var: either 'Imputedprice' or 'ImputedminInstalls'
+        :return:
+        """
+        d = self._select_df_for_key_vars_against_text_clusters(key_vars=[dep_var],
                                                                the_panel=the_panel,
                                                                includeNicheDummy=False,
                                                                convert_to_long=False)
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
+        res = self._df_text_cluster_sizes(d=d)
+        for k1, content1 in res.items():
             for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                df2['LogminInstalls_' + the_panel] = np.log2(df2['ImputedminInstalls_' + the_panel] + 1)
-                # count number of apps in each text cluster
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
-                res[k1][k2] = df2
+                df['Log' + dep_var + '_' + the_panel] = np.log2(df[dep_var + '_' + the_panel]+1)
         return res
-
-    def strip_violin_LogminInstalls_text_cluster_categorical_plot(self, key_vars, the_panel):
-        res = self._create_LogminInstalls_groupby_text_cluster_df(key_vars, the_panel)
-        for name1, content1 in res.items():
-            for name2, dfres in content1.items():
-                fig = plt.figure(figsize=(12, 6))
-                sns.set(style="whitegrid")
-                fig.subplots_adjust(bottom=0.2)
-                sns.violinplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogminInstalls_" + the_panel,
-                            data=res[name1][name2],
-                            color="0.8",
-                            inner=None,
-                            cut=0 # Distance, in units of bandwidth size, to extend the density past the extreme datapoints.
-                                  # Set to 0 to limit the violin range within the range of the observed data
-                                  # (i.e., to have the same effect as trim=True in ggplot.
-                            )
-                # overlay swamp plot with box plot
-                sns.stripplot(
-                        x="Apps Contained in One Cluster",
-                        y="LogminInstalls_" + the_panel,
-                        data=res[name1][name2],
-                        jitter=True)
-                plt.xticks(rotation=45)
-                plt.ylim(bottom=0) # natural log of above 1 positive price (ImputedPrice + 1) cannot be negative
-                plt.xlabel("Number of Apps Contained in One Cluster")
-                plt.ylabel("Log Minimum Installs")
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig, # fig is an attribute of FacetGrid class that return matplotlib fig, so it can uses .suptitle methods
-                                                name1=name1,
-                                                name2=name2,
-                                                graph_title="Log Minimum Installs in Niche or Broad App Clusters",
-                                                relevant_folder_name='niche_scale_scatter_new')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   subsample_names=self.ssnames,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
 
     ####################### functions for offerIAP, containsAds, paidTrue ####################################################
-    def _percentage_of_true_false_groupby_text_cluster(self, key_vars, the_panel, var):
+
+    def _percentage_of_true_false_groupby_text_cluster(self, the_panel):
         """
         On the y axis, we are going to graph percentage instead of number of apps (still stacked bar graph)
         On the x axis, we are going to use categorical text clusters by the number of apps they contain.
         var is one of paidTrue, offerIAPTrue, containsAdsTrue
         """
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=key_vars,
+        d = self._select_df_for_key_vars_against_text_clusters(key_vars=['offersIAPTrue', 'containsAdsTrue'],
                                                                the_panel=the_panel,
                                                                includeNicheDummy=False,
                                                                convert_to_long=False)
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1000]
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
+        res = self._df_text_cluster_sizes(d=d)
+        res2 = self._groupby_text_size_bins_count_percentage(d=res, the_panel=the_panel,
+                                                             count_by_var_list=['offersIAPTrue', 'containsAdsTrue'])
+        for k1, content1 in res2.items():
             for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                # count number of apps in each text cluster
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Apps Contained in One Cluster'] = pd.cut(df2['appnum_in_text_cluster'], bins=ranges)
-                # create percentage by group
-                total = df2.groupby('Apps Contained in One Cluster')[var + '_' + the_panel].count().reset_index()
-                yes = df2.loc[df2[var + '_' + the_panel] == 1].groupby('Apps Contained in One Cluster')[var + '_' + the_panel].count().reset_index()
-                # if you only have if statement, you can write it at the very end,[ for i, j in zip() if ...]
-                # but if you have both if and else statements, you must write them before for, [ X if .. else Y for i, j in zip() ]
-                yes[var + '_true_percentage'] = [i / j * 100 if j != 0 else 0 for i, j in zip(yes[var + '_' + the_panel], total[var + '_' + the_panel])]
-                total[var + '_total_percentage'] = [i / j * 100 if j != 0 else 0 for i, j in zip(total[var + '_' + the_panel], total[var + '_' + the_panel])]
-                res[k1][k2] = df2, total, yes
+                # remove one total percentage column because they are the same
+                df.drop(columns=['TOTAL%_offersIAPTrue'], axis=1, inplace=True)
+                df.rename(columns={'TOTAL%_containsAdsTrue': 'TOTAL%'}, inplace=True)
+                # conver to long to have hue in seaborn plotting
+                df2 = pd.melt(df,
+                              id_vars=['Text Cluster Sizes', "TOTAL%"],
+                              value_vars=['TRUE%_containsAdsTrue', 'TRUE%_offersIAPTrue'])
+                df2.rename(columns={'value': 'TRUE%', 'variable': 'dep_var'}, inplace=True)
+                df2['dep_var'] = df2['dep_var'].str.replace('TRUE%_', '', regex=False)
+                res[k1][k2] = df2
         return res
 
-    def stacked_percentage_bar_graph_groupby_text_cluster(self, key_vars, the_panel, var):
-        res = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, var)
-        for name1, content1 in res.items():
-            for name2, dfres in content1.items():
-                # barplot returns ax subplots, but we are overlapping them
-                fig = plt.figure(figsize=(12, 6))
-                sns.set(style="whitegrid")
-                fig.subplots_adjust(bottom=0.2)
-                # bar chart 1 -> is 1 because this is total value
-                bar1 = sns.barplot(x='Apps Contained in One Cluster', y=var + '_total_percentage', data=dfres[1], color='paleturquoise')
-                # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
-                # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
-                bar2 = sns.barplot(x='Apps Contained in One Cluster', y=var + '_true_percentage', data=dfres[2], color='darkturquoise')
-                # add legend
-                sns.despine(right=True, top=True)
-                top_bar = mpatches.Patch(color='paleturquoise',  label = var.replace("True", "") + ' : No')
-                bottom_bar = mpatches.Patch(color='darkturquoise', label = var.replace("True", "") + ' : Yes')
-                plt.legend(handles=[top_bar, bottom_bar])
-                # set title and save
-                plt.xticks(rotation=45)
-                # ------------------
-                plt.xlabel("Number of Apps Contained in One Cluster")
-                var_title = {'offersIAPTrue': 'Percentage of Apps Offer IAP',
-                             'containsAdsTrue': 'Percentage of Apps Contain Ads',
-                             'paidTrue': 'Percentage of Apps Charge Upfront'}
-                plt.ylabel('Percentage Points')
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
-                                                graph_title= var_title[var] + " in Niche or Broad App Clusters",
-                                                relevant_folder_name='niche_scale_scatter_new')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   subsample_names=self.ssnames,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
-
-    def put_4_dep_vars_in_1_graph(self, key_vars, the_panel):
+    def put_6_subsamples_dep_vars_in_1_graph(self, key_vars, the_panel):
         """
-        :param key_vars: 'Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'
-        I will delete paidTrue, because the information is already reflected in logImputedPrice
-        :param the_panel:
+        For the containsAdsTrue and offersIAPTrue I will put them into 1 graph with different hues
+        :param key_vars: 'Imputedprice','ImputedminInstalls','both_IAP_and_ADS'
+        :param the_panel: '202106'
         :return:
         """
-        res1 = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
-        res2 = self._create_LogminInstalls_groupby_text_cluster_df(key_vars, the_panel)
-        # --------------------------- putting into figure ------------------------------------
-        for name1, content1 in self.ssnames.items():
-            for name2 in content1:
-                fig, ax = plt.subplots(nrows=2, ncols=2,
-                                       figsize=(11, 8.5),
-                                       sharex='col')
-                for i in range(len(key_vars)):
-                    sns.set(style="whitegrid")
-                    if key_vars[i] == 'Imputedprice':
-                        sns.violinplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogImputedprice_" + the_panel,
-                            data=res1[name1][name2],
-                            color=".8",
-                            inner=None,  # because you are overlaying stripplot
-                            cut=0,
-                            ax = ax.flat[i])
-                        # overlay swamp plot with box plot
-                        sns.stripplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogImputedprice_" + the_panel,
-                            data=res1[name1][name2],
-                            jitter=True,
-                            ax = ax.flat[i])
-                        ax.flat[i].set_ylabel("Log Price")
-                    elif key_vars[i] == 'ImputedminInstalls':
-                        sns.violinplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogminInstalls_" + the_panel,
-                            data=res2[name1][name2],
-                            color="0.8",
-                            inner=None,
-                            cut=0,
-                            ax = ax.flat[i])
-                        # overlay swamp plot with box plot
-                        sns.stripplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogminInstalls_" + the_panel,
-                            data=res2[name1][name2],
-                            jitter=True,
-                            ax = ax.flat[i])
-                        ax.flat[i].set_ylabel("Log Minimum Installs")
-                    else:
-                        res34 = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, key_vars[i])
-                        # bar chart 1 -> is 1 because this is total value
-                        sns.barplot(x='Apps Contained in One Cluster',
-                                    y=key_vars[i] + '_total_percentage',
-                                    data=res34[name1][name2][1],
-                                    color='paleturquoise',
-                                    ax = ax.flat[i])
-                        # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
-                        # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
-                        sns.barplot(x='Apps Contained in One Cluster',
-                                    y=key_vars[i] + '_true_percentage',
-                                    data=res34[name1][name2][2],
-                                    color='darkturquoise',
-                                    ax = ax.flat[i])
-                        ax.flat[i].set_ylabel("Percentage Points")
-                        # add legend
-                        sns.despine(right=True, top=True)
-                        top_bar = mpatches.Patch(color='paleturquoise', label=key_vars[i].replace("True", "") + ' : No')
-                        bottom_bar = mpatches.Patch(color='darkturquoise', label=key_vars[i].replace("True", "") + ' : Yes')
-                        ax.flat[i].legend(handles=[top_bar, bottom_bar], ncol=2)
-                    ax.flat[i].set_xlabel("Number of Apps Contained in One Cluster")
-                    ax.flat[i].set_ylim(bottom=0)
-                    ax.flat[i].xaxis.set_visible(True)
-                    for tick in ax.flat[i].get_xticklabels():
-                        tick.set_rotation(45)
-                # ------------ set title and save ---------------------------------------------
-                fig.subplots_adjust(bottom=0.15)
-                self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
-                                                graph_title= "Pricing Variables in Niche or Broad App Clusters",
-                                                relevant_folder_name='four_dep_vars_in_one_graph')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   subsample_names=self.ssnames,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
-
-    def put_6_subsamples_dep_vars_in_1_graph(self, key_vars, the_panel):
-        res1 = self._create_log_price_groupby_text_cluster_df(key_vars, the_panel)
-        res2 = self._create_LogminInstalls_groupby_text_cluster_df(key_vars, the_panel)
         for i in range(len(key_vars)):
             for name1, content1 in self.ssnames.items():
                 fig, ax = plt.subplots(nrows=2, ncols=3,
@@ -771,74 +810,75 @@ class reg_preparation_essay_2_3():
                 for j in range(len(content1)):
                     sns.set(style="whitegrid")
                     sns.despine(right=True, top=True)
-                    if key_vars[i] == 'Imputedprice':
+                    if key_vars[i] in ['Imputedprice', 'ImputedminInstalls']:
+                        res12 = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var=key_vars[i])
                         sns.violinplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogImputedprice_" + the_panel,
-                            data=res1[name1][content1[j]],
+                            x='Text Cluster Sizes',
+                            y="Log" + key_vars[i] + "_" + the_panel,
+                            data=res12[name1][content1[j]],
                             color=".8",
                             inner=None,  # because you are overlaying stripplot
                             cut=0,
                             ax=ax.flat[j])
                         # overlay swamp plot with box plot
                         sns.stripplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogImputedprice_" + the_panel,
-                            data=res1[name1][content1[j]],
+                            x='Text Cluster Sizes',
+                            y="Log" + key_vars[i] + "_" + the_panel,
+                            data=res12[name1][content1[j]],
                             jitter=True,
                             ax=ax.flat[j])
-                        ax.flat[j].set_ylabel("Log Price")
-                    elif key_vars[i] == 'ImputedminInstalls':
-                        sns.violinplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogminInstalls_" + the_panel,
-                            data=res2[name1][content1[j]],
-                            color="0.8",
-                            inner=None,
-                            cut=0,
-                            ax = ax.flat[j])
-                        # overlay swamp plot with box plot
-                        sns.stripplot(
-                            x="Apps Contained in One Cluster",
-                            y="LogminInstalls_" + the_panel,
-                            data=res2[name1][content1[j]],
-                            jitter=True,
-                            ax = ax.flat[j])
-                        ax.flat[j].set_ylabel("Log Minimum Installs")
                     else:
-                        res34 = self._percentage_of_true_false_groupby_text_cluster(key_vars, the_panel, key_vars[i])
+                        res34 = self._percentage_of_true_false_groupby_text_cluster(the_panel)
                         # bar chart 1 -> is 1 because this is total value
-                        sns.barplot(x='Apps Contained in One Cluster',
-                                    y=key_vars[i] + '_total_percentage',
-                                    data=res34[name1][content1[j]][1],
-                                    color='paleturquoise',
+                        total_palette = {"containsAdsTrue": 'paleturquoise', "offersIAPTrue": 'paleturquoise'}
+                        sns.barplot(x='Text Cluster Sizes',
+                                    y='TOTAL%', # total does not matter since if the subsample does not have any apps in a text cluster, the total will always be 0
+                                    data=res34[name1][content1[j]],
+                                    hue="dep_var",
+                                    palette=total_palette,
                                     ax=ax.flat[j])
                         # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
-                        # chart 2 represents the True group, thus the remaining backdrop chart 1 represents the False group
-                        sns.barplot(x='Apps Contained in One Cluster',
-                                    y=key_vars[i] + '_true_percentage',
-                                    data=res34[name1][content1[j]][2],
-                                    color='darkturquoise',
+                        # chart 2 represents the contains ads True group, thus the remaining backdrop chart 1 represents the False group
+                        true_palette = {"containsAdsTrue": 'darkturquoise', "offersIAPTrue": 'teal'}
+                        sns.barplot(x='Text Cluster Sizes',
+                                    y='TRUE%',
+                                    data=res34[name1][content1[j]],
+                                    hue="dep_var",
+                                    palette=true_palette,
                                     ax=ax.flat[j])
                         ax.flat[j].set_ylabel("Percentage Points")
                         # add legend
                         sns.despine(right=True, top=True)
-                        top_bar = mpatches.Patch(color='paleturquoise', label=key_vars[i].replace("True", "") + ' : No')
-                        bottom_bar = mpatches.Patch(color='darkturquoise',
-                                                    label=key_vars[i].replace("True", "") + ' : Yes')
-                        ax.flat[j].legend(handles=[top_bar, bottom_bar], ncol=2)
-                    ax.flat[j].set_xlabel("Number of Apps Contained in One Cluster")
+                    if content1[j] == 'full':
+                        ax.flat[j].set_title('Full Sample')
+                    else:
+                        sample_name = content1[j].replace("category_", "").lower().title()
+                        ax.flat[j].set_title(sample_name)
                     ax.flat[j].set_ylim(bottom=0)
+                    ax.flat[j].set_xlabel('Text Cluster Sizes Bins')
+                    y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                                    'Imputedprice': 'Log Price',
+                                    'both_IAP_and_ADS': 'Percentage Points'}
+                    ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
                     ax.flat[j].xaxis.set_visible(True)
                     for tick in ax.flat[j].get_xticklabels():
                         tick.set_rotation(45)
+                    ax.flat[j].legend().set_visible(False)
+                if key_vars[i] == 'both_IAP_and_ADS':
+                    top_bar = mpatches.Patch(color='paleturquoise',
+                                             label='Total (100%)')
+                    middle_bar = mpatches.Patch(color='darkturquoise',
+                                                label='Contains Ads (%)')
+                    bottom_bar = mpatches.Patch(color='teal',
+                                                label='Offers IAP (%)')
+                    fig.legend(handles=[top_bar, middle_bar, bottom_bar], loc='upper right', ncol=1)
                 # ------------ set title and save ---------------------------------------------
                 self._set_title_and_save_graphs(fig=fig,
                                                 name1=name1,
                                                 subsample_one_graph=True,
-                                                graph_title=key_vars[i] + " Descriptive Statistics",
+                                                graph_title=reg_preparation_essay_1.var_title_dict[key_vars[i]] + " In All Sub-samples",
                                                 relevant_folder_name='subgroups_in_one_graph')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -848,7 +888,7 @@ class reg_preparation_essay_2_3():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ################### graph box plots for minInstalls, price for parallel trends ############################
+    ######### graph group means parallel trends for log minInstalls, log pric, offers IAP and contains ADs ####################
     def _convert_to_long_form(self, df, var):
         """
         The function is used inside self._select_df_for_key_vars_against_text_clusters(
@@ -906,153 +946,6 @@ class reg_preparation_essay_2_3():
                                           values='percentage_true')
         return res_merge
 
-    def graph_line_plot_parallel_trend(self, var):
-        """
-        https://seaborn.pydata.org/generated/seaborn.lineplot.html
-        :param var: could either be 'ImputedminInstalls' or 'Imputedprice' or 'offersIAPTrue' or 'containsAdsTrue'
-        :return:
-        """
-        if var in ['ImputedminInstalls', 'Imputedprice']:
-            res = self._select_df_for_key_vars_against_text_clusters(
-                key_vars=[var],
-                the_panel=None,
-                includeNicheDummy=True,
-                convert_to_long=True)
-        else: # for 'offersIAPTrue' or 'containsAdsTrue'
-            res = self._select_df_for_key_vars_against_text_clusters(
-                key_vars=[var],
-                the_panel=None,
-                includeNicheDummy=True,
-                convert_to_long=True,
-                percentage_true_df=True)
-        for name1, content1 in res.items():
-            for name2, dfres in content1.items():
-                nichedummy = name1 + "_" + name2 + "_NicheDummy"
-                # barplot returns ax subplots, but we are overlapping them
-                fig = plt.figure(figsize=(12, 6))
-                sns.set(style="whitegrid")
-                sns.despine(right=True, top=True)
-                fig.subplots_adjust(bottom=0.2)
-                hue_order = [1, 0] # Niche yes comes first, then broad apps
-                if var in ['ImputedminInstalls', 'Imputedprice']:
-                    dfres['Log' + var] = np.log2(dfres[var] + 1)
-                    sns.lineplot(
-                        data=dfres,
-                        x="panel",
-                        y="Log" + var,
-                        hue= nichedummy,
-                        hue_order=hue_order,
-                        style = nichedummy,
-                        markers=True,
-                        dashes=False)
-                else:
-                    sns.lineplot(
-                        data=dfres,
-                        hue_order=hue_order,
-                        markers=True,
-                        dashes=False)
-                plt.xticks(rotation=45)
-                # ------------------
-                plt.axvline(x='2020-03', linewidth=2, color='red')
-                plt.xlabel("Time")
-                y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
-                                'Imputedprice': 'Log Price',
-                                'offersIAPTrue': 'Percentage of Apps Offers IAP',
-                                'containsAdsTrue': 'Percentage of Apps Contains Ads'}
-                plt.ylabel(y_label_dict[var])
-                # change label according to hue order
-                plt.legend(labels=['Niche App : Yes', 'Niche App : No'],
-                           ncol=2)
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
-                                                graph_title=y_label_dict[var] + " Before And After Covid-19 Stay-at-Home Orders",
-                                                relevant_folder_name='parallel_trend')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   subsample_names=self.ssnames,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
-
-    def put_4_parallel_trends_in_1_graph(self, key_vars):
-        """
-        :param key_vars: 'Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'
-        I will delete paidTrue, because the information is already reflected in logImputedPrice
-        :param the_panel:
-        :return:
-        """
-        for name1, content1 in self.ssnames.items():
-            for name2 in content1:
-                nichedummy = name1 + "_" + name2 + "_NicheDummy"
-                fig, ax = plt.subplots(nrows=2, ncols=2,
-                                       figsize=(11, 8.5),
-                                       sharex='col')
-                fig.subplots_adjust(bottom=0.2)
-                hue_order = [1, 0]
-                for i in range(len(key_vars)):
-                    sns.set(style="whitegrid")
-                    sns.despine(right=True, top=True)
-                    if key_vars[i] in ['ImputedminInstalls', 'Imputedprice']:
-                        res = self._select_df_for_key_vars_against_text_clusters(
-                            key_vars=[key_vars[i]],
-                            the_panel=None,
-                            includeNicheDummy=True,
-                            convert_to_long=True)
-                        res[name1][name2]['Log' + key_vars[i]] = np.log2(res[name1][name2][key_vars[i]] + 1)
-                        sns.lineplot(
-                            data=res[name1][name2],
-                            x="panel",
-                            y="Log" + key_vars[i],
-                            hue=nichedummy,
-                            hue_order=hue_order,
-                            style=nichedummy,
-                            markers=True,
-                            dashes=False,
-                            ax = ax.flat[i])
-                    else:
-                        res = self._select_df_for_key_vars_against_text_clusters(
-                            key_vars=[key_vars[i]],
-                            the_panel=None,
-                            includeNicheDummy=True,
-                            convert_to_long=True,
-                            percentage_true_df=True)
-                        sns.lineplot(
-                            data=res[name1][name2],
-                            hue_order=hue_order,
-                            markers=True,
-                            dashes=False,
-                            ax = ax.flat[i])
-                    ax.flat[i].legend(labels=['Niche App : Yes', 'Niche App : No'],
-                               ncol=2)
-                    ax.flat[i].set_xlabel("Time")
-                    y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
-                                    'Imputedprice': 'Log Price',
-                                    'offersIAPTrue': 'Percentage of Apps Offers IAP',
-                                    'containsAdsTrue': 'Percentage of Apps Contains Ads'}
-                    ax.flat[i].set_ylabel(y_label_dict[key_vars[i]])
-                    ax.flat[i].set_ylim(bottom=0)
-                    ax.flat[i].xaxis.set_visible(True)
-                    for tick in ax.flat[i].get_xticklabels():
-                        tick.set_rotation(45)
-                # ------------ set title and save ---------------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
-                                                graph_title="Pricing Variables Parallel Trends",
-                                                relevant_folder_name='four_dep_vars_parallel_trends')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   subsample_names=self.ssnames,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
-
     def put_6_subsamples_parallel_trends_in_1_graph(self, key_vars):
         for i in range(len(key_vars)):
             if key_vars[i] in ['ImputedminInstalls', 'Imputedprice']:
@@ -1108,10 +1001,9 @@ class reg_preparation_essay_2_3():
                     if content1[j] == 'full':
                         ax.flat[j].set_title('Full Sample')
                     else:
-                        sample_name = content1[j].replace("category_", "").lower().title() + " Sub-sample"
+                        sample_name = content1[j].replace("category_", "").lower().title()
                         ax.flat[j].set_title(sample_name)
-                    ax.flat[j].legend(labels=['Niche App : Yes', 'Niche App : No'],
-                                      ncol=2)
+                    ax.flat[j].axvline(x='2020-03', linewidth=2, color='red')
                     ax.flat[j].set_xlabel("Time")
                     y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
                                     'Imputedprice': 'Log Price',
@@ -1121,13 +1013,179 @@ class reg_preparation_essay_2_3():
                     ax.flat[j].xaxis.set_visible(True)
                     for tick in ax.flat[j].get_xticklabels():
                         tick.set_rotation(45)
+                    ax.flat[j].legend().set_visible(False)
+                fig.legend(labels=['Niche App : Yes', 'Niche App : No'],
+                           loc='upper right', ncol=2)
                 # ------------ set title and save ---------------------------------------------
                 self._set_title_and_save_graphs(fig=fig,
                                                 name1=name1,
                                                 subsample_one_graph=True,
                                                 graph_title=key_vars[i] + " Parallel Trends",
                                                 relevant_folder_name='subgroups_in_one_graph')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
+                                   all_panels=self.all_panels,
+                                   tcn=self.tcn,
+                                   subsample_names=self.ssnames,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   nicheDummy_labels=self.nicheDummy_labels,
+                                   long_cdf=self.long_cdf,
+                                   individual_dummies_df=self.i_dummies_df)
+
+    ######### graph group means parallel trends for log minInstalls, log pric, offers IAP and contains ADs ####################
+    def _cross_section_regression(self, y_var, df, the_panel, log_y):
+        """
+        https://www.statsmodels.org/stable/generated/statsmodels.regression.linear_model.RegressionResults.html#statsmodels.regression.linear_model.RegressionResults
+        #https://www.statsmodels.org/stable/rlm.html
+        https://stackoverflow.com/questions/30553838/getting-statsmodels-to-use-heteroskedasticity-corrected-standard-errors-in-coeff
+        source code for HC0, HC1, HC2, and HC3, white and Mackinnon
+        https://www.statsmodels.org/dev/_modules/statsmodels/regression/linear_model.html
+        """
+        all_vars = df.columns.values.tolist()
+        # y_var is a string without panel substring
+        for i in all_vars:
+            if y_var in i:
+                all_vars.remove(i)
+        independents_df = df[all_vars]
+        X = sm.add_constant(independents_df)
+        if log_y is True:
+            y = df[['Log' + y_var + '_' + the_panel]]
+        else:
+            y = df[[y_var + '_' + the_panel]]
+        model = sm.OLS(y, X)
+        results = model.fit(cov_type='HC3')
+        return results
+
+    def _reg_for_all_subsamples_and_all_panels(self, reg_type, y_var, log_y=None):
+        """
+        possible input for reg_type are: 'cross_section_ols', uses self._cross_section_regression()
+        possible y_var 'Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'
+        log_y True for 'Imputedprice', 'ImputedminInstalls'
+        """
+        reg_results = dict.fromkeys(self.all_panels)
+        for i in self.all_panels:
+            d = self._slice_xy_df_for_subsamples(y_var, the_panel=i, log_y=log_y)
+            reg_results[i] = dict.fromkeys(self.ssnames.keys())
+            for name1, content1 in d.items():
+                reg_results[i][name1] = dict.fromkeys(content1.keys())
+                for name2, df in content1.items():
+                    if reg_type == 'cross_section_ols':
+                        reg_results[i][name1][name2] = self._cross_section_regression(y_var=y_var, df=df, the_panel=i, log_y=log_y)
+        return reg_results
+
+    def _create_cross_section_reg_results_df_for_all_dep_vars(self, reg_type, alpha):
+        """
+        possible input for reg_type are: 'cross_section_ols', uses self._cross_section_regression()
+        alpha = 0.05 for 95% CI of coefficients
+        """
+        # all dependant variables in one dictionary
+        res_results = dict.fromkeys(['Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'])
+        dep_y_log_y = {'Imputedprice': True,
+                       'ImputedminInstalls': True,
+                       'offersIAPTrue': False,
+                       'containsAdsTrue': False}
+        # all subsamples are hue in the same graph
+        for y_var in res_results.keys():
+            res_results[y_var] = self._reg_for_all_subsamples_and_all_panels(reg_type=reg_type,
+                                                                             y_var=y_var,
+                                                                             log_y=dep_y_log_y[y_var])
+        #  since every reg result is one row in dataframe
+        res_df = dict.fromkeys(['Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'])
+        for y_var, panels in res_results.items():
+            # order in lists are persistent (unlike sets or dictionaries)
+            panel_content = []
+            sub_samples_content = []
+            beta_nichedummy_content = []
+            ci_lower = []
+            ci_upper = []
+            for panel, subsamples in panels.items():
+                for name1, content1 in subsamples.items():
+                    for name2, reg_result in content1.items():
+                        panel_content.append(panel)
+                        sub_samples_content.append(name1 + '_' + name2)
+                        nichedummy = name1 + '_' + name2 + '_NicheDummy'
+                        beta_nichedummy_content.append(reg_result.params[nichedummy])
+                        ci_lower.append(reg_result.conf_int(alpha=alpha).loc[nichedummy, 0])
+                        ci_upper.append(reg_result.conf_int(alpha=alpha).loc[nichedummy, 1])
+            d = {'panel': panel_content,
+                 'sub_samples': sub_samples_content,
+                 'beta_nichedummy': beta_nichedummy_content,
+                 'ci_lower': ci_lower,
+                 'ci_upper': ci_upper}
+            df = pd.DataFrame(data=d)
+            # create error bars (positive distance away from beta) for easier ax.errorbar graphing
+            df['lower_error'] = df['beta_nichedummy'] - df['ci_lower']
+            df['upper_error'] = df['ci_upper'] - df['beta_nichedummy']
+            # sort by panels
+            df["panel"] = pd.to_datetime(df["panel"], format='%Y%m')
+            df["panel"] = df["panel"].dt.strftime('%Y-%m')
+            df = df.sort_values(by=["panel"])
+            res_df[y_var] = df
+        return res_df
+
+    def graph_leader_vs_non_leaders_beta_parallel_trends(self, reg_type, alpha):
+        """
+        :return: six graphs per page (each graph is 1 sub-sample), 1 page has 1 dep var, hues are leaders and non-leaders
+        """
+        res = self._create_cross_section_reg_results_df_for_all_dep_vars(reg_type, alpha)
+        for dep_var in ['Imputedprice', 'ImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue']:
+            fig, ax = plt.subplots(nrows=2, ncols=3,
+                                   figsize=(18, 8.5),
+                                   sharex='col',
+                                   sharey='row')
+            fig.subplots_adjust(bottom=0.2)
+            sub_samples = self.ssnames['Leaders']
+            for j in range(len(sub_samples)):
+                leaders = 'Leaders_' + sub_samples[j]
+                followers = 'Non-leaders_' + sub_samples[j]
+                df = res[dep_var].copy(deep=True)
+                df_leaders = df.loc[df['sub_samples']==leaders]
+                df_followers = df.loc[df['sub_samples']==followers]
+                sns.set(style="whitegrid")
+                sns.despine(right=True, top=True)
+                leaders_beta_error = [df_leaders['lower_error'], df_leaders['upper_error']]
+                ax.flat[j].errorbar(df_leaders['panel'],
+                                    df_leaders['beta_nichedummy'],
+                                    color='cadetblue',
+                                    yerr=leaders_beta_error,
+                                    fmt='o-', # dot with line
+                                    capsize=3,
+                                    label='Market Leaders')
+                followers_beta_error = [df_followers['lower_error'], df_followers['upper_error']]
+                ax.flat[j].errorbar(df_followers['panel'],
+                                    df_followers['beta_nichedummy'],
+                                    color='palevioletred',
+                                    yerr=followers_beta_error,
+                                    fmt='o-', # dot with line
+                                    capsize=3,
+                                    label='Market Followers')
+                ax.flat[j].axvline(x='2020-03', linewidth=2, color='red')
+                if sub_samples[j] == 'full':
+                    sample_name = "Full Sample"
+                else:
+                    sample_name = sub_samples[j].replace("category_", "").lower().title()
+                ax.flat[j].set_title(sample_name)
+                ax.flat[j].set_xlabel("Time")
+                ax.flat[j].set_ylabel('Niche Dummy Coefficient')
+                ax.flat[j].xaxis.set_visible(True)
+                for tick in ax.flat[j].get_xticklabels():
+                    tick.set_rotation(45)
+                handles, labels = ax.flat[j].get_legend_handles_labels()
+                fig.legend(handles, labels, loc='upper right', ncol=2)
+            dep_var_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                            'Imputedprice': 'Log Price',
+                            'offersIAPTrue': 'Percentage of Apps Offers IAP',
+                            'containsAdsTrue': 'Percentage of Apps Contains Ads'}
+            # ------------ set title and save ---------------------------------------------
+            self._set_title_and_save_graphs(fig=fig,
+                                            name1=None,
+                                            subsample_one_graph=True,
+                                            graph_title= dep_var_dict[dep_var] +
+                                                         " Niche Dummy Coefficient and Its 95% Confidence Interval " +
+                                                         "\n Before and After Covid-19 Stay-At-Home Orders",
+                                            relevant_folder_name=None,
+                                            essay_2_and_3_overall=True)
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1178,7 +1236,7 @@ class reg_preparation_essay_2_3():
         dcols = ['size_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1200,7 +1258,7 @@ class reg_preparation_essay_2_3():
         dcols = ['ImputedcontentRating_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1222,7 +1280,7 @@ class reg_preparation_essay_2_3():
         dcols = ['Imputedreleased_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1242,7 +1300,7 @@ class reg_preparation_essay_2_3():
         dcols = ['Imputedfree_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1259,7 +1317,7 @@ class reg_preparation_essay_2_3():
         dcols = ['Imputed' + cat_var + '_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1276,7 +1334,7 @@ class reg_preparation_essay_2_3():
                 label_col_name = name1 + '_' + name2 + '_kmeans_labels'
                 self.cdf[name1 + '_' + name2 + '_NicheDummy'] = self.cdf[label_col_name].apply(
                     lambda x: 0 if x in self.nicheDummy_labels[name1][name2] else 1)
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1294,7 +1352,7 @@ class reg_preparation_essay_2_3():
         dummies = df[['appId']]
         dummies = pd.get_dummies(dummies, columns=['appId'], drop_first=True)
         self.i_dummies_df = dummies
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1324,7 +1382,7 @@ class reg_preparation_essay_2_3():
                     created_POST_dummies.append('PostX' + j + '_' + i)
         print('CREATED the following post and niche interactions:')
         print(created_POST_dummies)
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1337,10 +1395,10 @@ class reg_preparation_essay_2_3():
     # ----------------------- after creating above variables, save the dataframe as cross section -----------------
     def save_cross_section_reg_df(self):
         filename = self.initial_panel + '_cross_section_df.pickle'
-        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'cross_section_dfs' / filename
+        q = reg_preparation_essay_1.panel_essay_1_path / 'cross_section_dfs' / filename
         pickle.dump(self.cdf, open(q, 'wb'))
         print(self.initial_panel, ' SAVED CROSS SECTION DFS. ')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1364,7 +1422,7 @@ class reg_preparation_essay_2_3():
             dfs.append(sub_df[ts_idm])
         df_new = functools.reduce(lambda a, b: a.join(b, how='inner'), dfs)
         self.cdf = self.cdf.join(df_new, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1399,7 +1457,7 @@ class reg_preparation_essay_2_3():
             print(df3[i].describe())
             print()
         self.cdf = self.cdf.join(df3, how='inner')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
@@ -1516,10 +1574,10 @@ class reg_preparation_essay_2_3():
         print('FINISHED converting from wide to long')
         # --------------------------- save -------------------------------------------------
         filename = self.initial_panel + '_converted_long_table.pickle'
-        q = reg_preparation_essay_2_3.panel_essay_2_3_common_path / 'converted_long_tables' / filename
+        q = reg_preparation_essay_1.panel_essay_1_path / 'converted_long_tables' / filename
         pickle.dump(self.long_cdf, open(q, 'wb'))
         print(self.initial_panel, ' SAVED LONG TABLES. ')
-        return reg_preparation_essay_2_3(initial_panel=self.initial_panel,
+        return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
                                    subsample_names=self.ssnames,
