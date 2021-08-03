@@ -50,10 +50,6 @@ class reg_preparation_essay_2_3():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_3___/descriptive_stats/graphs')
     des_stats_graphs_overall = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/overall_graphs')
-    graph_ylabel_dict = {'containsAdsTrue': 'ContainsAds',
-                         'offersIAPTrue': 'OffersIAP',
-                         'paidTrue': 'Paid',
-                         'Imputedprice': 'Price'}
     graph_subsample_title_dict = {'Leaders full': 'Market Leaders Full Sample',
                                     'Leaders category_GAME': 'Market Leaders Game Apps',
                                     'Leaders category_BUSINESS': 'Market Leaders Business Apps',
@@ -98,6 +94,20 @@ class reg_preparation_essay_2_3():
     ###########################################################################################################
     # Open and Combine Dataframes
     ###########################################################################################################
+    def _select_vars(self, df, time_variant_vars_list=None, time_invariant_vars_list=None):
+        df2 = df.copy(deep=True)
+        tv_var_list = []
+        if time_variant_vars_list is not None:
+            for i in time_variant_vars_list:
+                vs = [i + '_' + j for j in self.all_panels]
+                tv_var_list = tv_var_list + vs
+        ti_var_list = []
+        if time_invariant_vars_list is not None:
+            for i in time_invariant_vars_list:
+                ti_var_list.append(i)
+        total_vars = tv_var_list + ti_var_list
+        df2 = df2[total_vars]
+        return df2
 
     def _open_imputed_deleted_divided_df(self):
         f_name = self.initial_panel + '_imputed_deleted_subsamples.pickle'
@@ -1243,7 +1253,7 @@ class reg_preparation_essay_2_3():
         If the size is not missing, it must not be zero. It is equivalent as having a dummies, where missing is 0 and non-missing is 1,
         and the interaction of the dummy with the original variable is imputing the original's missing as zeros.
         """
-        df1 = self.select_vars(time_variant_vars_list=['size'])
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['size'])
         df1['size'] = df1.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
         df1['size'] = df1['size'].fillna(0)
         dcols = ['size_' + i for i in self.all_panels]
@@ -1264,7 +1274,7 @@ class reg_preparation_essay_2_3():
         contentRating dummy is time invariant, using the mode (this mode is different from previous imputation mode
         because there is no missings (all imputed).
         """
-        df1 = self.select_vars(time_variant_vars_list=['ImputedcontentRating'])
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['ImputedcontentRating'])
         df1['contentRatingMode'] = df1.mode(axis=1, numeric_only=False, dropna=False).iloc[:, 0]
         df1['contentRatingAdult'] = df1['contentRatingMode'].apply(
             lambda x: 0 if 'Everyone' in x else 1)
@@ -1286,7 +1296,7 @@ class reg_preparation_essay_2_3():
         :param var: time invariant independent variables, could either be released or updated
         :return: a new variable which is the number of days between today() and the datetime
         """
-        df1 = self.select_vars(time_variant_vars_list=['Imputedreleased'])
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputedreleased'])
         df1['releasedMode'] = df1.mode(axis=1, numeric_only=False, dropna=False).iloc[:, 0]
         df1['DaysSinceReleased'] = pd.Timestamp.now().normalize() - df1['releasedMode']
         df1['DaysSinceReleased'] = df1['DaysSinceReleased'].apply(lambda x: int(x.days))
@@ -1307,7 +1317,7 @@ class reg_preparation_essay_2_3():
         """
         paid dummies are time variant
         """
-        df1 = self.select_vars(time_variant_vars_list=['Imputedfree'])
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputedfree'])
         for i in self.all_panels:
             df1['paidTrue_' + i] = df1['Imputedfree_' + i].apply(lambda x: 1 if x is False else 0)
         dcols = ['Imputedfree_' + i for i in self.all_panels]
@@ -1324,7 +1334,7 @@ class reg_preparation_essay_2_3():
                                    individual_dummies_df=self.i_dummies_df)
 
     def create_generic_true_false_dummies(self, cat_var):
-        df1 = self.select_vars(time_variant_vars_list=['Imputed' + cat_var])
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputed' + cat_var])
         for i in self.all_panels:
             df1[cat_var + 'True_' + i] = df1['Imputed' + cat_var + '_' + i].apply(lambda x: 1 if x is True else 0)
         dcols = ['Imputed' + cat_var + '_' + i for i in self.all_panels]
@@ -1427,7 +1437,7 @@ class reg_preparation_essay_2_3():
         """
         dfs = []
         for i in time_variant_vars:
-            sub_df = self.select_vars(time_variant_vars_list=[i])
+            sub_df = self._select_vars(df=self.cdf, time_variant_vars_list=[i])
             sub_df['PanelMean' + i] = sub_df.mean(axis=1)
             for p in self.all_panels:
                 sub_df['DeMeaned' + i + '_' + p] = sub_df[i + '_' + p] - sub_df['PanelMean' + i]
@@ -1452,7 +1462,7 @@ class reg_preparation_essay_2_3():
         for example, min max transformation uses the max and min of each column, not of the entire dataframe
         :return:
         """
-        df2 = self.select_vars(time_variant_vars_list=[con_var])
+        df2 = self._select_vars(df=self.cdf, time_variant_vars_list=[con_var])
         print('before standardization:')
         for i in df2.columns:
             print(i)
