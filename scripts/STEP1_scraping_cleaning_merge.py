@@ -39,6 +39,15 @@ class scrape():
         self.id_list = id_list,
         self.scraped_dict = scraped_dict
 
+    def create_dir(self):
+        ispath = os.path.join(scrape.tracking_path, self.current_panel)
+        os.makedirs(ispath, exist_ok=True)
+        return scrape(initial_panel=self.initial_panel,
+                      current_panel=self.current_panel,
+                      initial_panel_data=self.initial_panel_data,
+                      id_list=self.id_list,
+                      scraped_dict=self.scraped_dict)
+
     def open_initial_panel_data(self):
         filename = "ALL_APP_DETAILS_" + self.initial_panel + '.pickle'
         q = scrape.initial_dict_path / self.initial_panel / filename
@@ -68,9 +77,6 @@ class scrape():
         scraping using google_play_scraper app function
         for unknown reason,, self.id_list in weird tuple, so first turn it into list and flatten it
         """
-        ispath = os.path.join(scrape.tracking_path, self.current_panel)
-        if ispath is False:
-            os.mkdir(ispath)
         filename = 'TRACKING_' + self.initial_panel + '.pickle'
         q = scrape.tracking_path / self.current_panel / filename
         isfile = os.path.isfile(q)

@@ -99,6 +99,52 @@ class reg_preparation_essay_1():
     text_cluster_size_labels = ['[0, 1]', '(1, 2]', '(2, 3]', '(3, 5]',
                                 '(5, 10]', '(10, 20]', '(20, 30]', '(30, 50]',
                                 '(50, 100]', '(100, 200]', '(200, 500]', '(500, 1500]']
+    graph_combo_name1_list = {
+        'combo1': ['full', 'minInstalls'],
+        'combo2': ['full', 'starDeveloper'],
+        'combo3': ['full', 'categories'],
+        'combo4': ['genreId']
+    }
+    multi_graph_combo_fig_subplot_layout = {
+        'combo1': plt.subplots(nrows=2, ncols=2,
+                               figsize=(11, 8.5),
+                               sharex='col',
+                               sharey='row'),
+        'combo2': plt.subplots(nrows=1, ncols=3,
+                               figsize=(17, 5.5),
+                               sharex='col',
+                               sharey='row'),
+        'combo3': plt.subplots(nrows=2, ncols=3,
+                               figsize=(16.5, 8.5),
+                               sharex='col',
+                               sharey='row'),
+        'combo4': plt.subplots(nrows=2, ncols=3,
+                               figsize=(16.5, 8.5),
+                               sharex='col',
+                               sharey='row')
+    }
+
+    combo_barh_figsize = {
+        'combo1': (8, 5),
+        'combo2': (8, 5),
+        'combo3': (8, 5),
+        'combo4': (8, 16)
+    }
+
+    combo_barh_yticklabel_fontsize = {
+        'combo1': 10,
+        'combo2': 10,
+        'combo3': 10,
+        'combo4': 6
+    }
+
+    combo_graph_titles = {
+        'combo1': 'Full Sample and Minimum Installs Sub-samples',
+        'combo2': 'Full Sample and Sub-samples Developed by Top and Non-top Firms',
+        'combo3': 'Full Sample and Functional Category Sub-samples',
+        'combo4': 'Default App Genre Sub-sample'
+    }
+    # --------------------------------------------------------------------------------------------------------
     def __init__(self,
                  initial_panel,
                  all_panels,
@@ -348,50 +394,29 @@ class reg_preparation_essay_1():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    def _set_title_and_save_graphs(self, fig, name1, graph_title, relevant_folder_name,
-                                   name2=None,
-                                   subsample_one_graph=False,
-                                   essay_2_and_3_overall=False):
+    def _set_title_and_save_graphs(self, fig,
+                                   file_keywords,
+                                   relevant_folder_name,
+                                   graph_title='',
+                                   name1='',
+                                   name2=''):
         """
         generic internal function to save graphs according to essay 2 (non-leaders) and essay 3 (leaders).
         name1 and name2 are the key names of self.ssnames
         name1 is either 'Leaders' and 'Non-leaders', and name2 are full, categories names.
         graph_title is what is the graph is.
         """
-        if essay_2_and_3_overall is True:
-            title = self.initial_panel + ' ' + graph_title
+        # ------------ set title -------------------------------------------------------------------------
+        if graph_title != '' and name1 != '' and name2 != '':
+            title = self.initial_panel + ' ' + reg_preparation_essay_1.graph_subsample_title_dict[name1 + ' ' + name2] \
+                    + ' ' + graph_title
             title = title.title()
             fig.suptitle(title, fontsize='medium')
-            file_title = graph_title.lower().replace(" ", "_")
-            filename = self.initial_panel + '_' + file_title + '.png'
-            fig.savefig(reg_preparation_essay_1.des_stats_graphs_overall / filename,
-                        facecolor='white',
-                        dpi=300)
-        else:
-            if subsample_one_graph is False:
-                # ------------ set title -------------------------------------------------------------------------
-                subsample_name = name1 + ' ' + name2
-                title = self.initial_panel + ' ' \
-                        + reg_preparation_essay_1.graph_subsample_title_dict[subsample_name] + ' ' \
-                        + graph_title
-                title = title.title()
-                fig.suptitle(title, fontsize='medium')
-                # ------------------ save file with name (tolower and replace whitespace with underscores) ------
-                file_title = graph_title.lower().replace(" ", "_")
-                filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_title + '.png'
-            else:
-                # ------------ set title -------------------------------------------------------------------------
-                title = self.initial_panel + ' ' + name1 \
-                        + ' ' \
-                        + graph_title + ' In All Subsamples'
-                title = title.title()
-                fig.suptitle(title, fontsize='medium')
-                # ------------------ save file with name (tolower and replace whitespace with underscores) ------
-                file_title = graph_title.lower().replace(" ", "_")
-                filename = self.initial_panel + '_' + name1 + '_' + file_title + '.png'
-            fig.savefig(reg_preparation_essay_1.des_stats_graphs_essay_1 / relevant_folder_name / filename,
-                        facecolor='white',
-                        dpi=300)
+        # ------------ save ------------------------------------------------------------------------------
+        filename = self.initial_panel + '_' + name1 + '_' + name2 + '_' + file_keywords + '.png'
+        fig.savefig(reg_preparation_essay_1.des_stats_graphs_essay_1 / relevant_folder_name / filename,
+                    facecolor='white',
+                    dpi=300)
 
     ###########################################################################################################
     # Count and Graph NLP Label for all sub samples ###########################################################
@@ -502,7 +527,9 @@ class reg_preparation_essay_1():
                 plt.ylabel('Apps Count')
                 # ------------ set title and save ----------------------------------------
                 self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
+                                                file_keywords='numApps_count',
+                                                name1=name1,
+                                                name2=name2,
                                                 graph_title='Text Cluster Bar Graph',
                                                 relevant_folder_name = 'numApps_per_text_cluster')
         return reg_preparation_essay_1(initial_panel=self.initial_panel,
@@ -556,7 +583,9 @@ class reg_preparation_essay_1():
                 ax.yaxis.grid() # since pandas parameter grid = False or True, no options, so I will modify here
                 # ------------ set title and save ----------------------------------------
                 self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
+                                                file_keywords='numClusters_count',
+                                                name1=name1,
+                                                name2=name2,
                                                 graph_title='Clusters Count in Certain Size',
                                                 relevant_folder_name='numClusters_per_cluster_size_bin')
         return reg_preparation_essay_1(initial_panel=self.initial_panel,
@@ -616,8 +645,9 @@ class reg_preparation_essay_1():
                 ax.yaxis.grid() # since pandas parameter grid = False or True, no options, so I will modify here
                 # ------------ set title and save ----------------------------------------
                 self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1, name2=name2,
-                                                graph_title='Apps Count in Clusters with the Same Size',
+                                                file_keywords='numApps_per_cluster_size_bin',
+                                                name1=name1,
+                                                name2=name2,
                                                 relevant_folder_name='numApps_per_cluster_size_bin')
         return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
@@ -826,8 +856,7 @@ class reg_preparation_essay_1():
         self._set_title_and_save_graphs(fig=fig,
                                         name1=None,
                                         graph_title="Leaders and Non-leaders Apps Count By Text Cluster Size Bins",
-                                        relevant_folder_name=None,
-                                        essay_2_and_3_overall=True)
+                                        relevant_folder_name=None)
         return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
@@ -850,92 +879,67 @@ class reg_preparation_essay_1():
                 res[name1][name2] = df2
         return res
 
-    def _combine_groupbyed_category_subdfs_into_leader_df(self, d):
-        res = dict.fromkeys(d.keys())
-        for name1, content1 in d.items():
-            df_list = []
-            for name2, df in content1.items():
-                if name2 != 'full': # exclude the full sample because each column represent a category
-                    df_list.append(df)
-            res[name1] = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-        return res
-
-    def _combine_groupbyed_leaders_subdfs_into_overall_df(self, d):
+    def _combine_name2s_into_single_df(self, name2_list, d):
+        """
+        :param name2_list: such as ['full', 'Tier1', 'Tier2', 'Tier3']
+        :param d: the dictionary of single subsample df containing stats
+        :return:
+        """
         df_list = []
         for name1, content1 in d.items():
             for name2, df in content1.items():
-                if name2 == 'full': # exclude the full sample because each column represent a category
+                if name2 in name2_list:
                     df_list.append(df)
-        res = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-        res.rename(columns={'Leaders_full':'Leaders', 'Non-leaders_full':'Non-leaders'}, inplace=True)
-        return res
+        df2 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        l = df2.columns.tolist()
+        str_to_replace = {'categories_category_': '',
+                          'genreId_': '',
+                          'minInstalls_': '',
+                          'full_': '',
+                          'starDeveloper_': '',
+                          '_digital_firms': '',
+                          '_': ' '}
+        for col in l:
+            new_col = col
+            for k, v in str_to_replace.items():
+                new_col = new_col.replace(k, v)
+            new_col = new_col.title()
+            df2.rename(columns={col: new_col}, inplace=True)
+        df2.loc["Total"] = df2.sum(axis=0)
+        df2 = df2.sort_values(by='Total', axis=1, ascending=False)
+        df2 = df2.drop(labels='Total')
+        df2 = df2.T
+        return df2
 
-    def _sort_df_descending_left_to_right(self, df):
-        df = df.append(df.sum(numeric_only=True), ignore_index=True)
-        df = df.sort_values(by=2, axis=1)
-        df = df.drop([df.index[2]])
-        df.rename(index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
-        return df
-
-    def niche_by_subsamples_bar_graph(self):
-        """
-        Create a single graph is the histogram by group
-        """
-        res = self._groupby_subsample_dfs_by_nichedummy()
-        res2 = self._combine_groupbyed_category_subdfs_into_leader_df(d=res)
-        res3 = self._combine_groupbyed_leaders_subdfs_into_overall_df(d=res)
-        fig, ax = plt.subplots(nrows=3, ncols=1,
-                               figsize=(7.5, 13),
-                               sharex='col')
+    def niche_by_subsamples_bar_graph(self, combo=None):
+        # each sub-sample is a horizontal bar in a single graph
+        fig, ax = plt.subplots(figsize=reg_preparation_essay_1.combo_barh_figsize[combo])
         fig.subplots_adjust(left=0.2)
-        name1_dict = {'Leaders': 'Market Leaders', 'Non-leaders': 'Market Followers'}
-        name1_list = list(res.keys())
-        for i in range(len(name1_list)+1):
-            if i in range(len(name1_list)):
-                ytick_labels = []
-                df = self._sort_df_descending_left_to_right(df=res2[name1_list[i]])
-                for col_name in df.columns:
-                    str_to_remove = name1_list[i] + '_category_'
-                    label_text = col_name.replace(str_to_remove, '').lower().title()
-                    ytick_labels.append(label_text)
-                    ax.flat[i].barh(col_name, df.loc['Niche Apps', col_name],
-                                    label=label_text + ' Niche Apps',
-                                    color='lightsalmon')
-                    ax.flat[i].barh(col_name, df.loc['Broad Apps', col_name],
-                                    left=df.loc['Niche Apps', col_name],
-                                    label=label_text + ' Broad Apps',
-                                    color='orangered')
-                    ax.flat[i].set_yticks(np.arange(len(ytick_labels)))
-                    ax.flat[i].set_yticklabels(ytick_labels)
-                    ax.flat[i].set_title(name1_dict[name1_list[i]])
-            else:
-                ytick_labels = []
-                df = self._sort_df_descending_left_to_right(df=res3)
-                for col_name in df.columns:
-                    ytick_labels.append(name1_dict[col_name])
-                    ax.flat[i].barh(col_name, df.loc['Niche Apps', col_name],
-                                    label=col_name + ' Niche Apps',
-                                    color='lightsalmon')
-                    ax.flat[i].barh(col_name, df.loc['Broad Apps', col_name],
-                                    left=df.loc['Niche Apps', col_name],
-                                    label=col_name + ' Broad Apps',
-                                    color='orangered')
-                    ax.flat[i].set_yticks(np.arange(len(ytick_labels)))
-                    ax.flat[i].set_yticklabels(ytick_labels)
-                    ax.flat[i].set_title('Entire Sample')
-            ax.flat[i].spines['top'].set_visible(False)
-            ax.flat[i].spines['right'].set_visible(False)
-            ax.flat[i].xaxis.grid(True)
-            ax.flat[i].set_xlabel('Count')
-        left_bar = mpatches.Patch(color='lightsalmon', label='Niche Apps')
-        right_bar = mpatches.Patch(color='orangered', label='Broad Apps')
-        fig.legend(handles=[left_bar, right_bar], loc='lower center', ncol=2)
-        # ------------------ save file with name (tolower and replace whitespace with underscores) ------
+        # -------------------------------------------------------------------------
+        res = self._groupby_subsample_dfs_by_nichedummy()
+        name2_list = []
+        for name1 in reg_preparation_essay_1.graph_combo_name1_list[combo]:
+            name2_list = name2_list + self.ssnames[name1]
+        df = self._combine_name2s_into_single_df(name2_list=name2_list, d=res)
+        df.plot.barh(stacked=True,
+                     color={"Broad Apps": "orangered",
+                            "Niche Apps": "lightsalmon"},
+                     ax=ax)
+        ax.set_ylabel('Samples')
+        ax.set_yticklabels(ax.get_yticklabels(),
+                           fontsize=reg_preparation_essay_1.combo_barh_yticklabel_fontsize[combo])
+        ax.set_xlabel('Apps Count')
+        ax.xaxis.grid()
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        graph_title = self.initial_panel + ' ' + reg_preparation_essay_1.combo_graph_titles[combo] + \
+                      '\n Apps Count by Niche and Broad Types'
+        ax.set_title(graph_title)
+        ax.legend()
+        # ------------------ save file -----------------------------------------------------------------
         self._set_title_and_save_graphs(fig=fig,
-                                        name1=None,
-                                        graph_title="Niche and Broad Apps Count By Sub-samples",
-                                        relevant_folder_name=None,
-                                        essay_2_and_3_overall=True)
+                                        file_keywords=reg_preparation_essay_1.combo_graph_titles[combo].lower().replace(' ', '_'),
+                                        relevant_folder_name='nichedummy_count_by_subgroup')
         return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
