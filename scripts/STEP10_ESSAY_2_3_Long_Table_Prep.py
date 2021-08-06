@@ -587,6 +587,8 @@ class reg_preparation_essay_2_3():
                 df_list = []
                 for var in count_by_var_list:
                     total = df.groupby('Text Cluster Sizes')[var + '_' + the_panel].count().reset_index()
+                    # this is completely WRONG, because you are calculating percentage of text cluster sizes out of all apps where containsAds is True
+                    # you actually wanted to calculate the percentage of containsAds is True out of total apps in one cluster.
                     yes = df.loc[df[var + '_' + the_panel] == 1].groupby('Text Cluster Sizes')[
                         var + '_' + the_panel].count().reset_index()
                     # if you only have if statement, you can write it at the very end,[ for i, j in zip() if ...]

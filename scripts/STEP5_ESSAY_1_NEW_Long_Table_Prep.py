@@ -30,66 +30,66 @@ class reg_preparation_essay_1():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/graphs')
     des_stats_graphs_overall = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/overall_graphs')
-    graph_subsample_title_dict = {  'full full': 'Full Sample',
-                                    'minInstalls Tier1' : 'Minimum Installs Tier 1',
-                                    'minInstalls Tier2': 'Minimum Installs Tier 2',
-                                    'minInstalls Tier3': 'Minimum Installs Tier 3',
-                                    'categories category_GAME': 'Gaming Apps',
-                                    'categories category_SOCIAL': 'Social Apps',
-                                    'categories category_LIFESTYLE': 'Lifestyle Apps',
-                                    'categories category_MEDICAL': 'Medical Apps',
-                                    'categories category_BUSINESS': 'Business Apps',
-                                    'genreId ART_AND_DESIGN': 'Default Genre Art And Design',
-                                    'genreId COMICS': 'Default Genre Comics',
-                                    'genreId PERSONALIZATION': 'Default Genre Personalization',
-                                    'genreId PHOTOGRAPHY': 'Default Genre Photography',
-                                    'genreId AUTO_AND_VEHICLES': 'Default Genre Auto And Vehicles',
-                                    'genreId GAME_ROLE_PLAYING': 'Default Genre Game Role Playing',
-                                    'genreId GAME_ACTION': 'Default Genre Game Action',
-                                    'genreId GAME_RACING': 'Default Genre Game Racing',
-                                    'genreId TRAVEL_AND_LOCAL': 'Default Genre Travel And Local',
-                                    'genreId GAME_ADVENTURE': 'Default Genre Game Adventure',
-                                    'genreId SOCIAL': 'Default Genre Social',
-                                    'genreId GAME_SIMULATION': 'Default Genre Game Simulation',
-                                    'genreId LIFESTYLE': 'Default Genre Lifestyle',
-                                    'genreId EDUCATION': 'Default Genre Education',
-                                    'genreId BEAUTY': 'Default Genre Beauty',
-                                    'genreId GAME_CASUAL': 'Default Genre Game Casual',
-                                    'genreId BOOKS_AND_REFERENCE': 'Default Genre Books And Reference',
-                                    'genreId BUSINESS': 'Default Genre Business',
-                                    'genreId FINANCE': 'Default Genre Finance',
-                                    'genreId GAME_STRATEGY': 'Default Genre Game Strategy',
-                                    'genreId SPORTS': 'Default Genre Sports',
-                                    'genreId COMMUNICATION': 'Default Genre Communication',
-                                    'genreId DATING': 'Default Genre Dating',
-                                    'genreId ENTERTAINMENT': 'Default Genre Entertainment',
-                                    'genreId GAME_BOARD': 'Default Genre Game Board',
-                                    'genreId EVENTS': 'Default Genre Events',
-                                    'genreId SHOPPING': 'Default Genre Shopping',
-                                    'genreId FOOD_AND_DRINK': 'Default Genre Food And Drink',
-                                    'genreId HEALTH_AND_FITNESS': 'Default Genre Health And Fitness',
-                                    'genreId HOUSE_AND_HOME': 'Default Genre House And Home',
-                                    'genreId TOOLS': 'Default Genre Tools',
-                                    'genreId LIBRARIES_AND_DEMO': 'Default Genre Libraries And Demo',
-                                    'genreId MAPS_AND_NAVIGATION': 'Default Genre Maps And Navigation',
-                                    'genreId MEDICAL': 'Default Genre Medical',
-                                    'genreId MUSIC_AND_AUDIO': 'Default Genre Music And Audio',
-                                    'genreId NEWS_AND_MAGAZINES': 'Default Genre News And Magazines',
-                                    'genreId PARENTING': 'Default Genre Parenting',
-                                    'genreId GAME_PUZZLE': 'Default Genre Game Puzzle',
-                                    'genreId VIDEO_PLAYERS': 'Default Genre Video Players',
-                                    'genreId PRODUCTIVITY': 'Default Genre Productivity',
-                                    'genreId WEATHER': 'Default Genre Weather',
-                                    'genreId GAME_ARCADE': 'Default Genre Game Arcade',
-                                    'genreId GAME_CASINO': 'Default Genre Game Casino',
-                                    'genreId GAME_CARD': 'Default Genre Game Card',
-                                    'genreId GAME_EDUCATIONAL': 'Default Genre Game Educational',
-                                    'genreId GAME_MUSIC': 'Default Genre Game Music',
-                                    'genreId GAME_SPORTS': 'Default Genre Game Sports',
-                                    'genreId GAME_TRIVIA': 'Default Genre Game Trivia',
-                                    'genreId GAME_WORD': 'Default Genre Game Word',
-                                    'starDeveloper top_digital_firms': 'Apps from Top Tier Firms',
-                                    'starDeveloper non-top_digital_firms': 'Apps from Non-top Tier Firms'}
+    graph_subsample_title_dict = {  'full_full': 'Full Sample',
+                                    'minInstalls_Tier1' : 'Minimum Installs Tier 1',
+                                    'minInstalls_Tier2': 'Minimum Installs Tier 2',
+                                    'minInstalls_Tier3': 'Minimum Installs Tier 3',
+                                    'categories_category_GAME': 'Gaming Apps',
+                                    'categories_category_SOCIAL': 'Social Apps',
+                                    'categories_category_LIFESTYLE': 'Lifestyle Apps',
+                                    'categories_category_MEDICAL': 'Medical Apps',
+                                    'categories_category_BUSINESS': 'Business Apps',
+                                    'genreId_ART_AND_DESIGN': 'Default Genre Art And Design',
+                                    'genreId_COMICS': 'Default Genre Comics',
+                                    'genreId_PERSONALIZATION': 'Default Genre Personalization',
+                                    'genreId_PHOTOGRAPHY': 'Default Genre Photography',
+                                    'genreId_AUTO_AND_VEHICLES': 'Default Genre Auto And Vehicles',
+                                    'genreId_GAME_ROLE_PLAYING': 'Default Genre Game Role Playing',
+                                    'genreId_GAME_ACTION': 'Default Genre Game Action',
+                                    'genreId_GAME_RACING': 'Default Genre Game Racing',
+                                    'genreId_TRAVEL_AND_LOCAL': 'Default Genre Travel And Local',
+                                    'genreId_GAME_ADVENTURE': 'Default Genre Game Adventure',
+                                    'genreId_SOCIAL': 'Default Genre Social',
+                                    'genreId_GAME_SIMULATION': 'Default Genre Game Simulation',
+                                    'genreId_LIFESTYLE': 'Default Genre Lifestyle',
+                                    'genreId_EDUCATION': 'Default Genre Education',
+                                    'genreId_BEAUTY': 'Default Genre Beauty',
+                                    'genreId_GAME_CASUAL': 'Default Genre Game Casual',
+                                    'genreId_BOOKS_AND_REFERENCE': 'Default Genre Books And Reference',
+                                    'genreId_BUSINESS': 'Default Genre Business',
+                                    'genreId_FINANCE': 'Default Genre Finance',
+                                    'genreId_GAME_STRATEGY': 'Default Genre Game Strategy',
+                                    'genreId_SPORTS': 'Default Genre Sports',
+                                    'genreId_COMMUNICATION': 'Default Genre Communication',
+                                    'genreId_DATING': 'Default Genre Dating',
+                                    'genreId_ENTERTAINMENT': 'Default Genre Entertainment',
+                                    'genreId_GAME_BOARD': 'Default Genre Game Board',
+                                    'genreId_EVENTS': 'Default Genre Events',
+                                    'genreId_SHOPPING': 'Default Genre Shopping',
+                                    'genreId_FOOD_AND_DRINK': 'Default Genre Food And Drink',
+                                    'genreId_HEALTH_AND_FITNESS': 'Default Genre Health And Fitness',
+                                    'genreId_HOUSE_AND_HOME': 'Default Genre House And Home',
+                                    'genreId_TOOLS': 'Default Genre Tools',
+                                    'genreId_LIBRARIES_AND_DEMO': 'Default Genre Libraries And Demo',
+                                    'genreId_MAPS_AND_NAVIGATION': 'Default Genre Maps And Navigation',
+                                    'genreId_MEDICAL': 'Default Genre Medical',
+                                    'genreId_MUSIC_AND_AUDIO': 'Default Genre Music And Audio',
+                                    'genreId_NEWS_AND_MAGAZINES': 'Default Genre News And Magazines',
+                                    'genreId_PARENTING': 'Default Genre Parenting',
+                                    'genreId_GAME_PUZZLE': 'Default Genre Game Puzzle',
+                                    'genreId_VIDEO_PLAYERS': 'Default Genre Video Players',
+                                    'genreId_PRODUCTIVITY': 'Default Genre Productivity',
+                                    'genreId_WEATHER': 'Default Genre Weather',
+                                    'genreId_GAME_ARCADE': 'Default Genre Game Arcade',
+                                    'genreId_GAME_CASINO': 'Default Genre Game Casino',
+                                    'genreId_GAME_CARD': 'Default Genre Game Card',
+                                    'genreId_GAME_EDUCATIONAL': 'Default Genre Game Educational',
+                                    'genreId_GAME_MUSIC': 'Default Genre Game Music',
+                                    'genreId_GAME_SPORTS': 'Default Genre Game Sports',
+                                    'genreId_GAME_TRIVIA': 'Default Genre Game Trivia',
+                                    'genreId_GAME_WORD': 'Default Genre Game Word',
+                                    'starDeveloper_top_digital_firms': 'Apps from Top Tier Firms',
+                                    'starDeveloper_non-top_digital_firms': 'Apps from Non-top Tier Firms'}
     var_title_dict = {'ImputedminInstalls': 'Log Minimum Installs',
                       'Imputedprice': 'Log Price',
                       'offersIAPTrue': 'Percentage of Apps Offers IAP',
@@ -105,24 +105,21 @@ class reg_preparation_essay_1():
         'combo3': ['full', 'categories'],
         'combo4': ['genreId']
     }
-    multi_graph_combo_fig_subplot_layout = {
-        'combo1': plt.subplots(nrows=2, ncols=2,
-                               figsize=(11, 8.5),
-                               sharex='col',
-                               sharey='row'),
-        'combo2': plt.subplots(nrows=1, ncols=3,
-                               figsize=(17, 5.5),
-                               sharex='col',
-                               sharey='row'),
-        'combo3': plt.subplots(nrows=2, ncols=3,
-                               figsize=(16.5, 8.5),
-                               sharex='col',
-                               sharey='row'),
-        'combo4': plt.subplots(nrows=2, ncols=3,
-                               figsize=(16.5, 8.5),
-                               sharex='col',
-                               sharey='row')
+    multi_graph_combo_suptitle = {
+        'combo1': 'Full Sample and Minimum Install Sub-samples',
+        'combo2': 'Full Sample and Apps from Top and Non-top Tier Firms',
+        'combo3': 'Full Sample and Five Main Categorical Sub-samples',
+        'combo4': 'Default Categorical Sub-samples'
     }
+    multi_graph_combo_fig_subplot_layout = {
+        'combo1': {'nrows': 2, 'ncols': 2,
+                   'figsize': (11, 8.5)},
+        'combo2': {'nrows': 1, 'ncols': 3,
+                   'figsize': (18, 6)},
+        'combo3': {'nrows': 2, 'ncols': 3,
+                   'figsize': (16.5, 8.5)},
+        'combo4': {'nrows': 7, 'ncols': 7,
+                   'figsize': (36, 36)}}
 
     combo_barh_figsize = {
         'combo1': (8, 5),
@@ -243,42 +240,6 @@ class reg_preparation_essay_1():
                 else:
                     d[name1][name2] = df.loc[df[name2]==1]
         return d
-
-    def _select_df_for_key_vars_against_text_clusters(self, key_vars,
-                                                      the_panel=None,
-                                                      includeNicheDummy=False,
-                                                      convert_to_long=False,
-                                                      percentage_true_df=False):
-        """
-        Internal function returns the dataframe for plotting relationship graphs between key_variables and text clusters (by number of apps)
-        This is for graphs in essay 2 and essay 3, and for new graphs incorporating Leah's suggestion on June 4 2021
-        """
-        if the_panel is not None:
-            selected_vars = [i + '_' + the_panel for i in key_vars]
-        else:
-            selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
-        d = self._slice_subsamples_dict()
-        res = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in d.items():
-            res[name1] = dict.fromkeys(content1.keys())
-            for name2, df in content1.items():
-                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
-                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
-                if includeNicheDummy is True:
-                    svars = selected_vars + [niche_dummy]
-                else:
-                    svars = selected_vars + [text_label_var]
-                if convert_to_long is False:
-                    res[name1][name2] = df[svars]
-                else:
-                    if percentage_true_df is False:
-                        res[name1][name2] = self._convert_to_long_form(df=df[svars], var=key_vars)
-                    else:
-                        df2 = self._convert_to_long_form(df=df[svars], var=key_vars)
-                        res[name1][name2] = self._create_percentage_true_df_from_longdf(var=key_vars,
-                                                                                        ldf=df2,
-                                                                                        nichedummy=niche_dummy)
-        return res
 
     ###########################################################################################################
     # Open, Combine Dataframes check variables and save graph functions
@@ -407,9 +368,8 @@ class reg_preparation_essay_1():
         graph_title is what is the graph is.
         """
         # ------------ set title -------------------------------------------------------------------------
-        if graph_title != '' and name1 != '' and name2 != '':
-            title = self.initial_panel + ' ' + reg_preparation_essay_1.graph_subsample_title_dict[name1 + ' ' + name2] \
-                    + ' ' + graph_title
+        if graph_title != '':
+            title = self.initial_panel + ' ' + graph_title
             title = title.title()
             fig.suptitle(title, fontsize='medium')
         # ------------ save ------------------------------------------------------------------------------
@@ -705,52 +665,6 @@ class reg_preparation_essay_1():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ############ Count number of apps in each text cluster sized bin, group_by leaders and non-leaders ##############
-    def _df_text_cluster_sizes(self, d):
-        """
-        :param d: a nested dictionary with name1, and name 2 where name 2 contains dfs, either obtained from
-        self._slice_subsamples_dict for from self._select_df_for_key_vars_against_text_clusters
-        :return: it will return three more new columns that show each row (an app) belong to a text cluster with its size bin,
-        whether it is a large text cluster (500, 1000], a broad app, or a small text cluster (1,2], a niche app.
-        """
-        res = dict.fromkeys(d.keys())
-        ranges = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1500]
-        labels = ['[0, 1]', '(1, 2]', '(2, 3]', '(3, 5]',
-                  '(5, 10]', '(10, 20]', '(20, 30]', '(30, 50]',
-                  '(50, 100]', '(100, 200]', '(200, 500]', '(500, 1500]']
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
-            for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                def _number_apps_in_each_text_cluster(df2):
-                    s1 = df2.groupby([k1 + '_' + k2 + '_kmeans_labels']).size().sort_values(ascending=False)
-                    return s1
-                s1 = _number_apps_in_each_text_cluster(df2)
-                # assign that number to dataframe
-                df2['appnum_in_text_cluster'] = df2[k1 + '_' + k2 + '_kmeans_labels'].apply(lambda x: s1.loc[x])
-                # create categorical variable indicating how many number of apps are there in a text cluster
-                df2['Text Cluster Sizes'] = pd.cut(df2['appnum_in_text_cluster'],
-                                                   bins=ranges,
-                                                   include_lowest=True,
-                                                   labels=labels)
-                res[k1][k2] = df2
-        return res
-
-    def _groupby_text_size_bins_count(self, d):
-        """
-        :param d: is the output of self._df_text_cluster_sizes(d)
-        :return:
-        """
-        res = dict.fromkeys(d.keys())
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
-            for k2, df in content1.items():
-                count_df = df.groupby('Text Cluster Sizes').count().reset_index()
-                count_df = count_df.iloc[:, 0:2]
-                count_df.rename(columns={count_df.columns[1]: "Apps Count in Text Clusters with the Same Size"}, inplace = True)
-                res[k1][k2] = count_df
-        return res
-
     def _place_leader_vs_nonleader_in_same_df(self, d):
         """
         This function aims to graph bar chart of apps count in text cluster with same sizes with leader as a bar and non-leader as a bar
@@ -778,94 +692,6 @@ class reg_preparation_essay_1():
             df3['sub_samples'] = df3['sub_samples'].str.replace('Apps Count in Text Clusters with the Same Size_', '', regex=False)
             res[name2] = df3
         return res
-
-    def _groupby_text_size_bins_count_percentage(self, d, the_panel, count_by_var_list):
-        """
-        :param d: is the output of self._df_text_cluster_sizes(d)
-        :param count_by_var: the variable to count by, generally == ['offersIAPTrue', 'containsAdsTrue']
-        :return:
-        """
-        res = dict.fromkeys(d.keys())
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
-            for k2, df in content1.items():
-                # create percentage by group, ca is containsAds, of is offersIAP
-                df_list = []
-                for var in count_by_var_list:
-                    total = df.groupby('Text Cluster Sizes')[var + '_' + the_panel].count().reset_index()
-                    yes = df.loc[df[var + '_' + the_panel] == 1].groupby('Text Cluster Sizes')[
-                        var + '_' + the_panel].count().reset_index()
-                    # if you only have if statement, you can write it at the very end,[ for i, j in zip() if ...]
-                    # but if you have both if and else statements, you must write them before for, [ X if .. else Y for i, j in zip() ]
-                    yes['TRUE%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in
-                                           zip(yes[var + '_' + the_panel], total[var + '_' + the_panel])]
-                    total['TOTAL%_' + var] = [i / j * 100 if j != 0 else 0 for i, j in
-                                              zip(total[var + '_' + the_panel], total[var + '_' + the_panel])]
-                    yes.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
-                    yes.set_index('Text Cluster Sizes', inplace=True)
-                    total.drop(columns=[var + '_' + the_panel], axis=1, inplace=True)
-                    total.set_index('Text Cluster Sizes', inplace=True)
-                    per_df = yes.join(total, how='inner')
-                    df_list.append(per_df)
-                df3 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-                df3.reset_index(inplace=True)
-                res[k1][k2] = df3
-        return res
-
-    def graph_number_of_apps_leaders_vs_nonleaders_in_text_cluster_size_bin(self):
-        """
-        This is based on the dataframe self.open_cross_section_reg_df
-        :return:
-        """
-        d = self._slice_subsamples_dict()
-        d2 = self._df_text_cluster_sizes(d=d)
-        d3 = self._groupby_text_size_bins_count(d=d2)
-        d4 = self._place_leader_vs_nonleader_in_same_df(d=d3)
-        fig, ax = plt.subplots(nrows=2, ncols=3,
-                               figsize=(16, 8.5),
-                               sharex='col',
-                               sharey='row')
-        fig.subplots_adjust(bottom=0.2)
-        sub_sample_names = list(d4.keys())
-        for i in range(len(sub_sample_names)):
-            sns.set(style="whitegrid")
-            sns.despine(right=True, top=True)
-            sub_sample_palette = {'Leaders': 'royalblue', 'Non-leaders': 'orchid'}
-            sns.barplot(x='Text Cluster Sizes',
-                        y='Apps Count in Text Clusters with the Same Size',
-                        data=d4[sub_sample_names[i]],
-                        hue="sub_samples",
-                        palette=sub_sample_palette,
-                        ax=ax.flat[i])
-            title_name = sub_sample_names[i].replace("category_", "").lower().title()
-            ax.flat[i].set_title(title_name)
-            ax.flat[i].set_ylabel("Apps Count")
-            ax.flat[i].set_ylim(bottom=0)
-            ax.flat[i].set_xlabel('Text Cluster Sizes Bins')
-            ax.flat[i].yaxis.grid(True)
-            ax.flat[i].xaxis.set_visible(True)
-            for tick in ax.flat[i].get_xticklabels():
-                tick.set_rotation(45)
-            ax.flat[i].legend().set_visible(False)
-            top_bar = mpatches.Patch(color='royalblue',
-                                     label='Leaders')
-            bottom_bar = mpatches.Patch(color='orchid',
-                                        label='Non-leaders')
-            fig.legend(handles=[top_bar, bottom_bar], loc='upper right', ncol=1)
-        # ------------ set title and save ---------------------------------------------
-        self._set_title_and_save_graphs(fig=fig,
-                                        name1=None,
-                                        graph_title="Leaders and Non-leaders Apps Count By Text Cluster Size Bins",
-                                        relevant_folder_name=None)
-        return reg_preparation_essay_1(initial_panel=self.initial_panel,
-                                   all_panels=self.all_panels,
-                                   tcn=self.tcn,
-                                   subsample_names=self.ssnames,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   nicheDummy_labels=self.nicheDummy_labels,
-                                   long_cdf=self.long_cdf,
-                                   individual_dummies_df=self.i_dummies_df)
 
     def _groupby_subsample_dfs_by_nichedummy(self):
         d = self._slice_subsamples_dict()
@@ -950,123 +776,205 @@ class reg_preparation_essay_1():
                                    long_cdf=self.long_cdf,
                                    individual_dummies_df=self.i_dummies_df)
 
-    ############## functions for strip violin plots for price and minInstalls graphs #############################
-    def _create_log_dep_var_groupby_text_cluster_df(self, the_panel, dep_var):
+    def _prepare_pricing_vars_for_graph_group_by_var(self,
+                                                     group_by_var,
+                                                     the_panel=None):
         """
-        :param the_panel: '202106'
-        :param dep_var: either 'Imputedprice' or 'ImputedminInstalls'
+        group_by_var could by either "NicheDummy" or "cluster_size_bin"
+        the dataframe (self.cdf) is after the function combine_app_level_text_cluster_stats_with_df
+        """
+        key_vars = ['Imputedprice',
+                    'ImputedminInstalls',
+                    'offersIAPTrue',
+                    'containsAdsTrue']
+        if the_panel is not None:
+            selected_vars = [i + '_' + the_panel for i in key_vars]
+        else:
+            selected_vars = [i + '_' + j for j in self.all_panels for i in key_vars]
+        d = self._slice_subsamples_dict()
+        res12 = dict.fromkeys(self.ssnames.keys())
+        res34 = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res12[name1] = dict.fromkeys(content1.keys())
+            res34[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                # ---- prepare regular df with log transformed imputedprice and imputed mininstalls --------
+                text_label_var = name1 + '_' + name2 + '_kmeans_labels'
+                numApps_in_cluster = name1 + '_' + name2 + '_numApps_in_cluster'
+                group_by_var_name = name1 + '_' + name2 + '_' + group_by_var
+                # ------------------------------------------------------------------------------------------
+                svars = selected_vars + [text_label_var,
+                                         group_by_var_name,
+                                         numApps_in_cluster]
+                df2 = df[svars]
+                if the_panel is not None:
+                    df2['LogImputedprice_' + the_panel] = np.log(df2['Imputedprice_' + the_panel] + 1)
+                    df2['LogImputedminInstalls_' + the_panel] = np.log(df2['ImputedminInstalls_' + the_panel] + 1)
+                    res12[name1][name2] = df2
+                else:
+                    for i in self.all_panels:
+                        df2['LogImputedprice_' + i] = np.log(df2['Imputedprice_' + i] + 1)
+                        df2['LogImputedminInstalls_' + i] = np.log(df2['ImputedminInstalls_' + i] + 1)
+                    # ---------- when no panel is specified, you will need the long form ----------------------
+                    df2 = df2.reset_index()
+                    ldf = pd.wide_to_long(
+                        df2,
+                        stubnames=['Imputedprice', 'ImputedminInstalls',
+                                   'LogImputedprice', 'LogImputedminInstalls',
+                                   'offersIAPTrue', 'containsAdsTrue'],
+                        i=['index'],
+                        j="panel",
+                        sep='_').reset_index()
+                    ldf["panel"] = pd.to_datetime(ldf["panel"], format='%Y%m')
+                    ldf["panel"] = ldf["panel"].dt.strftime('%Y-%m')
+                    ldf = ldf.sort_values(by=["index", "panel"]).set_index('index')
+                    res12[name1][name2] = ldf
+                # ------ prepare df consisting of percentage True in each text cluster size bin for offersIAP and containsAds ------
+                if the_panel is not None:
+                    panel_var_list = ['offersIAPTrue_' + the_panel, 'containsAdsTrue_' + the_panel]
+                    panel_value_var_list = ['TRUE%_offersIAPTrue_' + the_panel, 'TRUE%_containsAdsTrue_' + the_panel]
+                else:
+                    panel_var_list = ['offersIAPTrue_' + i for i in self.all_panels] + \
+                                     ['containsAdsTrue_' + i for i in self.all_panels]
+                    panel_value_var_list = ['TRUE%_offersIAPTrue_' + i for i in self.all_panels] + \
+                                           ['TRUE%_containsAdsTrue_' + i for i in self.all_panels]
+                # calculate the percentage True
+                df_list = []
+                for var in panel_var_list:
+                    df3 = pd.crosstab(  index=df2[group_by_var_name],
+                                        columns=[df2[var]],
+                                        margins=True)
+                    # for cases where only column 1 or column 0 exist for a sub text cluster or niche dummy group
+                    if 1 not in df3.columns:
+                        print(name1, name2, the_panel, var, 'column 1 does not exist.')
+                        df3[1] = 0
+                        print('created column 1 with zeros. ')
+                    if 0 not in df3.columns:
+                        print(name1, name2, the_panel, var, 'column 0 does not exist.')
+                        df3[0] = 0
+                        print('created column 0 with zeros. ')
+                    df3['TRUE%_' + var] = df3[1] / df3['All'] * 100
+                    df3['FALSE%_' + var] = df3[0] / df3['All'] * 100
+                    df3['TOTAL%_' + var] = df3['TRUE%_' + var] + df3['FALSE%_' + var]
+                    df_list.append(df3[['TRUE%_' + var]])
+                df4 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+                df4['TOTAL%'] = 100 # because the text cluster group that do not exist are not in the rows, so TOTAL% is 100
+                df4.drop(index='All', inplace=True)
+                total = df2.groupby(group_by_var_name)[var].count().to_frame()
+                total.rename(columns={var: 'Total_Count'}, inplace=True)
+                df5 = total.join(df4, how='left').fillna(0)
+                df5.drop(columns='Total_Count', inplace=True)
+                df5.reset_index(inplace=True)
+                if the_panel is not None:
+                    # ------- reshape to have seaborn hues (only for cross section descriptive stats) --------------------
+                    # conver to long to have hue for different dependant variables
+                    df6 = pd.melt(df5,
+                                  id_vars=[group_by_var_name, "TOTAL%"],
+                                  value_vars=panel_value_var_list)
+                    df6.rename(columns={'value': 'TRUE%', 'variable': 'dep_var'}, inplace=True)
+                    df6['dep_var'] = df6['dep_var'].str.replace('TRUE%_', '', regex=False)
+                    res34[name1][name2] = df6
+                else:
+                    # convert to long to have hue for different niche or non-niche dummies
+                    ldf = pd.wide_to_long(
+                        df5,
+                        stubnames=['TRUE%_offersIAPTrue', 'TRUE%_containsAdsTrue'],
+                        i=[group_by_var_name],
+                        j="panel",
+                        sep='_').reset_index()
+                    ldf["panel"] = pd.to_datetime(ldf["panel"], format='%Y%m')
+                    ldf["panel"] = ldf["panel"].dt.strftime('%Y-%m')
+                    ldf = ldf.sort_values(by=["panel"])
+                    res34[name1][name2] = ldf
+        return res12, res34
+
+    def _rearrange_combo_df_dict(self, d):
+        """
+        :param d: is any prepared/graph-ready dataframes organized in the dictionary tree in the default structure
         :return:
         """
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=[dep_var],
-                                                               the_panel=the_panel,
-                                                               includeNicheDummy=False,
-                                                               convert_to_long=False)
-        res = self._df_text_cluster_sizes(d=d)
-        for k1, content1 in res.items():
-            for k2, df in content1.items():
-                df['Log' + dep_var + '_' + the_panel] = np.log2(df[dep_var + '_' + the_panel]+1)
+        res = dict.fromkeys(reg_preparation_essay_1.graph_combo_name1_list.keys())
+        for combo in res.keys():
+            res[combo] = {}
+            for name1 in reg_preparation_essay_1.graph_combo_name1_list[combo]:
+                for name2 in self.ssnames[name1]:
+                    res[combo][name1 + '_' + name2] = d[name1][name2]
         return res
 
-    ####################### functions for offerIAP, containsAds, paidTrue ####################################################
-
-    def _percentage_of_true_false_groupby_text_cluster(self, the_panel):
-        """
-        On the y axis, we are going to graph percentage instead of number of apps (still stacked bar graph)
-        On the x axis, we are going to use categorical text clusters by the number of apps they contain.
-        var is one of paidTrue, offerIAPTrue, containsAdsTrue
-        """
-        d = self._select_df_for_key_vars_against_text_clusters(key_vars=['offersIAPTrue', 'containsAdsTrue'],
-                                                               the_panel=the_panel,
-                                                               includeNicheDummy=False,
-                                                               convert_to_long=False)
-        res = self._df_text_cluster_sizes(d=d)
-        res2 = self._groupby_text_size_bins_count_percentage(d=res, the_panel=the_panel,
-                                                             count_by_var_list=['offersIAPTrue', 'containsAdsTrue'])
-        for k1, content1 in res2.items():
-            for k2, df in content1.items():
-                # remove one total percentage column because they are the same
-                df.drop(columns=['TOTAL%_offersIAPTrue'], axis=1, inplace=True)
-                df.rename(columns={'TOTAL%_containsAdsTrue': 'TOTAL%'}, inplace=True)
-                # conver to long to have hue in seaborn plotting
-                df2 = pd.melt(df,
-                              id_vars=['Text Cluster Sizes', "TOTAL%"],
-                              value_vars=['TRUE%_containsAdsTrue', 'TRUE%_offersIAPTrue'])
-                df2.rename(columns={'value': 'TRUE%', 'variable': 'dep_var'}, inplace=True)
-                df2['dep_var'] = df2['dep_var'].str.replace('TRUE%_', '', regex=False)
-                res[k1][k2] = df2
-        return res
-
-    def put_6_subsamples_dep_vars_in_1_graph(self, key_vars, the_panel):
+    def graph_descriptive_stats_pricing_vars(self, combo, key_vars, the_panel):
         """
         For the containsAdsTrue and offersIAPTrue I will put them into 1 graph with different hues
         :param key_vars: 'Imputedprice','ImputedminInstalls','both_IAP_and_ADS'
         :param the_panel: '202106'
         :return:
         """
+        res12, res34 = self._prepare_pricing_vars_for_graph_group_by_var(
+                                    group_by_var='cluster_size_bin',
+                                    the_panel=the_panel)
+        res12 = self._rearrange_combo_df_dict(d=res12)
+        res34 = self._rearrange_combo_df_dict(d=res34)
+        # --------------------------------------- graph -------------------------------------------------
         for i in range(len(key_vars)):
-            for name1, content1 in self.ssnames.items():
-                fig, ax = plt.subplots(nrows=2, ncols=3,
-                                       figsize=(16, 8.5),
-                                       sharex='col',
-                                       sharey='row')
-                fig.subplots_adjust(bottom=0.2)
-                for j in range(len(content1)):
-                    sns.set(style="whitegrid")
+            fig, ax = plt.subplots(nrows=reg_preparation_essay_1.multi_graph_combo_fig_subplot_layout[combo]['nrows'],
+                                   ncols=reg_preparation_essay_1.multi_graph_combo_fig_subplot_layout[combo]['ncols'],
+                                   figsize=reg_preparation_essay_1.multi_graph_combo_fig_subplot_layout[combo]['figsize'],
+                                   sharey='row',
+                                   sharex='col')
+            fig.subplots_adjust(bottom=0.2)
+            name1_2_l = list(res12[combo].keys())
+            for j in range(len(name1_2_l)):
+                sns.set(style="whitegrid")
+                sns.despine(right=True, top=True)
+                if key_vars[i] in ['Imputedprice', 'ImputedminInstalls']:
+                    sns.violinplot(
+                        x= name1_2_l[j] + '_cluster_size_bin',
+                        y= "Log" + key_vars[i] + "_" + the_panel,
+                        data=res12[combo][name1_2_l[j]],
+                        color=".8",
+                        inner=None,  # because you are overlaying stripplot
+                        cut=0,
+                        ax=ax.flat[j])
+                    # overlay swamp plot with violin plot
+                    sns.stripplot(
+                        x= name1_2_l[j] + '_cluster_size_bin',
+                        y="Log" + key_vars[i] + "_" + the_panel,
+                        data=res12[combo][name1_2_l[j]],
+                        jitter=True,
+                        ax=ax.flat[j])
+                else:
+                    total_palette = {"containsAdsTrue_" + the_panel: 'paleturquoise',
+                                     "offersIAPTrue_"+ the_panel: 'paleturquoise'}
+                    sns.barplot(x= name1_2_l[j] + '_cluster_size_bin',
+                                y='TOTAL%', # total does not matter since if the subsample does not have any apps in a text cluster, the total will always be 0
+                                data=res34[combo][name1_2_l[j]],
+                                hue="dep_var",
+                                palette=total_palette,
+                                ax=ax.flat[j])
+                    # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
+                    # chart 2 represents the contains ads True group, thus the remaining backdrop chart 1 represents the False group
+                    true_palette = {"containsAdsTrue_" + the_panel: 'darkturquoise',
+                                    "offersIAPTrue_" + the_panel: 'teal'}
+                    sns.barplot(x= name1_2_l[j] + '_cluster_size_bin',
+                                y='TRUE%',
+                                data=res34[combo][name1_2_l[j]],
+                                hue="dep_var",
+                                palette=true_palette,
+                                ax=ax.flat[j])
+                    ax.flat[j].set_ylabel("Percentage Points")
+                    # add legend
                     sns.despine(right=True, top=True)
-                    if key_vars[i] in ['Imputedprice', 'ImputedminInstalls']:
-                        res12 = self._create_log_dep_var_groupby_text_cluster_df(the_panel, dep_var=key_vars[i])
-                        sns.violinplot(
-                            x='Text Cluster Sizes',
-                            y="Log" + key_vars[i] + "_" + the_panel,
-                            data=res12[name1][content1[j]],
-                            color=".8",
-                            inner=None,  # because you are overlaying stripplot
-                            cut=0,
-                            ax=ax.flat[j])
-                        # overlay swamp plot with box plot
-                        sns.stripplot(
-                            x='Text Cluster Sizes',
-                            y="Log" + key_vars[i] + "_" + the_panel,
-                            data=res12[name1][content1[j]],
-                            jitter=True,
-                            ax=ax.flat[j])
-                    else:
-                        res34 = self._percentage_of_true_false_groupby_text_cluster(the_panel)
-                        # bar chart 1 -> is 1 because this is total value
-                        total_palette = {"containsAdsTrue": 'paleturquoise', "offersIAPTrue": 'paleturquoise'}
-                        sns.barplot(x='Text Cluster Sizes',
-                                    y='TOTAL%', # total does not matter since if the subsample does not have any apps in a text cluster, the total will always be 0
-                                    data=res34[name1][content1[j]],
-                                    hue="dep_var",
-                                    palette=total_palette,
-                                    ax=ax.flat[j])
-                        # bar chart 2 -> bottom bars that overlap with the backdrop of bar chart 1,
-                        # chart 2 represents the contains ads True group, thus the remaining backdrop chart 1 represents the False group
-                        true_palette = {"containsAdsTrue": 'darkturquoise', "offersIAPTrue": 'teal'}
-                        sns.barplot(x='Text Cluster Sizes',
-                                    y='TRUE%',
-                                    data=res34[name1][content1[j]],
-                                    hue="dep_var",
-                                    palette=true_palette,
-                                    ax=ax.flat[j])
-                        ax.flat[j].set_ylabel("Percentage Points")
-                        # add legend
-                        sns.despine(right=True, top=True)
-                    if content1[j] == 'full':
-                        ax.flat[j].set_title('Full Sample')
-                    else:
-                        sample_name = content1[j].replace("category_", "").lower().title()
-                        ax.flat[j].set_title(sample_name)
-                    ax.flat[j].set_ylim(bottom=0)
-                    ax.flat[j].set_xlabel('Text Cluster Sizes Bins')
-                    y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
-                                    'Imputedprice': 'Log Price',
-                                    'both_IAP_and_ADS': 'Percentage Points'}
-                    ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
-                    ax.flat[j].xaxis.set_visible(True)
-                    for tick in ax.flat[j].get_xticklabels():
-                        tick.set_rotation(45)
-                    ax.flat[j].legend().set_visible(False)
+                graph_title = reg_preparation_essay_1.graph_subsample_title_dict[name1_2_l[j]]
+                ax.flat[j].set_title(graph_title)
+                ax.flat[j].set_ylim(bottom=0)
+                ax.flat[j].set_xlabel('Text Cluster Sizes Bins')
+                y_label_dict = {'ImputedminInstalls': 'Log Minimum Installs',
+                                'Imputedprice': 'Log Price',
+                                'both_IAP_and_ADS': 'Percentage Points'}
+                ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
+                ax.flat[j].xaxis.set_visible(True)
+                for tick in ax.flat[j].get_xticklabels():
+                    tick.set_rotation(45)
+                ax.flat[j].legend().set_visible(False)
                 if key_vars[i] == 'both_IAP_and_ADS':
                     top_bar = mpatches.Patch(color='paleturquoise',
                                              label='Total (100%)')
@@ -1075,12 +983,13 @@ class reg_preparation_essay_1():
                     bottom_bar = mpatches.Patch(color='teal',
                                                 label='Offers IAP (%)')
                     fig.legend(handles=[top_bar, middle_bar, bottom_bar], loc='upper right', ncol=1)
-                # ------------ set title and save ---------------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                name1=name1,
-                                                subsample_one_graph=True,
-                                                graph_title=reg_preparation_essay_1.var_title_dict[key_vars[i]] + " In All Sub-samples",
-                                                relevant_folder_name='subgroups_in_one_graph')
+            # ------------ set title and save ---------------------------------------------
+            self._set_title_and_save_graphs(fig=fig,
+                                            file_keywords=key_vars[i] + '_' + combo + '__' + the_panel,
+                                            graph_title=reg_preparation_essay_1.multi_graph_combo_suptitle[combo] + \
+                                                        " Cross Section Descriptive Statistics of Pricing Variables for Panel " + \
+                                                        the_panel,
+                                            relevant_folder_name='pricing_vars_stats')
         return reg_preparation_essay_1(initial_panel=self.initial_panel,
                                    all_panels=self.all_panels,
                                    tcn=self.tcn,
@@ -1116,42 +1025,15 @@ class reg_preparation_essay_1():
         ldf = ldf.sort_values(by=["index", "panel"]).set_index('index')
         return ldf
 
-    def _create_percentage_true_df_from_longdf(self, var, ldf, nichedummy):
-        """
-        The function is used inside self._select_df_for_key_vars_against_text_clusters(
-            key_vars=['offersIAPTrue'],
-            the_panel=None,
-            includeNicheDummy=True,
-            convert_to_long=True,
-            percentage_true_df=True)
-            where you have to turn both convert_to_long and percentage_true to True.
-        :param var should be inside a list, just like its outer function var=['containsAds'] or ['offersIAP']
-        :param ldf: it is the output of self._convert_to_long_form(var=['containsAds'] or ['offersIAP'])
-        :param nichedummy is string name1 + "_" + name2 + "_NicheDummy"
-        :return: df ready for graphing parallel trends for offers IAP and contains ads
-        """
-        # here we assume var list contains only one string variable
-        for i in var:
-            str_var = i
-        res_true = ldf.groupby(by=["panel", nichedummy]).sum().reset_index().rename(columns={str_var: "TRUE"})
-        res_total = ldf.groupby(by=["panel", nichedummy]).count().reset_index().rename(columns={str_var: "TOTAL"})
-        res_merge = pd.merge(
-                        res_true,
-                        res_total,
-                        how="inner",
-                        on=['panel', nichedummy])
-        res_merge['percentage_true'] = res_merge['TRUE']/res_merge['TOTAL'] * 100
-        res_merge = res_merge.round({'percentage_true': 0})
-        # convert back to wide form in order to pass into sns.lineplot
-        res_merge = res_merge.drop(['TRUE', 'TOTAL'], axis=1)
-        res_merge = res_merge.pivot_table(index=['panel'],
-                                          columns=nichedummy,
-                                          values='percentage_true')
-        return res_merge
+    def _prepare_pricing_vars_for_graph_group_mean_parallel_trends(self):
+        res12, res34 = self._prepare_pricing_vars_for_graph_with_text_clusters_bins()
+        res12 = self._rearrange_combo_df_dict(d=res12)
+        res34 = self._rearrange_combo_df_dict(d=res34)
 
-    def put_6_subsamples_parallel_trends_in_1_graph(self, key_vars):
+    def graph_group_mean_subsamples_parallel_trends(self):
+        key_vars = ['LogImputedminInstalls', 'LogImputedprice', 'containsAdsTrue', 'offersIAPTrue']
         for i in range(len(key_vars)):
-            if key_vars[i] in ['ImputedminInstalls', 'Imputedprice']:
+            if key_vars[i] in ['LogImputedminInstalls', 'LogImputedprice']:
                 res = self._select_df_for_key_vars_against_text_clusters(
                     key_vars=[key_vars[i]],
                     the_panel=None,
