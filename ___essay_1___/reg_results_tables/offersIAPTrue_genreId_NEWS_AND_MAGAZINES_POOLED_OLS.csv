@@ -1,0 +1,5 @@
+,parameter,pvalue
+const,-0.184,0.004
+genreId_NEWS_AND_MAGAZINES_NicheDummy,-0.025,0.271
+PostDummy,0.289,0.0
+genreId_NEWS_AND_MAGAZINES_PostXNicheDummy,0.299,0.0
