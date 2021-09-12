@@ -1,0 +1,15 @@
+,Samples,Independent Vars,Log Price,Log Minimum Installs,Offers IAP,Contains Ads
+0,Full,Constant,0.948***,4.283***,0.108***,0.092***
+1,Full,Niche,-0.12***,1.16***,0.156***,0.174***
+2,"Minimum Installs 
+Tier 1",Constant,-0.013,16.559***,0.407***,0.618***
+3,"Minimum Installs 
+Tier 1",Niche,0.001,-0.0,-0.053,-0.085**
+4,"Minimum Installs 
+Tier 2",Constant,-0.494***,14.648***,0.759***,0.712***
+5,"Minimum Installs 
+Tier 2",Niche,-0.145***,0.213***,0.089***,0.132***
+6,"Minimum Installs 
+Tier 3",Constant,14.682***,94.149***,2.485**,-0.287
+7,"Minimum Installs 
+Tier 3",Niche,-0.034,0.06,0.053***,0.042***

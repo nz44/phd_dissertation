@@ -2,6 +2,7 @@ import pandas as pd
 from pathlib import Path
 import pickle
 import copy
+import math
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 pd.options.mode.chained_assignment = None
@@ -10,6 +11,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from sklearn import preprocessing
+from scipy.stats import boxcox
 import statsmodels.api as sm
 from linearmodels import PooledOLS
 from linearmodels import RandomEffects
@@ -43,7 +45,7 @@ class essay_1_stats_and_regs_201907:
                   '202106']
 
     panel_essay_1_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1___')
     main_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___')
     des_stats_tables_essay_1 = Path(
@@ -52,6 +54,7 @@ class essay_1_stats_and_regs_201907:
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/graphs')
     des_stats_graphs_overall = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/overall_graphs')
+
     graph_subsample_title_dict = {  'full_full': 'Full Sample',
                                     'minInstalls_Tier1' : 'Minimum Installs Tier 1',
                                     'minInstalls_Tier2': 'Minimum Installs Tier 2',
@@ -112,6 +115,7 @@ class essay_1_stats_and_regs_201907:
                                     'genreId_GAME_WORD': 'Default Genre Game Word',
                                     'starDeveloper_top_digital_firms': 'Apps from Top Tier Firms',
                                     'starDeveloper_non-top_digital_firms': 'Apps from Non-top Tier Firms'}
+
     var_title_dict = {'ImputedminInstalls': 'Log Minimum Installs',
                       'Imputedprice': 'Log Price',
                       'offersIAPTrue': 'Percentage of Apps Offers IAP',
@@ -158,17 +162,39 @@ class essay_1_stats_and_regs_201907:
         'combo3': 'Full Sample and Functional Category Sub-samples',
         'combo4': 'Default App Genre Sub-sample'
     }
-    all_y_reg_vars = ['LogImputedprice',
+    all_y_reg_vars = ['LogWNImputedprice',
                       'LogImputedminInstalls',
                       'offersIAPTrue',
                       'containsAdsTrue']
-    graph_dep_vars_descriptive_stats_names = {
-        'LogImputedminInstalls': 'Log Minimum Installs',
+    graph_dep_vars_ylabels = {
+        'Imputedprice': 'Price',
         'LogImputedprice': 'Log Price',
-        'both_IAP_and_ADS': 'Percentage of Apps that Offers IAP and Contains Ads'
+        'LogWNImputedprice': 'Log Price Adjusted \nWith White Noise',
+        'ImputedminInstalls': 'Minimum Installs',
+        'LogImputedminInstalls': 'Log Minimum Installs',
+        'both_IAP_and_ADS': 'Percentage Points',
+        'TRUE%_offersIAPTrue': 'Percentage of Apps Offers IAP',
+        'TRUE%_containsAdsTrue': 'Percentage of Apps Contains Ads',
+        'offersIAPTrue': 'Percentage of Apps Offers IAP',
+        'containsAdsTrue': 'Percentage of Apps Contains Ads'
+    }
+    graph_dep_vars_titles = {
+        'Imputedprice': 'Price',
+        'LogImputedprice': 'Log Price',
+        'LogWNImputedprice': 'Log Price Adjusted With White Noise',
+        'ImputedminInstalls': 'Minimum Installs',
+        'LogImputedminInstalls': 'Log Minimum Installs',
+        'both_IAP_and_ADS': 'Percentage of Apps that Offers IAP and Contains Ads',
+        'TRUE%_offersIAPTrue': 'Percentage of Apps Offers IAP',
+        'TRUE%_containsAdsTrue': 'Percentage of Apps Contains Ads',
+        'offersIAPTrue': 'Percentage of Apps Offers IAP',
+        'containsAdsTrue': 'Percentage of Apps Contains Ads'
     }
     dep_vars_reg_table_names = {
+        'Imputedprice' : 'Price',
         'LogImputedprice': 'Log Price',
+        'LogWNImputedprice': 'Log Price Adjusted \nWith White Noise',
+        'ImputedminInstalls': 'Minimum Installs',
         'LogImputedminInstalls': 'Log Minimum Installs',
         'containsAdsTrue': 'Contains Ads',
         'offersIAPTrue': 'Offers IAP'
@@ -379,7 +405,7 @@ class essay_1_stats_and_regs_201907:
 
     def _cross_section_reg_get_xy_var_list(self, name1, name2, y_var, the_panel):
         """
-        :param y_var: 'LogImputedprice','LogImputedminInstalls','offersIAPTrue','containsAdsTrue'
+        :param y_var: 'LogWNImputedprice','LogImputedminInstalls','offersIAPTrue','containsAdsTrue'
         :return:
         """
         time_invar_controls = ['size', 'DaysSinceReleased', 'contentRatingAdult']
@@ -414,12 +440,13 @@ class essay_1_stats_and_regs_201907:
         https://stackoverflow.com/questions/30553838/getting-statsmodels-to-use-heteroskedasticity-corrected-standard-errors-in-coeff
         source code for HC0, HC1, HC2, and HC3, white and Mackinnon
         https://www.statsmodels.org/dev/_modules/statsmodels/regression/linear_model.html
+        https://timeseriesreasoning.com/contents/zero-inflated-poisson-regression-model/
         """
         # check the correlation among variables
-        dfcorr = df.corr(method='pearson').round(2)
-        print('The correlation table of the cross section regression dataframe is:')
-        print(dfcorr)
-        print()
+        # dfcorr = df.corr(method='pearson').round(2)
+        # print('The correlation table of the cross section regression dataframe is:')
+        # print(dfcorr)
+        # print()
         all_vars = df.columns.values.tolist()
         # y_var is a string without panel substring
         for i in all_vars:
@@ -470,10 +497,16 @@ class essay_1_stats_and_regs_201907:
                                               y_var=y_var,
                                               the_panel=i)
                         df = data[name1][name2][allvars]
+                        print(name1, name2, 'Cross Section Regression -- First Check Correlations')
                         reg_results[i][name1][name2] = self._cross_section_regression(
                                               y_var=y_var,
                                               df=df,
                                               the_panel=i)
+            for i in self.all_panels:
+                self._extract_and_save_reg_results(result=reg_results,
+                                                   reg_type=reg_type,
+                                                   y_var=y_var,
+                                                   the_panel=i)
         elif reg_type == 'panel_pooled_ols':
             reg_results = dict.fromkeys(self.ssnames.keys())
             for name1, content1 in self.ssnames.items():
@@ -500,9 +533,11 @@ class essay_1_stats_and_regs_201907:
                     reg_results[name1][name2] = self._panel_reg_pooled_ols(
                                                                   y_var=y_var,
                                                                   df=ldf)
+            self._extract_and_save_reg_results(result=reg_results,
+                                               reg_type=reg_type,
+                                               y_var=y_var)
         else:
             reg_results = {}
-        self._extract_and_save_panel_results(result=reg_results, y_var=y_var)
         return reg_results
 
     def reg_for_all_subsamples_for_all_y_vars(self, reg_type):
@@ -517,28 +552,40 @@ class essay_1_stats_and_regs_201907:
                                    broadDummy_labels=self.broadDummy_labels,
                                    reg_results=self.reg_results)
 
-    def _extract_and_save_panel_results(self, result, y_var):
+    def _extract_and_save_reg_results(self, result, reg_type, y_var, the_panel=None):
         for name1, content1 in self.ssnames.items():
             for name2 in content1:
+                # ---------- specify the rows to extract ---------------
+                index_to_extract = {
+                    'cross_section_ols': ['const', name1 + '_' + name2 + '_NicheDummy'],
+                    'panel_pooled_ols': [
+                                            'const',
+                                             name1 + '_' + name2 + '_NicheDummy',
+                                            'PostDummy',
+                                             name1 + '_' + name2 + '_PostXNicheDummy']
+                }
                 # ---------- get the coefficients ----------------------
-                x = result[name1][name2].params
+                if reg_type == 'cross_section_ols':
+                    x = result[the_panel][name1][name2].params
+                else:
+                    x = result[name1][name2].params
                 x = x.to_frame()
-                y = x.loc[[
-                    'const',
-                     name1 + '_' + name2 + '_NicheDummy',
-                    'PostDummy',
-                     name1 + '_' + name2 + '_PostXNicheDummy']]
+                x.columns = ['parameter']
+                y = x.loc[index_to_extract[reg_type]]
                 # ---------- get the pvalues ---------------------------
-                z1 = result[name1][name2].pvalues
+                if reg_type == 'cross_section_ols':
+                    z1 = result[the_panel][name1][name2].pvalues
+                else:
+                    z1 = result[name1][name2].pvalues
                 z1 = z1.to_frame()
-                z2 = z1.loc[[
-                    'const',
-                     name1 + '_' + name2 + '_NicheDummy',
-                    'PostDummy',
-                     name1 + '_' + name2 + '_PostXNicheDummy']]
+                z1.columns = ['pvalue']
+                z2 = z1.loc[index_to_extract[reg_type]]
                 y2 = y.join(z2, how='inner')
                 y2 = y2.round(3)
-                filename = y_var + '_' + name1 + '_' + name2 + '_POOLED_OLS.csv'
+                if the_panel is None:
+                    filename = y_var + '_' + name1 + '_' + name2 + '_' + reg_type + '.csv'
+                else:
+                    filename = y_var + '_' + name1 + '_' + name2 + '_' + reg_type + '_' + the_panel + '.csv'
                 y2.to_csv(self.main_path / 'reg_results_tables' / filename)
                 print(name1, name2, 'Reg results are saved in the reg_results_tables folder')
 
@@ -586,11 +633,11 @@ class essay_1_stats_and_regs_201907:
             res_df[y_var] = df
         return res_df
 
-    def _put_panel_results_into_pandas_for_single_y_var(self, y_var):
+    def _put_reg_results_into_pandas_for_single_y_var(self, reg_type, y_var, the_panel=None):
         """
         :param result: is the output of self._reg_for_all_subsamples(
             reg_type='panel_pooled_ols',
-            y_var=any one of ['LogImputedprice', 'LogImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'])
+            y_var=any one of ['LogWNImputedprice', 'LogImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue'])
             the documentation of the PanelResult class (which result is)
         :return:
         """
@@ -599,22 +646,31 @@ class essay_1_stats_and_regs_201907:
         for name1, content1 in self.ssnames.items():
             params_pvalues_dict[name1] = dict.fromkeys(content1)
             for name2 in content1:
+                # ---------- specify the rows to extract ---------------
+                index_to_extract = {
+                    'cross_section_ols': ['const', name1 + '_' + name2 + '_NicheDummy'],
+                    'panel_pooled_ols': [
+                        'const',
+                        name1 + '_' + name2 + '_NicheDummy',
+                        'PostDummy',
+                        name1 + '_' + name2 + '_PostXNicheDummy']
+                }
                 # ---------- get the coefficients ----------------------
-                x = self.reg_results[y_var][name1][name2].params
+                if reg_type == 'cross_section_ols':
+                    x = self.reg_results[y_var][the_panel][name1][name2].params
+                else:
+                    x = self.reg_results[y_var][name1][name2].params
                 x = x.to_frame()
-                y = x.loc[[
-                    'const',
-                     name1 + '_' + name2 + '_NicheDummy',
-                    'PostDummy',
-                     name1 + '_' + name2 + '_PostXNicheDummy']]
+                x.columns = ['parameter']
+                y = x.loc[index_to_extract[reg_type]]
                 # ---------- get the pvalues ---------------------------
-                z1 = self.reg_results[y_var][name1][name2].pvalues
+                if reg_type == 'cross_section_ols':
+                    z1 = self.reg_results[y_var][the_panel][name1][name2].pvalues
+                else:
+                    z1 = self.reg_results[y_var][name1][name2].pvalues
                 z1 = z1.to_frame()
-                z2 = z1.loc[[
-                    'const',
-                     name1 + '_' + name2 + '_NicheDummy',
-                    'PostDummy',
-                     name1 + '_' + name2 + '_PostXNicheDummy']]
+                z1.columns = ['pvalue']
+                z2 = z1.loc[index_to_extract[reg_type]]
                 def _assign_asterisk(v):
                     if 0.05 < v <= 0.1:
                         return '*'
@@ -652,10 +708,16 @@ class essay_1_stats_and_regs_201907:
             res[combo] = adf
         return res
 
-    def put_panel_results_into_pandas_for_all_y_var(self):
+    def put_reg_results_into_pandas_for_all_y_var(self, reg_type, the_panel=None):
         res1 = dict.fromkeys(self.all_y_reg_vars)
-        for y in self.all_y_reg_vars:
-            res1[y] = self._put_panel_results_into_pandas_for_single_y_var(y_var=y)
+        if reg_type == 'cross_section_ols':
+            for y in self.all_y_reg_vars:
+                res1[y] = self._put_reg_results_into_pandas_for_single_y_var(reg_type=reg_type,
+                                                                             y_var=y,
+                                                                             the_panel=the_panel)
+        else:
+            for y in self.all_y_reg_vars:
+                res1[y] = self._put_reg_results_into_pandas_for_single_y_var(reg_type=reg_type, y_var=y)
         res2 = dict.fromkeys(['combo1', 'combo2', 'combo3', 'combo4'])
         for combo in res2.keys():
             df_list = []
@@ -665,7 +727,7 @@ class essay_1_stats_and_regs_201907:
                                                         on=['Samples', 'Independent Vars']),
                                    df_list)
             print(adf)
-            filename = combo + '_POOLED_OLS_REG_RESULTS.csv'
+            filename = combo + '_' + reg_type + '_reg_results.csv'
             adf.to_csv(self.main_path / 'reg_tables_ready_for_latex' / filename)
             res2[combo] = adf
         return essay_1_stats_and_regs_201907(
@@ -674,94 +736,6 @@ class essay_1_stats_and_regs_201907:
                                    broad_niche_cutoff=self.broad_niche_cutoff,
                                    broadDummy_labels=self.broadDummy_labels,
                                    reg_results=self.reg_results)
-
-    def select_cols_and_rows_result_PostXNicheDummy(self, result_type, table_type):
-        """
-        table_type == table_1:
-        include full, minInstalls and developer sub-samples, pooled OLS results with
-        post * niche dummy (PostXNicheDummy) for now.
-        table_type == table_2:
-        include genreId sub-samples, pooled OLS results with
-        post * niche dummy (PostXNicheDummy) for now.
-        table_type == table_3:
-        include full sample, pooled OLS results with
-        post * niche scale dummies 1-19 (PostXNicheDummy) for now.
-        """
-        if result_type == 'panel':
-            q = regression.panel_path / 'reg_results' / 'panel' / 'NicheDummy_combined.csv'
-        else:
-            q = regression.panel_path / 'reg_results' / 'cross_section' / 'NicheDummy_combined.csv'
-        df = pd.read_csv(q)
-        df.set_index('index', inplace=True)
-        # -------------------------------------------------------------------------------
-        if result_type == 'panel':
-            selected_col_names = []
-            substrings = ['POOLED_OLS', 'POOLED_OLS_pvalue']
-            for i in df.columns:
-                if any([substring in i for substring in substrings]):
-                    selected_col_names.append(i)
-        else:
-            selected_col_names = df.columns.tolist()
-        # -------------------------------------------------------------------------------
-        selected_row_indices = []
-        if table_type == 'table_1':
-            if result_type == 'panel':
-                contain = ['PostX', 'NicheDummy', 'PostDummy', 'Constant']
-            else:
-                contain = ['NicheDummy', 'Constant']
-            not_contain = ['genreId', 'NicheScaleDummy', 'NicheScaleDummies']
-            for i in df.index.values:
-                if any([substring in i for substring in contain]) and not any([substring in i for substring in not_contain]):
-                    selected_row_indices.append(i)
-        elif table_type == 'table_2':
-            if result_type == 'panel':
-                substrings = ['PostX', 'NicheDummy', 'PostDummy', 'Constant']
-            else:
-                substrings = ['NicheDummy', 'Constant']
-            for i in df.index.values:
-                if any([substring in i for substring in substrings]) and 'genreId' in i:
-                    selected_row_indices.append(i)
-        else:
-            if result_type == 'panel':
-                substrings = ['PostXfull_full_NicheScaleDummy',
-                              'full_full_NicheScaleDummy',
-                              'NicheScaleDummies_PostDummy',
-                              'NicheScaleDummies_Constant']
-            else:
-                substrings = ['NicheScaleDummy',
-                              'NicheScaleDummies_Constant']
-            for i in df.index.values:
-                if any([substring in i for substring in substrings]):
-                    selected_row_indices.append(i)
-        # -------------------------------------------------------------------------------
-        df2 = df.loc[selected_row_indices, selected_col_names]
-        return df2
-
-    def add_pvalue_asterisk_to_results(self, df):
-        """
-        This should be run after self.select_cols_and_rows_result_PostXNicheDummy(self, result_type, table_type).
-        df is the output of self.select_cols_and_rows_result_PostXNicheDummy
-        """
-        # convert p_value columns to asterisks
-        df2 = df.copy(deep=True)
-        pvaluecols = [i for i in df2.columns if 'pvalue' in i]
-        def f(x):
-            if 0.05 < float(x) <= 0.1:
-                return '*'
-            elif 0.01 < float(x) <= 0.05:
-                return '**'
-            elif float(x) <= 0.01:
-                return '***'
-            else:
-                return ''
-        for i in pvaluecols:
-            df2[i] = df2[i].apply(f)
-        # concat pvalue cols to coefficient cols
-        for i in df2.columns:
-            if i not in pvaluecols:
-                df2[i] = df2[i].astype(str) + df2[i+'_pvalue']
-        df2.drop(pvaluecols, axis=1, inplace=True)
-        return df2
 
     def set_row_and_column_groups(self, df, result_type, table_type):
         """
@@ -910,7 +884,11 @@ class essay_1_stats_and_regs_201907:
         for name1, content in d.items():
             for name2, text_label_col in content.items():
                 label_col_name = name1 + '_' + name2 + '_kmeans_labels'
-                unique_labels = df2[label_col_name].unique()
+                unique_labels = df2[label_col_name].unique().tolist()
+                unique_labels = [x for x in unique_labels if math.isnan(x) is False]
+                print(name1, name2, ' -- unique text labels are --')
+                print(unique_labels)
+                print()
                 for label_num in unique_labels:
                     df3 = df2.loc[df2[label_col_name]==label_num, [self.tcn + 'ModeClean']]
                     if len(df3.index) >= 10:
@@ -1094,7 +1072,7 @@ class essay_1_stats_and_regs_201907:
 
     def _numApps_per_cluster_size_bin(self):
         d1 = self._numApps_per_cluster()
-        d3 = essay_1_stats_and_regs_201907._open_predicted_labels_dict()
+        d3 = self._open_predicted_labels_dict()
         res = dict.fromkeys(self.ssnames.keys())
         for name1, content1 in self.ssnames.items():
             res[name1] = dict.fromkeys(content1)
@@ -1107,9 +1085,9 @@ class essay_1_stats_and_regs_201907:
                 # create a new column indicating the size bin the text cluster belongs to
                 df['cluster_size_bin'] = pd.cut(
                                    x=df['numApps_in_cluster'],
-                                   bins=essay_1_stats_and_regs_201907.text_cluster_size_bins,
+                                   bins=self.text_cluster_size_bins,
                                    include_lowest=True,
-                                   labels=essay_1_stats_and_regs_201907.text_cluster_size_labels)
+                                   labels=self.text_cluster_size_labels)
                 # create a new column indicating grouped sum of numApps_in_cluster for each cluster_size
                 df2 = df.groupby('cluster_size_bin').count()
                 df3 = df2.iloc[:, 0].to_frame()
@@ -1152,7 +1130,7 @@ class essay_1_stats_and_regs_201907:
                                    reg_results=self.reg_results)
 
     def text_cluster_stats_at_app_level(self):
-        d1 = essay_1_stats_and_regs_201907._open_predicted_labels_dict()
+        d1 = self._open_predicted_labels_dict()
         d2 = self._numApps_per_cluster()
         d3 = self._numClusters_per_cluster_size_bin()
         d4 = self._numApps_per_cluster_size_bin()
@@ -1280,7 +1258,11 @@ class essay_1_stats_and_regs_201907:
         group_by_var could by either "NicheDummy" or "cluster_size_bin"
         the dataframe (self.cdf) is after the function combine_app_level_text_cluster_stats_with_df
         """
-        key_vars = ['LogImputedprice',
+        key_vars = ['Imputedprice',
+                    'LogImputedprice',
+                    # use this for regression and descriptive stats because it added uniform white noise to avoid 0 price
+                    'LogWNImputedprice',
+                    'ImputedminInstalls',
                     'LogImputedminInstalls',
                     'offersIAPTrue',
                     'containsAdsTrue']
@@ -1311,8 +1293,7 @@ class essay_1_stats_and_regs_201907:
                     df2 = df2.reset_index()
                     ldf = pd.wide_to_long(
                         df2,
-                        stubnames=['LogImputedprice', 'LogImputedminInstalls',
-                                   'offersIAPTrue', 'containsAdsTrue'],
+                        stubnames=key_vars,
                         i=['index'],
                         j="panel",
                         sep='_').reset_index()
@@ -1395,6 +1376,51 @@ class essay_1_stats_and_regs_201907:
                         res[combo][the_name] = d[name1][name2]
         return res
 
+    def graph_histogram_pricing_vars_by_niche(self, combo, the_panel):
+        res12, res34 = self._prepare_pricing_vars_for_graph_group_by_var(
+            group_by_var='NicheDummy',
+            the_panel=the_panel)
+        res12 = self._rearrange_combo_df_dict(d=res12)
+        key_vars = ['LogImputedprice', 'Imputedprice', 'LogWNImputedprice',
+                    'LogImputedminInstalls', 'ImputedminInstalls']
+        # --------------------------------------- graph -------------------------------------------------
+        for i in range(len(key_vars)):
+            fig, ax = plt.subplots(nrows=self.multi_graph_combo_fig_subplot_layout[combo]['nrows'],
+                                   ncols=self.multi_graph_combo_fig_subplot_layout[combo]['ncols'],
+                                   figsize=self.multi_graph_combo_fig_subplot_layout[combo]['figsize'],
+                                   sharey='row',
+                                   sharex='col')
+            fig.subplots_adjust(bottom=0.2)
+            name1_2_l = self.graph_combo_ssnames[combo]  # for df names and column names name1 + name2
+            for j in range(len(name1_2_l)):
+                sns.set(style="whitegrid")
+                sns.despine(right=True, top=True)
+                sns.histplot(data=res12[combo][name1_2_l[j]],
+                             x=key_vars[i] + "_" + the_panel,
+                             hue=name1_2_l[j] + '_NicheDummy',
+                             ax=ax.flat[j])
+                sns.despine(right=True, top=True)
+                graph_title = self.graph_subsample_title_dict[name1_2_l[j]]
+                ax.flat[j].set_title(graph_title)
+                ax.flat[j].set_ylabel(self.graph_dep_vars_ylabels[key_vars[i]])
+                ax.flat[j].xaxis.set_visible(True)
+                ax.flat[j].legend().set_visible(False)
+            fig.legend(labels=['Niche App : Yes', 'Niche App : No'],
+                       loc='lower right', ncol=2)
+            # ------------ set title and save ---------------------------------------------
+            self._set_title_and_save_graphs(fig=fig,
+                                            file_keywords=key_vars[i] + '_' + combo + '_histogram_' + the_panel,
+                                            graph_title=self.multi_graph_combo_suptitle[combo] + \
+                                                        ' Cross Section Histogram \n' + \
+                                                        self.graph_dep_vars_titles[key_vars[i]] + the_panel,
+                                            relevant_folder_name='pricing_vars_stats')
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
     def graph_descriptive_stats_pricing_vars(self, combo, the_panel):
         """
         For the containsAdsTrue and offersIAPTrue I will put them into 1 graph with different hues
@@ -1407,7 +1433,7 @@ class essay_1_stats_and_regs_201907:
                                     the_panel=the_panel)
         res12 = self._rearrange_combo_df_dict(d=res12)
         res34 = self._rearrange_combo_df_dict(d=res34)
-        key_vars = ['LogImputedprice', 'LogImputedminInstalls', 'both_IAP_and_ADS']
+        key_vars = ['LogWNImputedprice', 'LogImputedminInstalls', 'both_IAP_and_ADS']
         # --------------------------------------- graph -------------------------------------------------
         for i in range(len(key_vars)):
             fig, ax = plt.subplots(nrows=self.multi_graph_combo_fig_subplot_layout[combo]['nrows'],
@@ -1420,7 +1446,7 @@ class essay_1_stats_and_regs_201907:
             for j in range(len(name1_2_l)):
                 sns.set(style="whitegrid")
                 sns.despine(right=True, top=True)
-                if key_vars[i] in ['LogImputedprice', 'LogImputedminInstalls']:
+                if key_vars[i] in ['LogWNImputedprice', 'LogImputedminInstalls']:
                     sns.violinplot(
                         x= name1_2_l[j] + '_cluster_size_bin',
                         y= key_vars[i] + "_" + the_panel,
@@ -1455,17 +1481,13 @@ class essay_1_stats_and_regs_201907:
                                 hue="dep_var",
                                 palette=true_palette,
                                 ax=ax.flat[j])
-                    ax.flat[j].set_ylabel("Percentage Points")
                     # add legend
                     sns.despine(right=True, top=True)
                 graph_title = essay_1_stats_and_regs_201907.graph_subsample_title_dict[name1_2_l[j]]
                 ax.flat[j].set_title(graph_title)
                 ax.flat[j].set_ylim(bottom=0)
                 ax.flat[j].set_xlabel('Text Cluster Sizes Bins')
-                y_label_dict = {'LogImputedminInstalls': 'Log Minimum Installs',
-                                'LogImputedprice': 'Log Price',
-                                'both_IAP_and_ADS': 'Percentage Points'}
-                ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
+                ax.flat[j].set_ylabel(self.graph_dep_vars_ylabels[key_vars[i]])
                 ax.flat[j].xaxis.set_visible(True)
                 for tick in ax.flat[j].get_xticklabels():
                     tick.set_rotation(45)
@@ -1486,7 +1508,7 @@ class essay_1_stats_and_regs_201907:
                                             file_keywords=key_vars[i] + '_' + combo + '__' + the_panel,
                                             graph_title=self.multi_graph_combo_suptitle[combo] + \
                                                         ' Cross Section Descriptive Statistics of \n' + \
-                                                        self.graph_dep_vars_descriptive_stats_names[key_vars[i]] + the_panel,
+                                                        self.graph_dep_vars_titles[key_vars[i]] + the_panel,
                                             relevant_folder_name='pricing_vars_stats')
         return essay_1_stats_and_regs_201907(
                                    tcn=self.tcn,
@@ -1505,7 +1527,7 @@ class essay_1_stats_and_regs_201907:
             group_by_var='NicheDummy')
         res12 = self._rearrange_combo_df_dict(d=res12)
         res34 = self._rearrange_combo_df_dict(d=res34)
-        key_vars = ['LogImputedminInstalls', 'LogImputedprice', 'TRUE%_offersIAPTrue', 'TRUE%_containsAdsTrue']
+        key_vars = ['LogImputedminInstalls', 'LogWNImputedprice', 'TRUE%_offersIAPTrue', 'TRUE%_containsAdsTrue']
         # --------------------------------------- graph -------------------------------------------------
         for i in range(len(key_vars)):
             fig, ax = plt.subplots(nrows=self.multi_graph_combo_fig_subplot_layout[combo]['nrows'],
@@ -1521,7 +1543,7 @@ class essay_1_stats_and_regs_201907:
                 sns.set(style="whitegrid")
                 sns.despine(right=True, top=True)
                 hue_order = [1, 0]
-                if key_vars[i] in ['LogImputedminInstalls', 'LogImputedprice']:
+                if key_vars[i] in ['LogImputedminInstalls', 'LogWNImputedprice']:
                     sns.lineplot(
                         data=res12[combo][name1_2_l[j]],
                         x="panel",
@@ -1533,7 +1555,7 @@ class essay_1_stats_and_regs_201907:
                         dashes=False,
                         ax = ax.flat[j])
                     ylimits = {'LogImputedminInstalls':{'bottom':0, 'top':25},
-                               'LogImputedprice':{'bottom':0, 'top':2}}
+                               'LogWNImputedprice':{'bottom':0, 'top':2}}
                     ax.flat[j].set_ylim(bottom=ylimits[key_vars[i]]['bottom'],
                                         top=ylimits[key_vars[i]]['top'])
                 else:
@@ -1552,11 +1574,7 @@ class essay_1_stats_and_regs_201907:
                 ax.flat[j].set_title(graph_title)
                 ax.flat[j].axvline(x='2020-03', linewidth=2, color='red')
                 ax.flat[j].set_xlabel("Time")
-                y_label_dict = {'LogImputedminInstalls': 'Log Minimum Installs',
-                                'LogImputedprice': 'Log Price',
-                                'TRUE%_offersIAPTrue': 'Percentage of Apps Offers IAP',
-                                'TRUE%_containsAdsTrue': 'Percentage of Apps Contains Ads'}
-                ax.flat[j].set_ylabel(y_label_dict[key_vars[i]])
+                ax.flat[j].set_ylabel(self.graph_dep_vars_ylabels[key_vars[i]])
                 ax.flat[j].xaxis.set_visible(True)
                 for tick in ax.flat[j].get_xticklabels():
                     tick.set_rotation(45)
@@ -1566,7 +1584,8 @@ class essay_1_stats_and_regs_201907:
             # ------------ set title and save ---------------------------------------------
             self._set_title_and_save_graphs(fig=fig,
                                             file_keywords=key_vars[i] + '_' + combo + '_group_mean_parallel_trends',
-                                            graph_title=essay_1_stats_and_regs_201907.multi_graph_combo_suptitle[combo] + \
+                                            graph_title=self.multi_graph_combo_suptitle[combo] + ' ' + \
+                                                        self.graph_dep_vars_titles[key_vars[i]] + \
                                                         " Group Mean Parallel Trends",
                                             relevant_folder_name='parallel_trend_group_mean')
         return essay_1_stats_and_regs_201907(
@@ -1576,12 +1595,12 @@ class essay_1_stats_and_regs_201907:
                                    broadDummy_labels=self.broadDummy_labels,
                                    reg_results=self.reg_results)
 
-    def graph_beta_parallel_trends(self, combo, reg_type, alpha):
+    def graph_beta_parallel_trends(self, combo, alpha):
         """
         :return: six graphs per page (each graph is 1 sub-sample), 1 page has 1 dep var, hues are leaders and non-leaders
         """
         res = self._create_cross_section_reg_results_df_for_parallel_trend_beta_graph(alpha)
-        for dep_var in ['LogImputedprice', 'LogImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue']:
+        for dep_var in self.all_y_reg_vars:
             fig, ax = plt.subplots(nrows=self.multi_graph_combo_fig_subplot_layout[combo]['nrows'],
                                    ncols=self.multi_graph_combo_fig_subplot_layout[combo]['ncols'],
                                    figsize=self.multi_graph_combo_fig_subplot_layout[combo]['figsize'],
@@ -1612,15 +1631,11 @@ class essay_1_stats_and_regs_201907:
                     tick.set_rotation(45)
                 handles, labels = ax.flat[j].get_legend_handles_labels()
                 fig.legend(handles, labels, loc='upper right', ncol=2)
-            dep_var_dict = {'LogImputedminInstalls': 'Log Minimum Installs',
-                            'LogImputedprice': 'Log Price',
-                            'offersIAPTrue': 'Percentage of Apps Offers IAP',
-                            'containsAdsTrue': 'Percentage of Apps Contains Ads'}
             # ------------ set title and save ---------------------------------------------
             self._set_title_and_save_graphs(fig=fig,
                                             file_keywords=dep_var + '_' + combo + '_beta_nichedummy_parallel_trends',
                                             graph_title=essay_1_stats_and_regs_201907.multi_graph_combo_suptitle[combo] + \
-                                                  ' ' + dep_var_dict[dep_var] + \
+                                                  ' ' + self.graph_dep_vars_titles[dep_var] + \
                                                   " \nRegress on Niche Dummy Coefficient Parallel Trends",
                                             relevant_folder_name='parallel_trend_nichedummy')
         return essay_1_stats_and_regs_201907(
@@ -1729,12 +1744,70 @@ class essay_1_stats_and_regs_201907:
                                    broadDummy_labels=self.broadDummy_labels,
                                    reg_results=self.reg_results)
 
+    def add_white_noise_to_Imputedprice(self):
+        """
+        Adding white noise Yt = Yt + Nt is to make sure that price fluctuation around a fixed level, so that in Leaders Medical
+        sub-sample where all prices are zeros the regression continue to run.
+        The results will nevertheless show that nichedummy is neither economically or statistically significant, but all we need to
+        do is to show that.
+        https://numpy.org/doc/stable/reference/random/index.html
+        I think you should add noise before log or other transformation.
+        """
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputedprice'])
+        for i in self.all_panels:
+            df1['WNImputedprice_' + i] = df1['Imputedprice_' + i] + np.random.uniform(low=0.01, high=0.1, size=len(df1.index))
+            print(i)
+            print(df1['Imputedprice_' + i].describe().round(3))
+            print(df1['WNImputedprice_' + i].describe().round(3))
+            print()
+        dcols = ['Imputedprice_' + i for i in self.all_panels]
+        df1.drop(dcols, axis=1, inplace=True)
+        self.cdf = self.cdf.join(df1, how='inner')
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
     def log_transform_pricing_vars(self):
-        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputedprice', 'ImputedminInstalls'])
+        df1 = self._select_vars(df=self.cdf,
+                                time_variant_vars_list=['Imputedprice', 'WNImputedprice', 'ImputedminInstalls'])
         for i in self.all_panels:
             df1['LogImputedprice_' + i] = np.log(df1['Imputedprice_' + i] + 1)
+            df1['LogWNImputedprice_' + i] = np.log(df1['WNImputedprice_' + i] + 1)
             df1['LogImputedminInstalls_' + i] = np.log(df1['ImputedminInstalls_' + i] + 1)
-        dcols = ['Imputedprice_' + i for i in self.all_panels] + ['ImputedminInstalls_' + i for i in self.all_panels]
+            print(i)
+            print(df1['LogImputedprice_' + i].describe().round(3))
+            print(df1['LogWNImputedprice_' + i].describe().round(3))
+            print(df1['ImputedminInstalls_' + i].describe().round(3))
+            print(df1['LogImputedminInstalls_' + i].describe().round(3))
+            print()
+        dcols = ['Imputedprice_' + i for i in self.all_panels] \
+                + ['ImputedminInstalls_' + i for i in self.all_panels] \
+                + ['WNImputedprice_' + i for i in self.all_panels]
+        df1.drop(dcols, axis=1, inplace=True)
+        self.cdf = self.cdf.join(df1, how='inner')
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+    def box_cox_transform_pricing_vars(self):
+        """
+        I use box_cox instead of log transformation is too weak for Imputedprice and not making it any normal.
+        https://towardsdatascience.com/types-of-transformations-for-better-normal-distribution-61c22668d3b9
+        """
+        df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputedprice', 'WNImputedprice', 'ImputedminInstalls'])
+        for i in self.all_panels:
+            df1['BCImputedprice_' + i],  lam_Imputedprice = boxcox(df1['Imputedprice_' + i] + 1)
+            df1['BCWNImputedprice_' + i], lam_WNImputedprice = boxcox(df1['WNImputedprice_' + i] + 1)
+            df1['BCImputedminInstalls_' + i],  lam_ImputedminInstalls = boxcox(df1['ImputedminInstalls_' + i] + 1)
+        dcols = ['Imputedprice_' + i for i in self.all_panels] \
+                + ['ImputedminInstalls_' + i for i in self.all_panels] \
+                + ['WNImputedprice_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
         return essay_1_stats_and_regs_201907(
@@ -1981,139 +2054,6 @@ class essay_1_stats_and_regs_201907:
                     escape=False)
         return df
 
-    def single_panel_descriptive_stats(self, var_list, the_panel, type):
-        """
-        run self.slice_single_panel_descriptive_stats before running this,
-        DO NOT run self.select_x_y_for_subsample() and self.slice_single_panel() before this, because
-        regression need different dataframes from descriptive stats.
-        """
-        for name1, content1 in self.single_panel_df.items():
-            for name2, df in content1.items():
-                df2 = df.copy(deep=True)
-                if type == 'dummy':
-                    df_list = []
-                    for i in var_list:
-                    # some dummy var has been deleted because of they are perfectly correlated with other dummy var
-                        if i in df2.columns:
-                            if df2[i].nunique() == 2:
-                                df3 = df2[i].value_counts()
-                                df3 = df3.rename(i).to_frame().T.rename(columns={0: 'False', 1: 'True'})
-                            else: # sometimes the entire column is 1 or 0
-                                if df2[i].unique() == 1:
-                                    df3 = df2[i].value_counts()
-                                    df3 = df3.rename(i).to_frame().T.rename(columns={1: 'True'})
-                                    df3['False'] = 0
-                                else:
-                                    df3 = df2[i].value_counts()
-                                    df3 = df3.rename(i).to_frame().T.rename(columns={0: 'False'})
-                                    df3['True'] = 0
-                            df3['count'] = df3['False'] + df3['True']
-                            df_list.append(df3)
-                    f_name = self.initial_panel + '_PANEL_' + the_panel + '_' + name1 + '_' + name2  + '_Dummy_Stats.csv'
-                    q = regression.descriptive_stats_tables / 'dummy_stats' / f_name
-                elif type == 'continuous':
-                    df_list = []
-                    for i in var_list:
-                        if i in df2.columns:
-                            df3 = df2[i].describe(include=[np.number]).round(3)
-                            df3 = df3.rename(i).to_frame().T
-                            df_list.append(df3)
-                    f_name = self.initial_panel + '_PANEL_' + the_panel + '_' + name1 + '_' + name2  + '_Continuous_Stats.csv'
-                    q = regression.descriptive_stats_tables / 'continuous_stats' / f_name
-                else: # for DeMeaned Variables Only (They are continuous)
-                    df_list = []
-                    for i in var_list:
-                        if i in df2.columns:
-                            df3 = df2[i].describe(include=[np.number]).round(3)
-                            df3 = df3.rename(i).to_frame().T
-                            df_list.append(df3)
-                    f_name = self.initial_panel + '_PANEL_' + the_panel + '_' + name1 + '_' + name2 + '_DeMeaned_Stats.csv'
-                    q = regression.descriptive_stats_tables / 'demeaned_stats' / f_name
-                stats_df = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
-                stats_df.to_csv(q)
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
 
-    def export_descriptive_stats_to_latex(self, the_panel):
-        # =============== DUMMY TABLE ==============================================================
-        df_list = []
-        for name, mapped_name in sample_name.items():
-            f_name = self.initial_panel + '_PANEL_' + the_panel + name + '_Dummy_Stats.csv'
-            q = regression.descriptive_stats_tables / 'dummy_stats' / f_name
-            df = pd.read_csv(q)
-            df['Sample'] = mapped_name
-            df_list.append(df)
-        df2 = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
-        df2['Variables'] = [regression.var_names[i] for i in df2.iloc[:,0]]
-        df2.drop(df2.columns[0], axis=1, inplace=True)
-        df2 = df2[['Sample', 'Variables', 'True', 'False', 'count']]
-        df2.set_index(['Sample', 'Variables'], inplace=True)
-        f_name = self.initial_panel + '_PANEL_' + the_panel + '_dummy_vars_descriptive_stats.tex'
-        df2.to_latex(buf=regression.descriptive_stats_tables / f_name,
-                   multirow=True,
-                   multicolumn=True,
-                   longtable=True,
-                   position='h!',
-                   escape=False)
-        # =============== CONTINUOUS TABLE =========================================================
-        df_list = []
-        for name, mapped_name in sample_name.items():
-            f_name = self.initial_panel + '_PANEL_' + the_panel + name + '_Continuous_Stats.csv'
-            q = regression.descriptive_stats_tables / 'continuous_stats' / f_name
-            df = pd.read_csv(q)
-            df['Sample'] = mapped_name
-            df_list.append(df)
-        df2 = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
-        df2['Variables'] = [regression.var_names[i] for i in df2.iloc[:,0]]
-        df2.drop(df2.columns[0], axis=1, inplace=True)
-        df2.rename(columns={'50%': 'median'}, inplace=True)
-        df2 = df2[['Sample', 'Variables', 'mean', 'std', 'min', 'median', 'max', 'count']]
-        df2.set_index(['Sample', 'Variables'], inplace=True)
-        # --- convert data type and round ----
-        df2['count'] = df2['count'].astype(int)
-        for i in ['mean', 'std', 'min', 'median', 'max']:
-            df2[i] = df2[i].apply(lambda x: round(x, 2))
-        f_name = self.initial_panel + '_PANEL_' + the_panel + '_continuous_vars_descriptive_stats.tex'
-        df2.to_latex(buf=regression.descriptive_stats_tables / f_name,
-                   multirow=True,
-                   multicolumn=True,
-                   longtable=True,
-                   position='h!',
-                   escape=False)
-        # =============== DEMEANED TABLE =========================================================
-        df_list = []
-        for name, mapped_name in sample_name.items():
-            f_name = self.initial_panel + '_PANEL_' + the_panel + name + '_DeMeaned_Stats.csv'
-            q = regression.descriptive_stats_tables / 'demeaned_stats' / f_name
-            df = pd.read_csv(q)
-            df['Sample'] = mapped_name
-            df_list.append(df)
-        df2 = functools.reduce(lambda a, b: pd.concat([a, b]), df_list)
-        df2['Variables'] = [regression.var_names[i] for i in df2.iloc[:,0]]
-        df2.drop(df2.columns[0], axis=1, inplace=True)
-        df2.rename(columns={'50%': 'median'}, inplace=True)
-        df2 = df2[['Sample', 'Variables', 'mean', 'std', 'min', 'median', 'max', 'count']]
-        df2.set_index(['Sample', 'Variables'], inplace=True)
-        # --- convert data type and round ----
-        df2['count'] = df2['count'].astype(int)
-        for i in ['mean', 'std', 'min', 'median', 'max']:
-            df2[i] = df2[i].apply(lambda x: round(x, 2))
-        f_name = self.initial_panel + '_PANEL_' + the_panel + '_demeaned_vars_descriptive_stats.tex'
-        df2.to_latex(buf=regression.descriptive_stats_tables / f_name,
-                   multirow=True,
-                   multicolumn=True,
-                   longtable=True,
-                   position='h!',
-                   escape=False)
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
 
 

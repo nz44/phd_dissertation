@@ -1,0 +1,15 @@
+,Samples,Independent Vars,Log Price,Log Minimum Installs,Offers IAP,Contains Ads
+0,Full,Constant,0.948***,4.283***,0.108***,0.092***
+1,Full,Niche,-0.12***,1.16***,0.156***,0.174***
+2,"Apps from 
+Top Tier 
+Firms",Constant,0.592,10.161***,-0.419*,-0.513***
+3,"Apps from 
+Top Tier 
+Firms",Niche,0.084,0.19,-0.023,0.028
+4,"Apps from 
+Non-top Tier 
+Firms",Constant,0.837***,4.915***,0.121***,0.151***
+5,"Apps from 
+Non-top Tier 
+Firms",Niche,-0.007,0.69***,0.181***,0.145***

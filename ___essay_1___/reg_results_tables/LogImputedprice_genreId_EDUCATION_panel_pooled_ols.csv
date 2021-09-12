@@ -1,0 +1,5 @@
+,parameter,pvalue
+const,0.373,0.054
+genreId_EDUCATION_NicheDummy,-0.147,0.263
+PostDummy,0.003,0.275
+genreId_EDUCATION_PostXNicheDummy,0.001,0.754
