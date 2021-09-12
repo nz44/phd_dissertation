@@ -1,5 +1,5 @@
 ,parameter,pvalue
-const,0.142,0.129
+const,0.142,0.131
 genreId_SPORTS_NicheDummy,-0.01,0.881
-PostDummy,0.0,1.0
-genreId_SPORTS_PostXNicheDummy,-0.0,1.0
+PostDummy,-0.0,
+genreId_SPORTS_PostXNicheDummy,0.0,

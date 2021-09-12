@@ -1,26 +1,27 @@
-,Samples,Independent Vars,Log Price,Log Minimum Installs,Offers IAP,Contains Ads
-0,Full,Constant,0.463***,9.391***,0.049***,0.386***
-1,Full,Niche,-0.145***,1.622***,-0.0,0.2***
+,Samples,Independent Vars,"Log Price Adjusted 
+With White Noise",Log Minimum Installs,Offers IAP,Contains Ads
+0,Full,Constant,0.504***,9.389***,0.049***,0.386***
+1,Full,Niche,-0.142***,1.622***,-0.0,0.2***
 2,Full,Post,0.015**,0.18***,0.274***,-0.001
 3,Full,PostNiche,-0.012*,0.009,0.149***,-0.001
 4,"Minimum Installs 
-Tier 1",Constant,-0.002,15.876***,0.028,1.016***
+Tier 1",Constant,0.054***,15.874***,0.028,1.016***
 5,"Minimum Installs 
-Tier 1",Niche,0.001,-0.027,0.016*,-0.089**
+Tier 1",Niche,-0.002,-0.027,0.016*,-0.089**
 6,"Minimum Installs 
-Tier 1",Post,0.0,0.25***,0.656***,-0.002
+Tier 1",Post,-0.004***,0.25***,0.656***,-0.002
 7,"Minimum Installs 
-Tier 1",PostNiche,0.0,-0.057,-0.056,-0.001
+Tier 1",PostNiche,0.005***,-0.057,-0.056,-0.001
 8,"Minimum Installs 
-Tier 2",Constant,-0.022,12.773***,0.053***,0.731***
+Tier 2",Constant,0.03,12.773***,0.054***,0.731***
 9,"Minimum Installs 
-Tier 2",Niche,-0.146***,0.223***,-0.003,0.128***
+Tier 2",Niche,-0.141***,0.223***,-0.003,0.128***
 10,"Minimum Installs 
 Tier 2",Post,0.001,0.194***,0.437***,-0.004***
 11,"Minimum Installs 
 Tier 2",PostNiche,0.001,0.005,0.077***,0.002
 12,"Minimum Installs 
-Tier 3",Constant,1.002***,6.251***,0.027***,0.069***
+Tier 3",Constant,1.029***,6.247***,0.027***,0.07***
 13,"Minimum Installs 
 Tier 3",Niche,-0.023,0.106,0.004*,0.042***
 14,"Minimum Installs 

@@ -1,5 +1,5 @@
 ,parameter,pvalue
-const,1.176,0.0
+const,1.177,0.0
 genreId_GAME_ACTION_NicheDummy,0.262,0.191
-PostDummy,0.0,
-genreId_GAME_ACTION_PostXNicheDummy,-0.0,
+PostDummy,0.0,1.0
+genreId_GAME_ACTION_PostXNicheDummy,-0.0,1.0

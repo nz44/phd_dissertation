@@ -1,5 +1,5 @@
 ,parameter,pvalue
 const,0.342,0.0
 genreId_TRAVEL_AND_LOCAL_NicheDummy,0.142,0.005
-PostDummy,-0.0,
-genreId_TRAVEL_AND_LOCAL_PostXNicheDummy,0.0,
+PostDummy,0.0,1.0
+genreId_TRAVEL_AND_LOCAL_PostXNicheDummy,0.0,1.0

@@ -1,29 +1,30 @@
-,Samples,Independent Vars,Log Price,Log Minimum Installs,Offers IAP,Contains Ads
-0,Full,Constant,0.463***,9.391***,0.049***,0.386***
-1,Full,Niche,-0.145***,1.622***,-0.0,0.2***
+,Samples,Independent Vars,"Log Price Adjusted 
+With White Noise",Log Minimum Installs,Offers IAP,Contains Ads
+0,Full,Constant,0.504***,9.389***,0.049***,0.386***
+1,Full,Niche,-0.142***,1.622***,-0.0,0.2***
 2,Full,Post,0.015**,0.18***,0.274***,-0.001
 3,Full,PostNiche,-0.012*,0.009,0.149***,-0.001
 4,"Apps from 
 Top Tier 
-Firms",Constant,0.115,13.538***,-0.107**,0.148*
+Firms",Constant,0.163,13.533***,-0.107**,0.147*
 5,"Apps from 
 Top Tier 
-Firms",Niche,0.074,0.214,-0.014,0.048
+Firms",Niche,0.072,0.214,-0.014,0.048
 6,"Apps from 
 Top Tier 
-Firms",Post,-0.003*,0.175***,0.422***,-0.0
+Firms",Post,-0.004*,0.175***,0.422***,-0.0
 7,"Apps from 
 Top Tier 
-Firms",PostNiche,-0.001,-0.023,0.003,-0.01
+Firms",PostNiche,0.0,-0.023,0.003,-0.01
 8,"Apps from 
 Non-top Tier 
-Firms",Constant,0.366***,9.925***,0.053***,0.43***
+Firms",Constant,0.41***,9.923***,0.053***,0.43***
 9,"Apps from 
 Non-top Tier 
 Firms",Niche,-0.032,1.044***,-0.006**,0.168***
 10,"Apps from 
 Non-top Tier 
-Firms",Post,0.011**,0.178***,0.26***,-0.001
+Firms",Post,0.01**,0.178***,0.26***,-0.001
 11,"Apps from 
 Non-top Tier 
-Firms",PostNiche,-0.007,0.013,0.176***,-0.001
+Firms",PostNiche,-0.006,0.013,0.176***,-0.001
