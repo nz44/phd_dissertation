@@ -1051,6 +1051,10 @@ class essay_23_stats_and_regs_201907():
         res = self._groupby_subsample_dfs_by_nichedummy()
         df = self._combine_name2s_into_single_df(name12_list=self.graph_name1_ssnames[name1],
                                                  d=res)
+        f_name = name1 + '_niche_by_subsamples_bar_graph.csv'
+        q = self.des_stats_root / f_name
+        df.to_csv(q)
+        # -------------------------------------------------------------------------
         df.plot.barh(stacked=True,
                      color={"Broad Apps": "orangered",
                             "Niche Apps": "lightsalmon"},
@@ -1321,6 +1325,33 @@ class essay_23_stats_and_regs_201907():
                                                         ' Cross Section Descriptive Statistics of \n' + \
                                                         self.graph_dep_vars_titles[key_vars[i]] + the_panel,
                                             relevant_folder_name='pricing_vars_stats')
+        return essay_23_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+    def graph_corr_heatmap_among_dep_vars(self, name1, the_panel):
+        dep_vars = ['LogImputedprice', 'LogImputedminInstalls', 'offersIAPTrue', 'containsAdsTrue']
+        selected_vars = [i + '_' + the_panel for i in dep_vars]
+        df = self.cdf.copy(deep=True)
+        dep_var_df = df[selected_vars]
+        correlation_matrix = dep_var_df.corr()
+        f_name = the_panel + '_' + name1 + '_dep_vars_corr_matrix.csv'
+        q = self.des_stats_root / f_name
+        correlation_matrix.to_csv(q)
+        # ------------------------------------------------
+        plt.figure(figsize=(9, 9))
+        labels = ['Log \nPrice', 'Log \nminInstalls', 'IAP', 'Ads']
+        heatmap = sns.heatmap(correlation_matrix,
+                              xticklabels=labels, yticklabels=labels,
+                              vmin=-1, vmax=1, annot=True)
+        filename = name1 + ' Dependent Variables Correlation Heatmap'
+        heatmap.set_title(filename, fontdict={'fontsize': 12}, pad=12)
+        plt.savefig(self.des_stats_root / self.name1_path_keywords[name1] / 'descriptive_stats' / 'graphs' / 'correlation_heatmaps' / filename,
+                    facecolor='white',
+                    dpi=300)
         return essay_23_stats_and_regs_201907(
                                    tcn=self.tcn,
                                    combined_df=self.cdf,

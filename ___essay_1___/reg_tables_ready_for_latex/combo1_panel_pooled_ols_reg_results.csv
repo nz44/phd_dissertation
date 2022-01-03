@@ -1,7 +1,7 @@
 ,Samples,Independent Vars,"Log Price Adjusted 
 With White Noise",Log Minimum Installs,Offers IAP,Contains Ads
 0,Full,Constant,0.504***,9.389***,0.049***,0.386***
-1,Full,Niche,-0.142***,1.622***,-0.0,0.2***
+1,Full,Niche,-0.142***,1.622***,0,0.2***
 2,Full,Post,0.015**,0.18***,0.274***,-0.001
 3,Full,PostNiche,-0.012*,0.009,0.149***,-0.001
 4,"Minimum Installs 
@@ -25,6 +25,6 @@ Tier 3",Constant,1.029***,6.247***,0.027***,0.07***
 13,"Minimum Installs 
 Tier 3",Niche,-0.023,0.106,0.004*,0.042***
 14,"Minimum Installs 
-Tier 3",Post,0.018***,0.151***,0.154***,0.0
+Tier 3",Post,0.018***,0.151***,0.154***,0
 15,"Minimum Installs 
-Tier 3",PostNiche,-0.012,0.013,0.042***,-0.0
+Tier 3",PostNiche,-0.012,0.013,0.042***,0

@@ -18,3 +18,4 @@ ___essay_1_test_code___.ipynb, ___essay_2_test_code___.ipynb, ___essay_3_test_co
 
 overall_graphs folder contains the graphs output of parallel trends that put essay 2 and essay 3 samples into the same graph. All the other folders containing descriptive statistics, natural language processing (nlp), regression results, results tables in LaTex and graphs outputs relating to each essay's sub-samples. 
 
+
