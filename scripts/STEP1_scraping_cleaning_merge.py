@@ -23,9 +23,9 @@ from collections.abc import Iterable
 # so id_list should just be C.keys()
 class scrape():
     initial_dict_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/NEW_ALGORITHM_MONTHLY_SCRAPE')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/NEW_ALGORITHM_MONTHLY_SCRAPE')
     tracking_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
 
     def __init__(self,
                  initial_panel,
@@ -108,11 +108,11 @@ class scrape():
 class convert():
 
     initial_dict_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/NEW_ALGORITHM_MONTHLY_SCRAPE')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/NEW_ALGORITHM_MONTHLY_SCRAPE')
     tracking_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/TRACKING_THE_SAME_ID_MONTHLY_SCRAPE')
     imputed_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/___essay_1___')
     df1_to_combine = ['developerId',
                       'developerWebsite',
                       'developerEmail',
@@ -242,22 +242,38 @@ class convert():
             print()
             print()
 
-    def merge_panels_into_single_df(self):
+    def merge_panels_into_single_df(self, balanced_panel):
         old_data = self.format_cols() # this is a dictionary with panel as keys
-        df_list = []
-        print('start merging the dataframe for all the panels below')
+        # ------------ singling out the initial month -------------------------
+        all_months = []
         for panel, df in old_data.items():
-            print(panel)
+            panel_dt = dt.strptime(panel, "%Y%m")
+            all_months.append(panel_dt)
+        init_month = min(all_months)
+        init_month_str = dt.strftime(init_month, "%Y%m")
+        # ---------------------------------------------------------------------
+        print('start merging the dataframe for panel starting ', init_month_str)
+        for panel, df in old_data.items():
             df = df.add_suffix('_' + panel)
-            df_list.append(df)
-        merged_df = functools.reduce(lambda x, y: x.join(y, how='inner'), df_list)
+            if panel == init_month_str:
+                merged_df = df
+            else:
+                indicator_col = 'merge_' + panel
+                if balanced_panel is True:
+                    # inner join will delete all the apps that disappear in the subsequent months
+                    merged_df = merged_df.merge(df, how='inner', left_index=True, right_index=True, indicator=indicator_col)
+                    filename = self.initial_panel + '_balanced_MERGED.pickle'
+                else:
+                    # in essay three we will use a noisy death measure (apps that disappear over time)
+                    merged_df = merged_df.merge(df, how='left', left_index=True, right_index=True, indicator=indicator_col)
+                    filename = self.initial_panel + '_unbalanced_MERGED.pickle'
         print('merged dataframe for all the panels above')
         self.merged_df = merged_df
         # --------------------------- save --------------------------------------
-        filename = self.initial_panel + '_MERGED.pickle'
         q = convert.imputed_path / filename
         pickle.dump(self.merged_df, open(q, 'wb'))
         print('panel data ', self.initial_panel, ' has shape : ', self.merged_df.shape)
+        print(self.merged_df.columns)
         return convert(initial_panel=self.initial_panel,
                        all_panels=self.all_panels,
                        d=self.d,

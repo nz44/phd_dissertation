@@ -7,6 +7,7 @@ warnings.filterwarnings('ignore')
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
+import copy
 import math
 import random
 from datetime import datetime
@@ -32,7 +33,9 @@ import copy
 class pre_processing():
     stoplist = nltk.corpus.stopwords.words('english')
     panel_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1_panels___')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/___essay_1___')
+    missing_stats_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/missing_stats')
 
     def __init__(self,
                  initial_panel,
@@ -48,8 +51,11 @@ class pre_processing():
         self.appids_to_remove = appids_to_remove
         self.appids_with_changing_developers=appids_with_changing_developers
 
-    def open_merged_df(self):
-        f_name = self.initial_panel + '_MERGED.pickle'
+    def open_merged_df(self, balanced):
+        if balanced is True:
+            f_name = self.initial_panel + '_balanced_MERGED.pickle'
+        else:
+            f_name = self.initial_panel + '_unbalanced_MERGED.pickle'
         q = pre_processing.panel_path / f_name
         with open(q, 'rb') as f:
             df = pickle.load(f)
@@ -60,6 +66,126 @@ class pre_processing():
                               tcn=self.tcn,
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
+
+    ############################# ONLY FOR ESSAY THREE UNBALANCED PANEL REGS ###############################################################
+    # this is a helper function where the input is a dataframe containing only the variable across all months in the panel
+    # var is the variable name
+    # if check_nan is true, we are checking after a period the variable is all nans till the end of the panel
+    # check_key_value is a string or a number that we want to know from which period the row has this key value till the end of the panel
+    # we are checking this by iterate through the first month to the last month
+    def _checking_consecutive_values(self, df, var, check_nan, check_key_value, new_col):
+        print('----------- _checking_consecutive_values ----------------')
+        # sort the all panels from the most recent to the oldest
+        # I do not use self.all_panels because not all variables exist for each panel (merge_month) does not exist for the first month
+        var_month = list(df.columns)
+        substr = var + '_'
+        all_months = [x.replace(substr, '') for x in var_month]
+        new_panel = [datetime.strptime(i, "%Y%m") for i in all_months]
+        forward_month = sorted(new_panel)
+        backward_month = sorted(new_panel, reverse=True)
+        forward_month = [datetime.strftime(i, "%Y%m") for i in forward_month]
+        backward_month = [datetime.strftime(i, "%Y%m") for i in backward_month]
+        print('forward month')
+        print(forward_month)
+        print('backward month')
+        print(backward_month)
+        df[new_col] = 0
+        for i in range(len(backward_month)):
+            v = var + '_' + backward_month[i]
+            if i > 0:
+                if check_nan is True:
+                    pass
+                else:
+                    # axis = 1 means v refers to column names, if axis =0, v must refer to row index
+                    df['conditions_satisfied'] = df.apply(lambda row: row['conditions_satisfied']+1 if row[v] == check_key_value else row['conditions_satisfied']+0, axis=1)
+            else:
+                if check_nan is True:
+                    pass
+                else:
+                    df['conditions_satisfied'] = df.apply(lambda row: 1 if row[v] == check_key_value else 0, axis=1)
+            # for example, if app id 1234 is completely missing in period 6 (merge_6 == left), and has some data in period 7 (merge_7 = both),
+            # and completely missing in period 8, 9, 10 (merge_8,9,10 == left) till the last period
+            # then we measure app id 1234 as death starting from period 8. However if an app is only missing for one period and has data till the end,
+            # it does not count towards dead apps.
+            # after check the condition for this backward period, let us check the total number so far,
+            # if the total figure equals to the number of periods we have checked starting from the last period
+            # that means the apps has been dead since this point onward till the end of the panel
+            # Then we could update the new_col with this period's datetime string.
+            # Then the loop will go one period earlier in time, if that period satisfied, then new_col will update to that period's datetime string.
+            # however if that period does not satisfy, then the total figure will be less than the number of periods we've checked,
+            # we will keep the new_col unchaged (it is either in the period it satisfied or 0 initial condition)
+            # Even if any of the earlier period satisfy again, the total figure will not equal to the number of periods we've checked,
+            # so the new_col will not be updated.
+            df[new_col] = df.apply(lambda row: backward_month[i] if row['conditions_satisfied'] == i+1 else row[new_col], axis=1)
+        print('the unqiue values in conditions_satisfied')
+        print(df['conditions_satisfied'].value_counts(dropna=False))
+        print('the unqiue values in ' + new_col)
+        print(df[new_col].value_counts(dropna=False))
+        return df
+
+    # ---UNBALANCED PANEL--- replace merged_month columns with noisy_death -----------------------------------------------------------------
+    def unbalanced_panel_create_noisy_death_dummy(self):
+        print('----------- unbalanced_panel_create_noisy_death_dummy ----------------')
+        self.df = self.df.fillna(value=np.nan)
+        df = self.df.copy()
+        merged_list = []
+        for i in df.columns:
+            if 'merge_' in i:
+                merged_list.append(i)
+        df2 = df[merged_list]
+        # print(df2.head())
+        df3 = self._checking_consecutive_values(df=df2,
+                                                var='merge',
+                                                check_nan=False,
+                                                check_key_value='left_only',
+                                                new_col='app_death_month')
+        # print(df3.head())
+        # create noisy death dummy
+        for i in range(len(self.all_panels)):
+            if i == 0:
+                df3['noisy_death_' + self.all_panels[i]] = df3.apply(
+                    lambda row: 1 if row['app_death_month'] == self.all_panels[i] else 0, axis=1)
+            else:
+                df3['noisy_death_' + self.all_panels[i]] = df3.apply(
+                    lambda row: 1 if row['app_death_month'] == self.all_panels[i] else row['noisy_death_' + self.all_panels[i-1]], axis=1)
+            print(df3['noisy_death_' + self.all_panels[i]].value_counts(dropna=False))
+        self.df = df3
+        print(self.df.head())
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    # ---UNBALANCED PANEL--- create dummies indicating the app has transitioned from market follower to market leader ---------------------------
+    # according to our definition of market leaders and followers, they are either switched to a top firm or minInstalls increase over a threshhold of
+    def unbalanced_panel_create_TRANSITION_dummy(self):
+        print('----------- unbalanced_panel_create_TRANSITION_dummy ----------------')
+        print(var_list)
+        self.df = self.df.fillna(value=np.nan)
+        dfs = self.select_dfs_per_month(var_list=var_list)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    # ---UNBALANCED PANEL--- create dummies indicating the app has changed firms (Merger and Acquisition) ----------------------------------
+    def unbalanced_panel_create_MA_dummy(self):
+        print('----------- unbalanced_panel_create_MA_dummy ----------------')
+        print(var_list)
+        self.df = self.df.fillna(value=np.nan)
+        dfs = self.select_dfs_per_month(var_list=var_list)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    # #######################################################################################################################################
 
     def open_imputed_missing_df(self):
         f_name = self.initial_panel + '_imputed_missing.pickle'
@@ -74,36 +200,76 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    def select_the_var(self, var, select_one_panel=None):
-        col_list = [var + '_' + i for i in self.all_panels]
-        if select_one_panel is not None:
-            col_list = [var + '_' + select_one_panel]
-        df2 = self.df.copy(deep=True)
-        df2 = df2[col_list]
-        return df2
-
-    def select_dfs_from_var_list(self, var_list, select_one_panel=None):
+    # create a list of dataframes that each df consists of the same variable across all months/or one month
+    def select_dfs_per_var(self, var_list, select_one_panel=None):
+        print('----------- select_dfs_per_var ----------------')
         dfs = []
         for var in var_list:
-            df2 = self.select_the_var(var, select_one_panel)
+            if select_one_panel is None:
+                col_list = [var + '_' + i for i in self.all_panels]
+            else:
+                col_list = [var + '_' + select_one_panel]
+            df2 = self.df.copy()
+            df2 = df2[col_list]
+            print('selected the following columns for the df ', df2.shape)
+            print(col_list)
             dfs.append(df2)
         return dfs
 
-    def count_missing(self, var_list, name, select_one_panel=None):
-        dfs = self.select_dfs_from_var_list(var_list=var_list,
-                                            select_one_panel=select_one_panel)
-        summary_dfs = []
-        for df in dfs:
-            df3 = df.isnull().sum().rename('count missing').to_frame()
-            summary_dfs.append(df3)
-        combined_df = functools.reduce(lambda a, b: pd.concat([a, b]), summary_dfs)
-        filename = self.initial_panel + '_' + name + '.csv'
-        q = pre_processing.panel_path / 'missing_counts' / filename
-        combined_df.to_csv(q)
-        print(self.initial_panel, ' : ', name)
-        print(combined_df)
-        print()
-        print()
+    # this will create a list of dataframes that each df contains only var_list to that month
+    def select_dfs_per_month(self, var_list):
+        print('----------- select_dfs_per_month ----------------')
+        dfs = {}
+        print(var_list)
+        for i in self.all_panels:
+            if i != self.initial_panel:
+                col_list = [var + '_' + i for var in var_list]
+            else:
+                col_list = [var + '_' + i for var in var_list]
+                col_list.remove('merge_'+i)
+            df2 = self.df.copy()
+            print(col_list)
+            df2 = df2[col_list]
+            print('selected the following columns for the df ', df2.shape)
+            dfs[i] = df2
+        return dfs
+
+    # count the rows that are all nan in each month
+    def count_missing_per_month(self, var_list):
+        print('----------- count_missing_per_month ----------------')
+        print(var_list)
+        self.df = self.df.fillna(value=np.nan)
+        dfs = self.select_dfs_per_month(var_list=var_list)
+        # Initialize data to Dicts of series.
+        d_keys = copy.deepcopy(var_list)
+        d_keys = ['rows_missing_in_' + i for i in d_keys]
+        d_keys.insert(0, 'rows_original') # insert 10 at 4th index
+        d_keys.insert(1, 'rows_missing_in_any')
+        d_keys.insert(2, 'rows_missing_in_all')
+        summary_df = pd.DataFrame(
+                    columns = d_keys,
+                    index = list(dfs.keys()))
+        for month, df in dfs.items():
+            print(month, ' before deleting nans : ', df.shape)
+            rows_original = df.shape[0]
+            summary_df.at[month, 'rows_original'] = rows_original
+            if month == self.initial_panel:
+                cols = df.columns.values.tolist()  # initial month does not have the merge variable
+            else:
+                cols = df.columns.values.tolist()
+                cols.remove('merge_' + month) # remove will not return a list
+            df2 = df.dropna(axis=0, how='any', subset=cols)
+            summary_df.at[month, 'rows_missing_in_any'] = rows_original - df2.shape[0]
+            df2 = df.dropna(axis=0, how='all', subset=cols)
+            summary_df.at[month, 'rows_missing_in_all'] = rows_original - df2.shape[0]
+            for v in cols:
+                df2 = df.dropna(axis=0, how='all', subset=[v])
+                v_col = v.replace('_'+month, '')
+                v_col = 'rows_missing_in_' + v_col
+                summary_df.at[month, v_col] = rows_original - df2.shape[0]
+        filename = self.initial_panel + '_count_missing_by_month_and_in_each_var.csv'
+        q = self.missing_stats_path / 'before_imputation' / filename
+        summary_df.to_csv(q)
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -372,7 +538,7 @@ class pre_processing():
         print('finished imputing missing for variable : ', var)
         return df3
 
-    def impute_list_of_vars(self, list_of_vars):
+    def impute_list_of_vars(self, balanced, list_of_vars):
         """
         Since I have save in this funciton, make sure to run text column imputation and developer column
         before this step
@@ -384,7 +550,10 @@ class pre_processing():
         combined_imputed = functools.reduce(lambda a, b: a.join(b, how='inner'), imputed_dfs)
         self.df = self.df.join(combined_imputed, how='inner')
         # -------------------- save -----------------------------------
-        filename = self.initial_panel + '_imputed_missing.pickle'
+        if balanced is True:
+            filename = self.initial_panel + '_balanced_imputed_missing.pickle'
+        else:
+            filename = self.initial_panel + '_unbalanced_imputed_missing.pickle'
         q = pre_processing.panel_path / filename
         pickle.dump(self.df, open(q, 'wb'))
         print('finished imputing missing for', self.initial_panel, 'dataset')

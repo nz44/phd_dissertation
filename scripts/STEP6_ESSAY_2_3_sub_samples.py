@@ -383,6 +383,7 @@ class divide_essay_2_3():
         df3 = self.df.loc[(self.df['Tier1'] == 1) & (self.df['top_digital_firms'] == 1)]
         print('Tier 1 and Top firms (overlap) : ', df3.shape[0])
         self.df['Leaders'] = 0
+        # if an app is either belongs to top firm or belongs to tier 1 min installs, the app is a market leader
         self.df.at[self.df['Tier1'] == 1, 'Leaders'] = 1
         self.df.at[self.df['top_digital_firms'] == 1, 'Leaders'] = 1
         self.df['Non-leaders'] = 0

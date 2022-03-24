@@ -1316,7 +1316,7 @@ class essay_23_stats_and_regs_201907():
             df5 = pd.concat(total_df, keys=total_keys)
             # slicing means of all pricing vars and std and median for log price and log minimum installs
             df6 = df5.swaplevel(axis=1)
-            df7 = df6.loc[:, ['mean', 'std', '50%']]
+            df7 = df6.loc[:, ['mean', '50%', 'std']]
             # print(df7.columns)
             # print(df7.head())
             df8 = df7.drop(('std', 'offersIAPTrue_' + the_panel), axis=1)
@@ -1328,6 +1328,7 @@ class essay_23_stats_and_regs_201907():
                                'LogImputedminInstalls_' + the_panel,
                                'offersIAPTrue_' + the_panel,
                                'containsAdsTrue_' + the_panel], axis=1, level=0)
+            df8 = df8.reindex(['Niche', 'Broad'], axis=0, level=2)
             # print(df8.columns)
             f_name = 'ALL_SUBSAMPLES_pricing_vars_' + groupby_var + '_stats_panel_' + the_panel + '.csv'
             q = self.des_stats_both_tables / f_name
