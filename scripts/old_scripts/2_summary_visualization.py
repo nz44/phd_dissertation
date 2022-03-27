@@ -1,0 +1,476 @@
+# The file include functions that transform raw scraped app data into
+# 1. categorical level and developer level
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+import pandas as pd
+import datetime
+import os.path
+import glob
+import ast
+import pickle
+from pathlib import Path
+
+#*****************************************************************************************************
+#*** INPUT DATA (scraped before 202009) is transformed to dataframe
+#*****************************************************************************************************
+# change the key names to the same one scraped using google_play_scraper
+# new data is the output of convert_data_before_202009_to_dict_with_appid_keys,
+# which is scraper using the older package play_scraper, thus they have different key attribute
+# so I have to standardize that.
+######################### old attributes --> new attributes ############################
+# title --> # title
+# icon --> # icon
+# screenshots --> # screenshots
+# video --> # video
+# category --> # genreId
+# score --> # score
+# histogram --> # histogram
+# reviews --> # reviews
+# description --> # description
+# description_html --> # descriptionHTML
+# recent_changes --> # recentChanges
+# editors_choice --> do not exist in new scraper, suggest to delete it
+# price --> # price
+# free --> # free
+# iap --> # offersIAP
+# developer_id --> # developerId
+# updated --> # updated
+# size --> # size
+# installs --> # installs and create minInstall variable
+# current_version --> # version
+# required_android_version --> # androidVersion
+# content_rating --> # ratings
+# iap_range --> # inAppProductPrice
+# interactive_elements --> do not exist in new scraper, suggest to delete it
+# developer --> # developer
+# developer_email --> # developerEmail
+# developer_url --> # developerWebsite
+# developer_address --> # developerAddress
+# app_id --> # appId
+# url --> # url
+
+
+######################################################################################
+## plot single dataframe
+######################################################################################
+def plot_dataframe(E, date_track_origin_date):
+    # the input is the output of transform_dict_dataframe
+    fig = plt.figure(figsize=(8.27, 11.69))
+    spec = fig.add_gridspec(ncols=2, nrows=3)
+
+    ax1 = fig.add_subplot(spec[0, 0])
+    ax1 = E['minInstalls'].dropna().plot.hist(bins=3)
+    ax1.set_ylabel('frequency', fontsize=6)
+    ax1.set_yticklabels(ax1.get_xticks(), fontsize=5)
+    ax1.set_xlabel('minInstalls', fontsize=6)
+    ax1.set_xticklabels(ax1.get_xticks(), fontsize=5)
+    ax1.set_title('The Histogram of \n Accumulative Minimum Installs', fontsize=8)
+
+    ax2 = fig.add_subplot(spec[1, 0])
+    ax2 = E['score'].dropna().plot.hist()
+    ax2.set_ylabel('frequency', fontsize=6)
+    ax2.set_xlabel('score', fontsize=6)
+    ax2.set_title('The Histogram of \n Weighted Average Score', fontsize=8)
+
+    ax3 = fig.add_subplot(spec[2, 0])
+    ax3 = E['score'].plot.hist()
+    ax3.set_ylabel('frequency', fontsize=6)
+    ax3.set_xlabel('score', fontsize=6)
+    ax3.set_title('The Histogram of \n Weighted Average Score', fontsize=8)
+
+    ax4 = fig.add_subplot(spec[0, 1])
+    ax4 = E['score'].plot.hist()
+    ax4.set_ylabel('frequency', fontsize=6)
+    ax4.set_xlabel('score', fontsize=6)
+    ax4.set_title('The Histogram of \n Weighted Average Score', fontsize=8)
+
+    ax5 = fig.add_subplot(spec[1, 1])
+    ax5 = E['score'].plot.hist()
+    ax5.set_ylabel('frequency', fontsize=6)
+    ax5.set_xlabel('score', fontsize=6)
+    ax5.set_title('The Histogram of \n Weighted Average Score', fontsize=8)
+
+    ax6 = fig.add_subplot(spec[2, 1])
+    ax6 = E['score'].plot.hist()
+    ax6.set_ylabel('frequency', fontsize=6)
+    ax6.set_xlabel('score', fontsize=6)
+    ax6.set_title('The Histogram of \n Weighted Average Score', fontsize=8)
+
+    spec.tight_layout(fig)
+    f_name = date_track_origin_date + '_visualization.png'
+    fig.savefig(os.path.join(graph_output, f_name),
+                facecolor='white', edgecolor='none', dpi=800)
+
+######################################################################################
+## plot panel trends
+# https://python-graph-gallery.com/124-spaghetti-plot/
+# https://matplotlib.org/3.1.0/gallery/subplots_axes_and_figures/broken_axis.html
+# https://jakevdp.github.io/PythonDataScienceHandbook/04.09-text-and-annotation.html
+# here, we are going to use nested functions
+######################################################################################
+
+# FUNCTION_1: Create a dataframe just for graphing
+# each column represent an app, and each row represent a time point (a panel)
+# the entire dataframe is about one variable: minInstalls
+
+def dataframe_for_line_plot(initial_date, panels, variable, **kwargs):
+
+    # open the merged panel dataframe
+    folder = initial_date + '_PANEL_DF'
+    df_name = initial_date + '_MERGED.pickle'
+    q = input_path / "__PANELS__" / folder / df_name
+    with open(q, 'rb') as filename:
+        B = pickle.load(filename)
+
+    # either randomly choose a subset or take the whole sample
+    if 'sample' in kwargs:
+        C = B.sample(kwargs['sample'])
+    else:
+        C = B
+
+    # select only the columns related to the variable
+    panels.insert(0, initial_date)
+    var_names = variable + '_'
+    col_names = list(map(lambda x: var_names + str(x), panels))
+    C = C[col_names]
+    for i in col_names:
+        C[i] = C[i].astype(float)
+
+    # figure out which apps have increase in the variable over the entire period
+    end_date = panels[-1]
+    end_date_var = variable + '_' + end_date
+    initial_date_var = variable + '_' + initial_date
+    C.loc[:, 'increase_over_interval'] = C.loc[:, end_date_var] - C.loc[:, initial_date_var]
+    C = C.sort_values(by='increase_over_interval', ascending=False)
+    n_rows = int(len(C.axes[0]))
+    if 'break_rule' in kwargs:
+        top_performers = C.loc[C['increase_over_interval'] > kwargs['break_rule']]
+        top_performers = top_performers.index.tolist()
+    elif n_rows >= 10:
+        top_performers = C.head(10)
+        top_performers = top_performers.index.tolist()
+    else:
+        top_performers = C
+        top_performers = top_performers.index.tolist()
+    C.drop('increase_over_interval', inplace=True, axis=1)
+    C = C.T
+
+    # create a column for graphing xticks (since you already modified panels, so you can skip adding the initial date)
+    time_axis = []
+    for j in panels:
+        time_axis.append(datetime.datetime.strptime(j, '%Y%m').strftime('%Y %b'))
+    C['x'] = time_axis
+
+    # take the title of app as the value of a dictionary for annotation in plotting
+    top_performers_dict = dict.fromkeys(top_performers)
+    title_column = 'title_' + initial_date
+    for app_id in top_performers_dict.keys():
+        top_performers_dict[app_id] = B.at[app_id, title_column]
+
+    return(C, top_performers_dict)
+
+###############################################################################################
+## LINE PLOTS
+# create new dataframe which each column holds the series of one app's data across panels
+###############################################################################################
+def graph_line_plots(C, initial_date, panels, variable, **kwargs):
+    fig = plt.figure(figsize=(11.69, 8.27))
+    plt.style.use('seaborn-paper')
+    spec = fig.add_gridspec(ncols=1, nrows=1)
+
+    # first subplot is the overall picture
+    ax1 = fig.add_subplot(spec[0, 0])
+    for column in C.drop('x', axis=1):
+        ax1.plot(C['x'], C[column], marker='', color='powderblue', linewidth=1, alpha=0.9, label=column)
+
+    # if top performers are specified, highlight those lines
+    last_panel = panels[-1]
+    annotate_pos = variable + '_' + last_panel
+    string_initial_date = datetime.datetime.strptime(initial_date, '%Y%m').strftime('%Y %b')
+    string_end_date = datetime.datetime.strptime(panels[-1], '%Y%m').strftime('%Y %b')
+    if 'top_performers' in kwargs:
+        x_coord_frac = 0.95
+        y_coord_frac = 0.95
+        for app_id, app_title in kwargs['top_performers'].items():
+            ax1.plot(C['x'], C[app_id], marker='', color='deepskyblue', linewidth=2, alpha=0.7)
+            ax1.annotate(app_title,
+                        xy=(string_end_date, C.at[annotate_pos, app_id]),
+                        xycoords='data',
+                        xytext=(x_coord_frac, y_coord_frac),
+                        textcoords='axes fraction',
+                        arrowprops={'arrowstyle': '->'},
+                        horizontalalignment='right',
+                        verticalalignment='bottom')
+            x_coord_frac += -0.08
+            y_coord_frac += -0.08
+
+    #ax1.grid(True)
+    ax1.set_xlabel('time')
+    if variable == 'minInstalls':
+        ax1.set_ylabel('cumulative minimum installs')
+        title = 'The Number of Minimum Installs of Apps from ' + string_initial_date + ' to ' + string_end_date
+        ax1.set_title(title)
+
+    # highlight the line that has the highest increase in min installs, and label them out in the legend
+    spec.tight_layout(fig)
+    f_name = initial_date + '_panels_' + variable + '_multiple_lines.png'
+    fig.savefig(os.path.join(graph_output, variable, f_name),
+                facecolor='white', edgecolor='none')
+
+    # second subplot zoom into the portion where the installs are lower and cramped together
+
+
+###############################################################################################
+## SCATTER PLOTS
+# (different color represents different category, and x-axis is the time)
+###############################################################################################
+def dataframe_for_scatter_plot_by_group(initial_date, panels, variable, group, **kwargs):
+    # open the merged panel dataframe
+    folder = initial_date + '_PANEL_DF'
+    df_name = initial_date + '_MERGED.pickle'
+    q = input_path / "__PANELS__" / folder / df_name
+    with open(q, 'rb') as filename:
+        B = pickle.load(filename)
+
+    # either randomly choose a subset or take the whole sample
+    if 'sample' in kwargs:
+        C = B.sample(kwargs['sample'])
+    else:
+        C = B
+
+    # select only the columns related to the variable, the panels and the group
+    panels.insert(0, initial_date)
+    var_names = variable + '_'
+    var_cols = list(map(lambda x: var_names + str(x), panels))
+    for i in var_cols:
+        C[i] = C[i].astype(float)
+    last_panel = panels[-1] # use the category specified in the most recent panel
+    group_cols = list(map(lambda x: str(x) + '_' + last_panel, group))
+    selected_cols = var_cols + group_cols
+    C = C[selected_cols]
+
+    # reshape the data with y-axis value in one column, x-axis value in another column (all panels stacked into one column)
+    # and categories in the third column
+    C['category'] = np.nan
+    for i in group:
+        col_name = str(i) + '_' + last_panel
+        C.loc[C[col_name] == 1, 'category'] = i
+
+    C['app_id'] = C.index
+    C.reset_index(drop=True, inplace=True)
+    D = pd.wide_to_long(C, stubnames=variable, i='app_id', j='panel', sep='_')
+    D.reset_index(inplace=True)
+
+    # convert to datetime format for panel column
+    D['panel'] = pd.to_datetime(D['panel'], format='%Y%m') # when you convert object to datetime, the format has to match the original format
+    D['panel'] = D['panel'].dt.strftime('%Y %b') # then you can change the format to the desired datetime format
+
+    return(D)
+
+
+
+###############################################################################################
+## VIOLIN PLOTS
+# create new dataframe which each column holds the series of one app's data across panels
+###############################################################################################
+def dataframe_for_violin_plots(initial_date, panels, variable, group, binary, panel_for_group_and_binary):
+    # open file and make the variable colume float
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
+    panels.insert(0, initial_date)
+    var_cols = list(map(lambda x: variable + '_' + str(x), panels))
+    for i in var_cols:
+        D[i] = D[i].astype(float)
+
+    if group == 'category':
+        group_names = ['GAME', 'UTILITIES', 'SOCIAL_MEDIA_LEISURE']
+        group_cols = []
+        for i in group_names:
+            group_cols.extend(list(map(lambda x: i + '_' + str(x), panels)))
+        # since group definition for the same app may change over time, for the purpose of graph, we only select one panel of group definition
+        group_panel_col = list(map(lambda x: str(x) + '_' + panel_for_group_and_binary, group_names))
+        # replace the 1 0 with appropriate content for showing in the legend of graphs
+
+    elif 'group_static' in group:
+        group_panel_col = [group]
+
+    if binary in ['free_True', 'offersIAP_True', 'containsAds_True']:
+        binary_cols = list(map(lambda x: binary + '_' + str(x), panels))
+        binary_panel_col = [binary + '_' + panel_for_group_and_binary]
+
+    selected_cols = var_cols + group_panel_col + binary_panel_col
+    D = D[selected_cols]
+
+    # reshape the dataframe from wide to long (stack all panels into a single column)
+    D['app_id'] = D.index
+    D.reset_index(drop=True, inplace=True)
+    E = pd.wide_to_long(D, stubnames=variable, i='app_id', j='panels', sep='_')
+    ## drop the last panel from group and binary column names
+    A = group_panel_col + binary_panel_col
+    for i in A:
+        need_to_be_removed = "_" + panel_for_group_and_binary
+        new_name = i.replace(need_to_be_removed, "")
+        E.rename(columns={i: new_name}, inplace=True)
+
+    # rename binary variable
+    new_name = binary.replace('_True', "")
+    E.rename(columns={binary: new_name}, inplace=True)
+
+    # convert to datetime format for panel column
+    E.reset_index(inplace=True) # because app_id and panel are automatically turned into indices after wide_to_long, this step turns them back into columns
+    E['panels'] = pd.to_datetime(E['panels'], format='%Y%m') # when you convert object to datetime, the format has to match the original format
+    E['panels'] = E['panels'].dt.strftime('%Y %b') # then you can change the format to the desired datetime format
+
+    if group == 'category':
+        E['SOCIAL_MEDIA_LEISURE'].replace(1, 'social_media_leisure', inplace=True)
+        E['SOCIAL_MEDIA_LEISURE'].replace(0, '', inplace=True)
+        E['UTILITIES'].replace(1, 'utilities', inplace=True)
+        E['UTILITIES'].replace(0, '', inplace=True)
+        E['GAME'].replace(1, 'game', inplace=True)
+        E['GAME'].replace(0, '', inplace=True)
+        E[group] = E['SOCIAL_MEDIA_LEISURE'] + E['UTILITIES'] + E['GAME']
+        # delete the rows with '' in category, I have checked the original data, the reason being in some panels genreId is nan
+        E = E[E[group] != '']
+
+    if binary == 'free_True':
+        E['free'].replace(1, 'free', inplace=True)
+        E['free'].replace(0, 'paid', inplace=True)
+
+    return(E)
+
+
+##################################################################################################
+def graph_violin_plots(dataframe, x_axis_group, y_axis_var, split_binary, subplot_var):
+    # set background theme
+    sns.set_theme(style="whitegrid")
+    # change column name so that title won't be too long
+    initial_date = dataframe['panels'].unique()[0]
+    end_date = dataframe['panels'].unique()[-1]
+    if 'group_static' in subplot_var:
+        save_subplot_var_name = subplot_var.replace('group_static_', '')
+        var_text = subplot_var.replace('group_static_', "")
+        dataframe.rename(columns={subplot_var: var_text}, inplace = True)
+        subplot_var = var_text
+        if 'minInstalls' in var_text:
+            var_text = 'minimum installs'
+            col_order_list = ['below 500000', 'between 500000 and 5000000', 'above 5000000']
+        title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and ' + var_text
+    elif 'group_change' in subplot_var:
+        need_to_remove = '_between_' + initial_date + '_and_'
+        save_subplot_var_name = subplot_var.replace('group_change_', '').replace(need_to_remove, '')
+        var_text = subplot_var.replace('group_change_', '').replace(need_to_remove, '')
+        dataframe.rename(columns={subplot_var: var_text}, inplace = True)
+        subplot_var = var_text
+        if 'minInstalls' in var_text:
+            var_text = 'minimum installs'
+            col_order_list = ['no change', 'increased more than 0']
+        title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and change in ' + var_text
+    else:
+        save_subplot_var_name = subplot_var
+        title_text = 'Violin Plots of ' + y_axis_var + ' by ' + split_binary + ' and ' + subplot_var + ' in ' + end_date
+    # plot
+    plot = sns.catplot(x = x_axis_group, y = y_axis_var,
+                    hue = split_binary,
+                    col = subplot_var,
+                    col_order = col_order_list,
+                    data = dataframe, kind = "violin",
+                    scale = "count",
+                    scale_hue = True,
+                    inner = "quartile",
+                    split = True,
+                    bw =.1,
+                    height = 4, aspect = .7)
+
+    plot.set_titles("{col_name}")
+    if y_axis_var == 'score':
+        plot.set(ylim=(0, 5))
+    # add plot title
+    plt.subplots_adjust(top=0.8)
+    plot.fig.suptitle(title_text)
+    # rotate plot x-axis so that the texts do not overlap
+    plot.set_xticklabels(rotation=60)
+    # save plot
+    f_name = initial_date + '_' + y_axis_var + '_by_' + split_binary + '_and_' + save_subplot_var_name + '_panel_violin.png'
+    plot.savefig(os.path.join(graph_output, y_axis_var, f_name),
+                facecolor='white', edgecolor='none', dpi=500)
+
+
+###############################################################################################
+## QQ PLOTS
+# https://data.library.virginia.edu/understanding-q-q-plots/#:~:text=A%20Q%2DQ%20plot%20is%20a,truly%20come%20from%20Normal%20distributions.
+###############################################################################################
+from scipy import stats
+from matplotlib import pyplot as plt
+
+def qq_plots(initial_date, the_panel, variable, theoretical_distribution, **kwargs):
+    # open file and make the variable colume float
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
+    var_col = variable + '_' + str(the_panel)
+    qq_col = D[var_col].to_numpy(float)
+
+    fig = plt.figure()
+    ax1 = plt.subplot(111)
+    stats.probplot(qq_col, dist=eval(theoretical_distribution), plot=ax1)
+    if theoretical_distribution == 'stats.norm':
+        print(str(theoretical_distribution))
+    title = 'Probability Plot for ' + variable + ' with Standard Normal Distribution'
+    ax1.set_title(title)
+
+    # save plot
+    f_name = initial_date + '_' + variable + '_' + the_panel + '_probability_plot.png'
+    fig.savefig(os.path.join(graph_output, variable, f_name),
+                facecolor='white', edgecolor='none', dpi=500)
+
+    return(ax1)
+
+
+###############################################################################################
+## KDE PLOTS
+#
+###############################################################################################
+
+def kde_plots(initial_date, variable, **kwargs):
+    sns.set(style="darkgrid")
+    # open file and make the variable colume float
+    folder_name = initial_date + '_PANEL_DF'
+    f_name = initial_date + '_MERGED.pickle'
+    q = input_path / '__PANELS__' / folder_name / f_name
+    with open(q, 'rb') as f:
+        D = pickle.load(f)
+
+    if 'panels' in kwargs.keys():
+        kwargs['panels'].insert(0, initial_date)
+        var_cols = list(map(lambda x: variable + '_' + str(x), kwargs['panels']))
+        for i in var_cols:
+            D[i] = D[i].astype(float)
+    elif 'the_panel' in kwargs.keys():
+        var_col = variable + '_' + kwargs['the_panel']
+        D[var_col] = D[var_col].astype(float)
+    fig = plt.figure()
+    ax1 = plt.subplot(111)
+
+    if 'hue' in kwargs.keys() and 'the_panel' in kwargs.keys():
+        hue_col = str(kwargs['hue']) + '_' + str(kwargs['the_panel'])
+        ax1 = sns.kdeplot(data=D, x = var_col, hue=hue_col, fill=True)
+        title = 'Density Distribution of ' + variable + ' by ' + str(kwargs['hue']) + ' (Data: ' + initial_date + ')'
+        f_name = initial_date + '_' + variable + ' by ' + str(kwargs['hue'])
+    else:
+        ax1 = sns.kdeplot(data=D[var_cols])
+        title = 'Density Distribution of ' + variable + ' for all the panels' + ' (Data: ' + initial_date + ')'
+        f_name = initial_date + '_' + variable + '_density_plot_all_panels.png'
+    ax1.set_title(title)
+
+    # save plot
+    fig.savefig(os.path.join(graph_output, variable, f_name),
+                facecolor='white', edgecolor='none', dpi=500)
+
+    return(ax1)

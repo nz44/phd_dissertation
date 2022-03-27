@@ -4,7 +4,6 @@ import pandas as pd
 pd.set_option('display.max_rows', 500)
 import warnings
 warnings.filterwarnings('ignore')
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import copy
@@ -22,20 +21,255 @@ from tqdm import tqdm
 tqdm.pandas()
 import spacy
 nlp = spacy.load('en_core_web_sm')
-import nltk
 from spacy.lang.en.stop_words import STOP_WORDS
 stopwords = list(STOP_WORDS)
 import matplotlib
 import seaborn
 import copy
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 #################################################################################################################
 # the input dataframe are the output of merge_panels_into_single_df() method of app_detail_dicts class
 class pre_processing():
-    stoplist = nltk.corpus.stopwords.words('english')
-    panel_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/___essay_1___')
+    full_sample_panel_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/___full_sample___')
     missing_stats_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/missing_stats')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/full_sample_missing_stats')
+    imputation_stats_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/full_sample_imputation_stats')
+    check_app_descriptions  = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/full_sample_check_app_descriptions')
+
+    # https://www.forbes.com/top-digital-companies/list/3/#tab:rank
+    # https://companiesmarketcap.com/tech/largest-tech-companies-by-market-cap/
+    # https://www.gamedesigning.org/gaming/mobile-companies/
+    top_digital_firms_substring = [
+         'apple inc',
+         'microsoft',
+         'samsung',
+         'google',
+         'at&t',
+         'amazon',
+         'verizon',
+         'china mobile',
+         'disney',
+         'facebook',
+         'alibaba',
+         'intel corporation',
+         'softbank',
+         'ibm',
+         'tencent',
+         'nippon telegraph & tel',
+         'cisco',
+         'oracle',
+         'deutsche telekom',
+         'taiwan semiconductor',
+         'kddi',
+         'sap se',
+         'telefonica',
+         'america movil',
+         'hon hai',
+         'dell inc',
+         'orange, s.a.',
+         'china telecom',
+         'sk hynix',
+         'accenture',
+         'broadcom',
+         'micron',
+         'qualcomm',
+         'paypal',
+         'china unicom',
+         'hp inc',
+         'bce',
+         'tata',
+         'automatic data processing',
+         'bt group',
+         'mitsubishi',
+         'canon inc',
+         'booking',
+         'saudi telecom',
+         'jd.com',
+         'texas instruments',
+         'netflix',
+         'philips',
+         'etisalat',
+         'baidu',
+         'asml',
+         'salesforce',
+         'applied materials',
+         'recruit holdings',
+         'singtel',
+         'adobe',
+         'xiaomi',
+         'telstra',
+         'vmware',
+         'te connectivity',
+         'sk holdings',
+         'murata manufacturing',
+         'cognizant',
+         'nvidia',
+         'ebay',
+         'telenor',
+         'vodafone',
+         'sk telecom',
+         'vivendi',
+         'naspers',
+         'infosys',
+         'china tower corp',
+         'swisscom',
+         'corning',
+         'fidelity',
+         'rogers',
+         'nintendo',
+         'kyocera',
+         'nxp semiconductors',
+         'dish network',
+         'rakuten',
+         'altice europe',
+         'telus',
+         'capgemini',
+         'activision blizzard',
+         'analog devices',
+         'lam research',
+         'dxc technology',
+         'legend holding',
+         'lenovo',
+         'netease',
+         'tokyo electron',
+         'keyence',
+         'telkom indonesia',
+         'nokia',
+         'fortive',
+         'ericsson',
+         'fiserv',
+         'fujitsu',
+         'hewlett packard enterprise',
+    # ------- switch to companiesmarketcap.com ---------------
+         'instagram',
+         'linkedin',
+         'huawei',
+         'tesla, inc',
+         'shopify',
+         'beijing kwai', # alias for kuaishou
+         'kuaishou',
+         'sony',
+         'square, inc',
+         'uber technologies',
+         'zoom.us',
+         'snap inc',
+         'amd',
+         'snowflake',
+         'atlassian',
+         'nxp semiconductors',
+         'infineon',
+         'mediatek',
+         'naver',
+         'crowdstrike',
+         'palantir',
+         'palo alto networks',
+         'fortinet',
+         'skyworks',
+         'xilinx',
+         'teladoc',
+         'ringcentral',
+         'unity',
+         'zebra',
+         'lg electronics',
+         'zscaler',
+         'fujifilm',
+         'keysight',
+         'smic',
+         'slack',
+         'arista networks',
+         'cloudflare',
+         'united microelectronics',
+         'cerner',
+         'qorvo',
+         'yandex',
+         'enphase',
+         'lyft',
+         'renesas',
+         'coupa',
+         'seagate',
+         'on semiconductor',
+         'citrix',
+         'ase technology',
+         'akamai',
+         'wix',
+         'qualtrics',
+         'netapp',
+         'entegris',
+         'dynatrace',
+         'asm international',
+         'godaddy',
+         'disco corp',
+         'line corporation',
+         'line games',
+         'five9',
+         'sina', # alias for weibo
+         'mcafee',
+         'dropbox',
+         'rohm',
+         'advantech',
+         'amec',
+         'teamviewer',
+         'kingsoft',
+         'realtek',
+         'fiverr',
+         'genpact',
+         'fastly',
+         'be semiconductor',
+         'avast',
+         'samanage', # alias for solarwinds
+         'solarwinds',
+         'descartes',
+         'stitch fix',
+         'riot blockchain',
+         'power integrations',
+         'nordic semiconductor',
+         'ambarella',
+        # ---------- switch to games ----------------------------------
+         'blizzard entertainment',
+         'electronic arts',
+         'niantic',
+         'bandai namco',
+         'ubisoft',
+         'warner bros',
+         'square enix',
+         'konami',
+         'zynga',
+         'nexon',
+         'jam city',
+         'gameloft',
+         'supercell',
+         'machine zone',
+         'mixi',
+         'gungho',
+         'netmarble',
+         'kabam games',
+         'ncsoft',
+         'com2us',
+         'super evil megacorp',
+         'disruptor beam',
+         'playrix',
+         'next games',
+         'socialpoint',
+         'dena co',
+         'scopely',
+         'ourpalm',
+         'cyberagent',
+         'pocket gems',
+         'rovio entertainment',
+         'space ape',
+         'flaregames',
+         'playdemic',
+         'funplus',
+         'ustwo games',
+         'colopl',
+         'igg.com',
+         'miniclip']
+
+    top_digital_firms_exactly_match = ['king', 'glu', 'peak', 'lumen']
 
     def __init__(self,
                  initial_panel,
@@ -51,12 +285,14 @@ class pre_processing():
         self.appids_to_remove = appids_to_remove
         self.appids_with_changing_developers=appids_with_changing_developers
 
+    # ====================== The set of functions below are regularly used common functions in pre_processing class =============================
     def open_merged_df(self, balanced):
+        print('----------- open_merged_df ----------------')
         if balanced is True:
             f_name = self.initial_panel + '_balanced_MERGED.pickle'
         else:
             f_name = self.initial_panel + '_unbalanced_MERGED.pickle'
-        q = pre_processing.panel_path / f_name
+        q = self.full_sample_panel_path / f_name
         with open(q, 'rb') as f:
             df = pickle.load(f)
         self.df = df
@@ -67,13 +303,213 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    ############################# ONLY FOR ESSAY THREE UNBALANCED PANEL REGS ###############################################################
-    # this is a helper function where the input is a dataframe containing only the variable across all months in the panel
-    # var is the variable name
-    # if check_nan is true, we are checking after a period the variable is all nans till the end of the panel
-    # check_key_value is a string or a number that we want to know from which period the row has this key value till the end of the panel
-    # we are checking this by iterate through the first month to the last month
+    def save_df(self, balanced):
+        """
+        I will save the df at the very end, which include imputed variables, sub-sample dummies and NLP niche variables
+        :param balanced: Whether to include appids that are missing in each subsequent month as compared to the original month
+        :return:
+        """
+        print('----------- save_df ----------------')
+        if balanced is True:
+            f_name = self.initial_panel + '_pre_processed_balanced.pickle'
+        else:
+            f_name = self.initial_panel + '_pre_processed_unbalanced.pickle'
+        q = self.full_sample_panel_path / f_name
+        pickle.dump(self.df, open(q, 'wb'))
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    def _select_dfs_per_var(self, var_list, select_one_panel=None):
+        """
+        return a list of dataframes that each df consists of the same variable across all months/or one month
+        """
+        print('----------- _select_dfs_per_var ----------------')
+        dfs = []
+        for var in var_list:
+            if select_one_panel is None:
+                col_list = [var + '_' + i for i in self.all_panels]
+            else:
+                col_list = [var + '_' + select_one_panel]
+            df2 = self.df.copy()
+            df2 = df2[col_list]
+            print('selected the following columns for the df ', df2.shape)
+            print(col_list)
+            dfs.append(df2)
+        return dfs
+
+    # this will create a list of dataframes that each df contains only var_list to that month
+    def _select_dfs_per_month(self, var_list):
+        """
+        return a dictionary of dataframes that each df consists a list of variables in the same month, the key is the month
+        """
+        print('----------- _select_dfs_per_month ----------------')
+        dfs = {}
+        print(var_list)
+        for i in self.all_panels:
+            if i != self.initial_panel:
+                col_list = [var + '_' + i for var in var_list]
+            else:
+                col_list = [var + '_' + i for var in var_list]
+                col_list.remove('merge_' + i)
+            df2 = self.df.copy()
+            print(col_list)
+            df2 = df2[col_list]
+            print('selected the following columns for the df ', df2.shape)
+            dfs[i] = df2
+        return dfs
+
+    def _create_mode_column(self, var):
+        """
+        By default, the mode is created using self.all_panels of the var
+        """
+        print('--------------------- _create_mode_column -------------------')
+        self.df = self.df.fillna(value=np.nan)
+        df = self.df.copy(deep=True)
+        col_list = [var + '_' + i for i in self.all_panels]
+        df2 = df[col_list]
+        self.df['mode_' + var] = df2.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
+        print('the unqiue values in the mode of ' + var)
+        print(self.df['mode_' + var].value_counts(dropna=False))
+        return self.df
+
+    def _create_mean_column(self, var):
+        """
+        By default, the mean is created using self.all_panels of the var
+        """
+        print('-------------------- _create_mean_column ----------------------')
+        self.df = self.df.fillna(value=np.nan)
+        df = self.df.copy(deep=True)
+        col_list = [var + '_' + i for i in self.all_panels]
+        df2 = df[col_list]
+        self.df['mean_' + var] = df2.mean(axis=1, skipna=True)
+        print('the summary statistics of the month average of ' + var)
+        print(self.df['mean_' + var].describe())
+        return self.df
+
+    def _impute_missing_by_previous_nonmissing_column(self, var, the_missing_month):
+        """
+        This is used in imputing pricing variables that suppose to change over time and may follow a trend.
+        For the_missing_month, we will seek its closest non-missing month back in time (NOT forward in time).
+        the_missing_month should be one of self.all_panels, eg. '202107'
+        suffix is the newly created column's suffix
+        """
+        print('----------- _impute_missing_by_previous_nonmissing_column ----------------')
+        self.df = self.df.fillna(value=np.nan)
+        # ------ get all the previous months and sort it from the closest (to today) to the furthest (to today) --------------
+        the_missing_month = datetime.strptime(the_missing_month, "%Y%m")
+        all_the_previous_months = []
+        for p in self.all_panels:
+            month = datetime.strptime(p, "%Y%m")
+            if month < the_missing_month:
+                all_the_previous_months.append(month)
+        backward_previous_months = sorted(all_the_previous_months, reverse=True)
+        backward_previous_months = [datetime.strftime(i, "%Y%m") for i in backward_previous_months]
+        # ----- iterate month data and stop until you find a non-missing value -----------
+        for i in range(len(backward_previous_months)):
+            if i == 0:
+                self.df['imputed_' + var + '_' + the_missing_month] = self.df.apply(
+                    lambda row: row[var + '_' + backward_previous_months[i]]\
+                        if row[var + '_' + backward_previous_months[i]].notnull() else np.nan, axis=1)
+            else:
+                self.df['imputed_' + var + '_' + the_missing_month] = self.df.apply(
+                    lambda row: row[var + '_' + backward_previous_months[i]]\
+                        if (row[var + '_' + backward_previous_months[i]].notnull() and row['imputed_' + var + '_' + the_missing_month].isnull())\
+                        else row['imputed_' + var + '_' + the_missing_month], axis=1)
+        return self.df
+
+    def _remove_stopwords(self, text):
+        text = text.lower()
+        tokens_without_sw = [word for word in text.split() if word not in stopwords]
+        filtered_sentence = (" ").join(tokens_without_sw)
+        return filtered_sentence
+
+    # count the rows that are all nan in each month
+    def count_missing(self,
+                      time_variant_var_list,
+                      before_imputation,
+                      balanced,
+                      time_invariant_var_list=None):
+        print('----------------------- count_missing -------------------------')
+        print('Time Variant Variables: ')
+        print(time_variant_var_list)
+        self.df = self.df.fillna(value=np.nan)
+        dfs = self._select_dfs_per_month(var_list=time_variant_var_list)
+        # Initialize data to Dicts of series.
+        d_keys = copy.deepcopy(time_variant_var_list)
+        if time_invariant_var_list is not None:
+            d_keys = d_keys + time_invariant_var_list
+        d_keys = ['rows_missing_in_' + i for i in d_keys]
+        d_keys.insert(0, 'rows_original')  # insert 10 at 4th index
+        d_keys.insert(1, 'rows_missing_in_any')
+        d_keys.insert(2, 'rows_missing_in_all')
+        summary_df = pd.DataFrame(
+            columns=d_keys,
+            index=list(dfs.keys()) + ['time_invariant'])
+        for month, df in dfs.items():
+            print(month, ' before deleting nans : ', df.shape)
+            rows_original = df.shape[0]
+            summary_df.at[month, 'rows_original'] = rows_original
+            cols = df.columns.values.tolist()
+            df2 = df.dropna(axis=0, how='any', subset=cols)
+            summary_df.at[month, 'rows_missing_in_any'] = rows_original - df2.shape[0]
+            df2 = df.dropna(axis=0, how='all', subset=cols)
+            summary_df.at[month, 'rows_missing_in_all'] = rows_original - df2.shape[0]
+            for v in cols:
+                df2 = df.dropna(axis=0, how='all', subset=[v])
+                v_col = v.replace('_' + month, '')
+                v_col = 'rows_missing_in_' + v_col
+                summary_df.at[month, v_col] = rows_original - df2.shape[0]
+            if time_invariant_var_list is not None:
+                for v in time_invariant_var_list:
+                    dfc = self.df.copy()
+                    df3 = dfc.dropna(axis=0, how='all', subset=[v])
+                    v_col = 'rows_missing_in_' + v
+                    summary_df.at['time_invariant', v_col] = rows_original - df3.shape[0]
+        # -------------------- save the summary dataframe -----------------------------
+        filename = self.initial_panel + '_count_missing_by_month_and_in_each_var.csv'
+        if before_imputation is True:
+            if balanced is True:
+                q = self.missing_stats_path / 'before_imputation' / 'balanced'/ filename
+            else:
+                q = self.missing_stats_path / 'before_imputation' / 'unbalanced' / filename
+        else:
+            if balanced is True:
+                q = self.missing_stats_path / 'after_imputation' / 'balanced' / filename
+            else:
+                q = self.missing_stats_path / 'after_imputation' / 'unbalanced' / filename
+        summary_df.to_csv(q)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
     def _checking_consecutive_values(self, df, var, check_nan, check_key_value, new_col):
+        """
+        this is a helper function where the input is a dataframe containing only the variable across all months in the panel
+        var is the variable name
+        if check_nan is true, we are checking after a period the variable is all nans till the end of the panel
+        check_key_value is a string or a number that we want to know from which period the row has this key value till the end of the panel
+        we are checking this by iterate through the first month to the last month
+        for example, if app id 1234 is completely missing in period 6 (merge_6 == left), and has some data in period 7 (merge_7 = both),
+        and completely missing in period 8, 9, 10 (merge_8,9,10 == left) till the last period
+        then we measure app id 1234 as death starting from period 8. However if an app is only missing for one period and has data till the end,
+        it does not count towards dead apps.
+        after check the condition for this backward period, let us check the total number so far,
+        if the total figure equals to the number of periods we have checked starting from the last period
+        that means the apps has been dead since this point onward till the end of the panel
+        Then we could update the new_col with this period's datetime string.
+        Then the loop will go one period earlier in time, if that period satisfied, then new_col will update to that period's datetime string.
+        however if that period does not satisfy, then the total figure will be less than the number of periods we've checked,
+        we will keep the new_col unchaged (it is either in the period it satisfied or 0 initial condition)
+        Even if any of the earlier period satisfy again, the total figure will not equal to the number of periods we've checked,
+        so the new_col will not be updated.
+        """
         print('----------- _checking_consecutive_values ----------------')
         # sort the all panels from the most recent to the oldest
         # I do not use self.all_panels because not all variables exist for each panel (merge_month) does not exist for the first month
@@ -103,19 +539,6 @@ class pre_processing():
                     pass
                 else:
                     df['conditions_satisfied'] = df.apply(lambda row: 1 if row[v] == check_key_value else 0, axis=1)
-            # for example, if app id 1234 is completely missing in period 6 (merge_6 == left), and has some data in period 7 (merge_7 = both),
-            # and completely missing in period 8, 9, 10 (merge_8,9,10 == left) till the last period
-            # then we measure app id 1234 as death starting from period 8. However if an app is only missing for one period and has data till the end,
-            # it does not count towards dead apps.
-            # after check the condition for this backward period, let us check the total number so far,
-            # if the total figure equals to the number of periods we have checked starting from the last period
-            # that means the apps has been dead since this point onward till the end of the panel
-            # Then we could update the new_col with this period's datetime string.
-            # Then the loop will go one period earlier in time, if that period satisfied, then new_col will update to that period's datetime string.
-            # however if that period does not satisfy, then the total figure will be less than the number of periods we've checked,
-            # we will keep the new_col unchaged (it is either in the period it satisfied or 0 initial condition)
-            # Even if any of the earlier period satisfy again, the total figure will not equal to the number of periods we've checked,
-            # so the new_col will not be updated.
             df[new_col] = df.apply(lambda row: backward_month[i] if row['conditions_satisfied'] == i+1 else row[new_col], axis=1)
         print('the unqiue values in conditions_satisfied')
         print(df['conditions_satisfied'].value_counts(dropna=False))
@@ -123,6 +546,78 @@ class pre_processing():
         print(df[new_col].value_counts(dropna=False))
         return df
 
+    # ====================== The function below cleans and prepares the app description columns for NLP =============================
+    def clean_and_prepare_app_description(self):
+        """
+        # _________________ process text __________________________________________________
+        # Adding ^ in []  excludes any character in
+        # the set. Here, [^ab5] it matches characters that are
+        # not a, b, or 5.
+        """
+        print('----------- clean_and_prepare_app_description ----------------')
+        self.df = self.df.fillna(value=np.nan)
+        self.df = self._create_mode_column(var=self.tcn)
+        self.df[self.tcn + 'ModeClean'] = self.df[self.tcn + 'Mode']
+        self.df[self.tcn + 'ModeClean'] = self.df[self.tcn + 'ModeClean'].apply(
+            lambda x: re.sub(r'[^\w\s]', '', x)).apply(
+            lambda x: re.sub(r'[0-9]', '', x)).apply(
+            lambda x: self._remove_stopwords(x))
+        print(self.initial_panel, ' finished cleaning ', self.tcn + 'ModeClean')
+        print()
+        # ---------- save a sample of app description text, their mode and their cleaned mode -------------------------
+        cols = [self.tcn + '_' + i for i in self.all_panels]
+        cols.extend([self.tcn + 'Mode', self.tcn + 'ModeClean'])
+        df2 = self.df.copy(deep=True)
+        df3 = df2[cols]
+        df3 = df3.sample(n=20)
+        filename = self.initial_panel + '_cleaned_mode_' + self.tcn + '.csv'
+        q = self.check_app_descriptions / filename
+        df3.to_csv(q)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    # ================= The function below impute the list of variables by their pre-defined imputation methods =======================
+    def impute_missing(self, imputation_var_methods_dict):
+        """
+        :param imputation_var_methods_dict: A dictionary with variable name as key and imputation methods as value ('mode', 'mean' and 'previous')
+        :return: it will update self.df with the imputed columns
+        """
+        print('------------------------- impute_missing -------------------------------------')
+        self.df = self.df.fillna(value=np.nan)
+        for var, method in imputation_var_methods_dict.items():
+            if method == 'mean':
+                self.df = self._create_mean_column(var=var)
+            if method == 'mode':
+                self.df = self._create_mode_column(var=var)
+            for p in self.all_panels:
+                print('BEFORE IMPUTATION total missing ' + var + '----' + p)
+                print(self.df[var + '_' + p].isna().sum())
+                print('Start imputing ' + var + ' with ' + method)
+                if method == 'previous':
+                    self.df = self._impute_missing_by_previous_nonmissing_column(
+                        var=var, the_missing_month=p)
+                if method == 'mean':
+                    self.df['imputed_' + var + '_' + p] = self.df.apply(
+                        lambda row: row['mean_'+var]\
+                            if row[var + '_' + p].isnull() else row[var + '_' + p])
+                if method == 'mode':
+                    self.df['imputed_' + var + '_' + p] = self.df.apply(
+                        lambda row: row['mode_'+var]\
+                            if row[var + '_' + p].isnull() else row[var + '_' + p])
+                print('AFTER IMPUTATION USING ' + method + ' METHOD total missing ' + var + '----' + p)
+                print(self.df['imputed_' + var + '_' + p].isna().sum())
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              appids_to_remove=self.appids_to_remove,
+                              appids_with_changing_developers=self.appids_with_changing_developers)
+
+    # =========== The set of functions below create time variant variables that exist only in the unbalanced panel ============
     # ---UNBALANCED PANEL--- replace merged_month columns with noisy_death -----------------------------------------------------------------
     def unbalanced_panel_create_noisy_death_dummy(self):
         print('----------- unbalanced_panel_create_noisy_death_dummy ----------------')
@@ -150,7 +645,8 @@ class pre_processing():
                     lambda row: 1 if row['app_death_month'] == self.all_panels[i] else row['noisy_death_' + self.all_panels[i-1]], axis=1)
             print(df3['noisy_death_' + self.all_panels[i]].value_counts(dropna=False))
         self.df = df3
-        print(self.df.head())
+        ls = ['noisy_death_' + i for i in self.all_panels]
+        print(self.df[ls].head())
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -160,39 +656,24 @@ class pre_processing():
 
     # ---UNBALANCED PANEL--- create dummies indicating the app has transitioned from market follower to market leader ---------------------------
     # according to our definition of market leaders and followers, they are either switched to a top firm or minInstalls increase over a threshhold of
-    def unbalanced_panel_create_TRANSITION_dummy(self):
+    def unbalanced_panel_create_TRANSITION_tier1_minInstalls(self):
+        # according to the definition of tier1 minInstalls sample (>= 1.000000e+07), we will create variable  assign the app 1 if in
         print('----------- unbalanced_panel_create_TRANSITION_dummy ----------------')
-        print(var_list)
         self.df = self.df.fillna(value=np.nan)
-        dfs = self.select_dfs_per_month(var_list=var_list)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    # ---UNBALANCED PANEL--- create dummies indicating the app has changed firms (Merger and Acquisition) ----------------------------------
-    def unbalanced_panel_create_MA_dummy(self):
-        print('----------- unbalanced_panel_create_MA_dummy ----------------')
-        print(var_list)
-        self.df = self.df.fillna(value=np.nan)
-        dfs = self.select_dfs_per_month(var_list=var_list)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    # #######################################################################################################################################
-
-    def open_imputed_missing_df(self):
-        f_name = self.initial_panel + '_imputed_missing.pickle'
-        q = pre_processing.panel_path / f_name
-        with open(q, 'rb') as f:
-            df = pickle.load(f)
+        df = self.df.copy()
+        # the new variables is a panel variables transition to tier 1 minInstalls
+        for i in range(len(self.all_panels)):
+            if i == 0:
+                df['T_TO_TIER1_minInstalls_' + self.all_panels[i]] = 0
+            else:
+                df['T_TO_TIER1_minInstalls_' + self.all_panels[i]] = df.apply(
+                    lambda row: 1\
+                        if (row['minInstalls_' + self.all_panels[i-1]] < 1.000000e+07 and row['minInstalls_' + self.all_panels[i]] >= 1.000000e+07)\
+                        else row['T_TO_TIER1_minInstalls_' + self.all_panels[i-1]], axis=1)
+            print(df['T_TO_TIER1_minInstalls_' + self.all_panels[i]].value_counts(dropna=False))
         self.df = df
+        ls = ['T_TO_TIER1_minInstalls_' + i for i in self.all_panels]
+        print(self.df[ls].head())
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -200,170 +681,7 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    # create a list of dataframes that each df consists of the same variable across all months/or one month
-    def select_dfs_per_var(self, var_list, select_one_panel=None):
-        print('----------- select_dfs_per_var ----------------')
-        dfs = []
-        for var in var_list:
-            if select_one_panel is None:
-                col_list = [var + '_' + i for i in self.all_panels]
-            else:
-                col_list = [var + '_' + select_one_panel]
-            df2 = self.df.copy()
-            df2 = df2[col_list]
-            print('selected the following columns for the df ', df2.shape)
-            print(col_list)
-            dfs.append(df2)
-        return dfs
-
-    # this will create a list of dataframes that each df contains only var_list to that month
-    def select_dfs_per_month(self, var_list):
-        print('----------- select_dfs_per_month ----------------')
-        dfs = {}
-        print(var_list)
-        for i in self.all_panels:
-            if i != self.initial_panel:
-                col_list = [var + '_' + i for var in var_list]
-            else:
-                col_list = [var + '_' + i for var in var_list]
-                col_list.remove('merge_'+i)
-            df2 = self.df.copy()
-            print(col_list)
-            df2 = df2[col_list]
-            print('selected the following columns for the df ', df2.shape)
-            dfs[i] = df2
-        return dfs
-
-    # count the rows that are all nan in each month
-    def count_missing_per_month(self, var_list):
-        print('----------- count_missing_per_month ----------------')
-        print(var_list)
-        self.df = self.df.fillna(value=np.nan)
-        dfs = self.select_dfs_per_month(var_list=var_list)
-        # Initialize data to Dicts of series.
-        d_keys = copy.deepcopy(var_list)
-        d_keys = ['rows_missing_in_' + i for i in d_keys]
-        d_keys.insert(0, 'rows_original') # insert 10 at 4th index
-        d_keys.insert(1, 'rows_missing_in_any')
-        d_keys.insert(2, 'rows_missing_in_all')
-        summary_df = pd.DataFrame(
-                    columns = d_keys,
-                    index = list(dfs.keys()))
-        for month, df in dfs.items():
-            print(month, ' before deleting nans : ', df.shape)
-            rows_original = df.shape[0]
-            summary_df.at[month, 'rows_original'] = rows_original
-            if month == self.initial_panel:
-                cols = df.columns.values.tolist()  # initial month does not have the merge variable
-            else:
-                cols = df.columns.values.tolist()
-                cols.remove('merge_' + month) # remove will not return a list
-            df2 = df.dropna(axis=0, how='any', subset=cols)
-            summary_df.at[month, 'rows_missing_in_any'] = rows_original - df2.shape[0]
-            df2 = df.dropna(axis=0, how='all', subset=cols)
-            summary_df.at[month, 'rows_missing_in_all'] = rows_original - df2.shape[0]
-            for v in cols:
-                df2 = df.dropna(axis=0, how='all', subset=[v])
-                v_col = v.replace('_'+month, '')
-                v_col = 'rows_missing_in_' + v_col
-                summary_df.at[month, v_col] = rows_original - df2.shape[0]
-        filename = self.initial_panel + '_count_missing_by_month_and_in_each_var.csv'
-        q = self.missing_stats_path / 'before_imputation' / filename
-        summary_df.to_csv(q)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def remove_rows_with_missing_in_all_text_cols(self):
-        """
-        do this before impute_text_col
-        """
-        df2 = self.df.copy(deep=True)
-        cols = [self.tcn + '_' + item for item in self.all_panels]
-        text_df = df2[cols]
-        appids_to_remove = self.find_rows_contain_all_missing(df=text_df)
-        print(self.initial_panel, ' before removing rows with all missing in ', self.tcn, ' has shape : ', self.df.shape)
-        self.df = self.df.drop(appids_to_remove, axis=0)
-        print(self.initial_panel, 'after removing rows with all missing in ', self.tcn, ' has shape : ', self.df.shape)
-        print()
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def mode_text_col(self):
-        """
-        impute the missing panels using its non-missing panels
-        """
-        cols = [self.tcn + '_' + item for item in self.all_panels]
-        for j in cols:
-            self.df[j] = self.df[j].fillna('')
-        df2 = self.df.copy(deep=True)
-        df3 = df2[cols]
-        df3[self.tcn + 'Mode'] = df3.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
-        text_col = df3[self.tcn + 'Mode']
-        null_data = text_col[text_col.isnull()]
-        print(self.initial_panel, ' IMPUTED ', self.tcn, ' using Mode. ')
-        if len(null_data) == 0:
-            print('NO MISSING remaining in mode text col.')
-        self.df = self.df.join(df3[self.tcn + 'Mode'], how='inner')
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def remove_stopwords(self, text):
-        text = text.lower()
-        tokens_without_sw = [word for word in text.split() if word not in pre_processing.stoplist]
-        filtered_sentence = (" ").join(tokens_without_sw)
-        return filtered_sentence
-
-    def clean_text_col(self):  # use take_out_the_text_colume_from_merged_df(open_file_func, initial_panel, text_column_name)
-        """
-        # _________________ process text __________________________________________________
-        # Adding ^ in []  excludes any character in
-        # the set. Here, [^ab5] it matches characters that are
-        # not a, b, or 5.
-        """
-        self.df[self.tcn + 'ModeClean'] = self.df[self.tcn + 'Mode']
-        self.df[self.tcn + 'ModeClean'] = self.df[self.tcn + 'ModeClean'].apply(
-            lambda x: re.sub(r'[^\w\s]', '', x)).apply(
-            lambda x: re.sub(r'[0-9]', '', x)).apply(
-            lambda x: self.remove_stopwords(x))
-        print(self.initial_panel, ' finished cleaning ', self.tcn + 'ModeClean')
-        print()
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def check_cleaned_mode_text_col(self):
-        cols = [self.tcn + '_' + item for item in self.all_panels]
-        cols.extend([self.tcn + 'Mode', self.tcn + 'ModeClean'])
-        df2 = self.df.copy(deep=True)
-        df3 = df2[cols]
-        df3 = df3.sample(n=50)
-        # ---------- save ------------------------------------------------------
-        filename = self.initial_panel + '_cleaned_mode_' + self.tcn + '.csv'
-        q = pre_processing.panel_path / 'check_text_cols' / filename
-        df3.to_csv(q)
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def format_text_for_developer(self, text):
+    def _format_text_for_developer(self, text):
         if text is not None:
             result_text = ''.join(c.lower() for c in text if not c.isspace())  # remove spaces
             punc = '''!()-[]{};:'"\, <>./?@#$%^&*_~+'''  # remove functuations
@@ -380,28 +698,35 @@ class pre_processing():
             res2 = np.nan
         return res2
 
-    def create_time_invariant_developer_col(self):
+    # ----- for both balanced and unbalanced panel -----------------------------------------------------------------------------------------------
+    def create_time_variant_top_firm_dummy(self):
+        # this is a time variant variable, because we want to see which apps transitioned from non-top firm to top firm
+        # or which app has gone through merger and acquisition
+        # in the balanced panel, we will use the mode of time_variant_top_firm_dummy to create time_invariant_top_firm_dummy
+        """
+        https://www.forbes.com/top-digital-companies/list/#tab:rank
+        :return:
+        """
+        print('----------- create_time_variant_top_firm_dummy ----------------')
+        self.df = self.df.fillna(value=np.nan)
+        # clean the developer text column
         for j in self.all_panels:
-            self.df['developerClean_' + j] = self.df['developer_' + j].apply(lambda x: self.format_text_for_developer(x))
-        df2 = self.select_the_var(var='developerClean')
-        appids_with_time_invar_developer = self.find_rows_contain_identical_value_for_nonmissings(df=df2)
-        self.df['developerTimeInvar'] = False
-        # use the mode developer for those apps that have identical developer value throughout all panels
-        df2 = self.df.copy(deep=True)
-        devs = ['developer_' + j for j in self.all_panels]
-        df2 = df2[devs]
-        self.df['developerMode'] = df2.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
-        self.df['developerTimeInvar'].loc[appids_with_time_invar_developer] = self.df['developerMode']
-        # ----------- stats --------------------------------------------------------------------
-        df2 = self.df.copy(deep=True)
-        print(self.initial_panel, ' shape : ', df2.shape)
-        df3 = df2.loc[df2['developerTimeInvar'] != False]
-        print(self.initial_panel, ' appids with time-invariant developer for ALL (none missing) panels : ',
-              len(df3.index))
-        df3 = df2.loc[df2['developerTimeInvar'] == False]
-        print(self.initial_panel, ' appids changed developer throughout ALL (none missing) panels : ',
-              len(df3.index))
-        self.appids_with_changing_developers = df3.index.tolist()
+            self.df['developerClean_' + j] = self.df['developer_' + j].apply(
+                lambda x: self._format_text_for_developer(x))
+        # create top firm dummy based on 'developerClean_'
+        for p in self.all_panels:
+            self.df['top_firm_'+p] = 0
+            for i in tqdm(range(len(self.top_digital_firms_substring))):
+                for j, row in self.df.iterrows():
+                    if self.top_digital_firms_substring[i] in row['developerClean_'+p]:
+                        self.df.at[j, 'top_firm_'+p] = 1
+            for i in tqdm(range(len(self.top_digital_firms_exactly_match))):
+                for j, row in self.df.iterrows():
+                    if self.top_digital_firms_exactly_match[i] == row['developerClean_'+p]:
+                        self.df.at[j, 'top_firm_'+p] = 1
+        # ------------------ print check -----------------------------------------
+        for p in self.all_panels:
+            print(self.df['top_firm_'+p].value_counts(dropna=False))
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -409,17 +734,21 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    def compare_original_and_imputed_developer(self):
-        df2 = self.df.copy(deep=True)
-        developer = ['developer_' + j for j in self.all_panels]
-        devclean = ['developerClean_' + j for j in self.all_panels]
-        developer.extend(devclean)
-        developer.extend(['developerTimeInvar', 'developerMode'])
-        df3 = df2[developer]
-        # ---------- save ------------------------------------------------------
-        filename = self.initial_panel + '_developer_names_compare.csv'
-        q = pre_processing.panel_path / 'check_imputed' / filename
-        df3.to_csv(q)
+    def create_time_invariant_top_firm_dummy(self):
+        print('---------------- create_time_invariant_top_firm_dummy ---------------------')
+        self.df = self.df.fillna(value=np.nan)
+        # clean the developer text column
+        for j in self.all_panels:
+            self.df['developerClean_' + j] = self.df['developer_' + j].apply(
+                lambda x: self._format_text_for_developer(x))
+        self.df = self._create_mode_column(var='developerClean')
+        # create top firm dummy based on 'developerMode'
+        self.df['top_firm'] = self.df.apply(
+            lambda row: 1\
+                if (process.extractOne(row['mode_developerClean'], self.top_digital_firms_substring, score_cutoff=80)\
+                    or row['mode_developerClean'] in self.top_digital_firms_exactly_match)\
+                else 0)
+        print(self.df['top_firm'].value_counts(dropna=False))
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -427,138 +756,36 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    def select_imputation_panels(self, df, method, current_panel):
+    def unbalanced_panel_create_TRANSITION_top_firm_and_MA_dummy(self):
         """
-        :param df: input dataframe is a deep copy of self.select_the_var(var=var)
-        :param method: all panels before, all panels before and after
-        :param current_panel: the time where you decide which panel are before and after in self.all_panels
-        :return: the dataframe after selecting the useful panels
+        merger and acquisition dummy is 1 in a period if the app's developerClean is different from the previous one
         """
-        df2 = df.copy(deep=True)
-        the_panel = datetime.strptime(current_panel, "%Y%m")
-        if method == 'all panels before and after':
-            return df2
-        elif method == 'all panels before':
-            before_panels = []
-            for i in self.all_panels:
-                panel = datetime.strptime(i, "%Y%m")
-                if panel <= the_panel:
-                    before_panels.append(i)
-            cols_to_keep = []
-            for i in df2.columns:
-                z = i.split('_')
-                if z[1] in before_panels:
-                    cols_to_keep.append(i)
-            return df2[cols_to_keep]
-
-    def find_rows_contain_identical_value_for_nonmissings(self, df):
-        """
-        :return: appids that have identical values for all its non-missing columns
-        """
-        df2 = df.copy(deep=True)
-        # ---------- strategy for rows contains no missing values --------------------------
-        appids_no_missing = self.find_rows_contain_no_missing(df=df2)
-        df3 = df2.loc[appids_no_missing]
-        # you need to select the True ones, df3.eq(df3.iloc[:, 0], axis=0).all(1) will return a pandas series with T and F
-        df3 = df3.loc[df3.eq(df3.iloc[:, 0], axis=0).all(1)]
-        appids_identical = df3.index.tolist()
-        # ---------- strategy for rows contains at least one missing value -----------------
-        appids_any_missing = self.find_rows_contain_any_missing(df=df2)
-        df4 = df2.loc[appids_any_missing]
-        df5 = df4.T
-        appids_part2 = []
-        # now each column name is appid
-        for i in df5.columns:
-            df6 = df5[i].dropna()
-            # if empty it means the entire row contains ALL missings
-            if not df6.empty:
-                if len(set(df6.tolist())) == 1:
-                    appids_part2.append(i)
-        appids_identical.extend(appids_part2)
-        return appids_identical
-
-    def implement_imputation_methods(self, df, method):
-        """
-        :param df: The dataframe is the output of self.select_imputation_panels()
-        :return: imputed column (a pandas series), you need to use this column to fill missing in the original columns
-        """
-        df2 = df.copy(deep=True)
-        if method == 'mean':
-            df2[method] = df2.mean(axis=1, skipna=True)
-        elif method == 'mode':
-            df2[method] = df2.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
-        elif method == 'mode if none-missing are all the same':
-            appids = self.find_rows_contain_identical_value_for_nonmissings(df=df2)
-            df2['mode'] = df2.mode(axis=1, numeric_only=False, dropna=True).iloc[:, 0]
-            df2[method] = None
-            # assign 'mode if none-missing are all the same' to 'mode' when 'nonmissings_are_same' is True
-            df2[method].loc[appids] = df2['mode']
-        elif method == 'previous':
-            # because you are imputing the last column in 'all panels before' using the second last column
-            reversed_columns = df2.columns[::-1]
-            df2[method] = df2[reversed_columns[0]]
-            # iterratively fill na in df[method] with previous panels, starting from the most recent previous
-            for i in range(1, len(reversed_columns)):
-                df2[method] = df2[method].fillna(df2[reversed_columns[i]])
-        return df2[method]
-
-    def impute_missing(self, var):
-        df3 = self.select_the_var(var=var)
-        cols_to_drop_later = df3.columns.tolist()
-        if var in ['minInstalls', 'price', 'updated', 'free']:
-            for i in self.all_panels:
-                df4 = self.select_imputation_panels(df=df3,
-                                                    method='all panels before',
-                                                    current_panel=i)
-                if var in ['minInstalls', 'price', 'updated']:
-                    the_imputed_panel = self.implement_imputation_methods(df=df4,
-                                                                          method='previous')
-                else:
-                    the_imputed_panel = self.implement_imputation_methods(df=df4,
-                                                                          method='mode if none-missing are all the same')
-                df3['Imputed' + var + '_' + i] = df3[var + '_' + i]
-                df3['Imputed' + var + '_' + i] = df3['Imputed' + var + '_' + i].fillna(the_imputed_panel)
-        elif var in ['score', 'reviews', 'ratings', 'released', 'contentRating', 'genreId', 'size', 'containsAds', 'offersIAP']:
-            for i in self.all_panels:
-                df4 = self.select_imputation_panels(df=df3,
-                                                    method='all panels before and after',
-                                                    current_panel=i)
-                if var in ['score', 'reviews', 'ratings']:
-                    the_imputed_panel = self.implement_imputation_methods(df=df4,
-                                                                          method='mean')
-                elif var in ['released', 'contentRating', 'genreId', 'size']:
-                    the_imputed_panel = self.implement_imputation_methods(df=df4,
-                                                                          method='mode')
-                else:
-                    the_imputed_panel = self.implement_imputation_methods(df=df4,
-                                                                          method='mode if none-missing are all the same')
-                df3['Imputed' + var + '_' + i] = df3[var + '_' + i]
-                df3['Imputed' + var + '_' + i] = df3['Imputed' + var + '_' + i].fillna(the_imputed_panel)
-        df3.drop(cols_to_drop_later, axis=1, inplace=True)
-        print('finished imputing missing for variable : ', var)
-        return df3
-
-    def impute_list_of_vars(self, balanced, list_of_vars):
-        """
-        Since I have save in this funciton, make sure to run text column imputation and developer column
-        before this step
-        """
-        imputed_dfs = []
-        for i in list_of_vars:
-            df3 = self.impute_missing(var=i)
-            imputed_dfs.append(df3)
-        combined_imputed = functools.reduce(lambda a, b: a.join(b, how='inner'), imputed_dfs)
-        self.df = self.df.join(combined_imputed, how='inner')
-        # -------------------- save -----------------------------------
-        if balanced is True:
-            filename = self.initial_panel + '_balanced_imputed_missing.pickle'
-        else:
-            filename = self.initial_panel + '_unbalanced_imputed_missing.pickle'
-        q = pre_processing.panel_path / filename
-        pickle.dump(self.df, open(q, 'wb'))
-        print('finished imputing missing for', self.initial_panel, 'dataset')
-        print()
-        print()
+        print('------------------ unbalanced_panel_create_TRANSITION_top_firm ----------------')
+        self.df = self.df.fillna(value=np.nan)
+        df = self.df.copy()
+        # the new variables is a panel variables transition to tier 1 minInstalls
+        for i in range(len(self.all_panels)):
+            if i == 0:
+                df['T_TO_top_firm_' + self.all_panels[i]] = 0
+                df['MA_' + self.all_panels[i]] = 0
+            else:
+                df['T_TO_top_firm_' + self.all_panels[i]] = df.apply(
+                    lambda row: 1\
+                        if (row['top_firm_' + self.all_panels[i-1]] == 0 and row[
+                        'top_firm_' + self.all_panels[i]] == 1)\
+                        else row['T_TO_top_firm_' + self.all_panels[i-1]], axis=1)
+                df['MA_' + self.all_panels[i]] = df.apply(
+                    lambda row: 1\
+                        if row['developerClean_' + self.all_panels[i-1]] != row['developerClean_' + self.all_panels[i]]\
+                        else row['MA_' + self.all_panels[i-1]], axis=1)
+            print(df['T_TO_top_firm_' + self.all_panels[i]].value_counts(dropna=False))
+            print(df['MA_' + self.all_panels[i]].value_counts(dropna=False))
+        # ----------------- assign and show the results -----------------------------
+        self.df = df
+        ls = ['T_TO_top_firm_' + i for i in self.all_panels]
+        print(self.df[ls].head())
+        ls = ['MA_' + i for i in self.all_panels]
+        print(self.df[ls].head())
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -566,117 +793,99 @@ class pre_processing():
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
 
-    def compare_original_and_imputed_var(self, var_list):
-        # ----------- open imputed dataframe ----------------------------------
-        f_name = self.initial_panel + '_imputed_missing.pickle'
-        q = pre_processing.panel_path / f_name
-        with open(q, 'rb') as f:
-            df = pickle.load(f)
-        df2 = df.copy(deep=True)
-        # ----------- take out rows with missing for easy comparison -----------
-        for var in var_list:
-            varcols = [var + '_' + i for i in self.all_panels]
-            df3 = df2[varcols]
-            df3 = df3[df3.isna().any(axis=1)]
-            appids = df3.index.tolist()
-            imputed_var = ['Imputed' + var + '_' + i for i in self.all_panels]
-            varcols.extend(imputed_var)
-            df4 = df2[varcols]
-            df4 = df4.loc[appids]
-            # ---------- save ------------------------------------------------------
-            filename = self.initial_panel + '_' + var + '_compare_missing_with_imputed.csv'
-            q = pre_processing.panel_path / 'check_imputed' / filename
-            df4.to_csv(q)
+    def create_sub_sample_dummies(self):
+        """
+        This way you do not need to seperately save data as sub-samples
+        """
+        print('----------------------------- create_sub_sample_dummies ----------------------------')
+        self.df = self.df.fillna(value=np.nan)
+        # ------------------------- minInstalls sub-samples -----------------------------------------
+        self.df['Tier1'] = 0
+        self.df['Tier1'].loc[self.df['imputed_minInstalls_'+self.all_panels[-1]] >= 1.000000e+07] = 1
+        self.df['Tier2'] = 0
+        self.df['Tier2'].loc[(self.df['imputed_minInstalls_' + self.all_panels[-1]] < 1.000000e+07) &
+                             (self.df['imputed_minInstalls_' + self.all_panels[-1]] >= 1.000000e+05)] = 1
+        self.df['Tier3'] = 0
+        self.df['Tier3'].loc[self.df['imputed_minInstalls_' + self.all_panels[-1]] < 1.000000e+05] = 1
+        # ------------------------- top firm sub-samples --------------------------------------------
+        # this has been done in self.create_time_invariant_top_firm_dummy, var_name is top_firm
+        # ------------------------- create market_leader --------------------------------------------
+        self.df['market_leader'] = self.df.apply(lambda row:1\
+                                                    if (row['Tier1']==1 or row['top_firm']==1)\
+                                                    else 0, axis=1)
+        # create categorical sub-samples, for nested market-leader categorical sub-samples, use two dummies to filter
+        self.df = self._create_mode_column(var='imputed_genreId')
+        app_categories = self.df['mode_imputed_genreId'].unique().tolist()
+        print(len(app_categories), app_categories)
+        self.df['FULL_GAME'] = self.df.apply(lambda row: 1 if 'GAME' in row['mode_imputed_genreId'] else 0, axis=1)
+        self.df['FULL_BUSINESS'] = self.df.apply(lambda row: 1\
+                                                        if row['mode_imputed_genreId'] in [  'FINANCE',
+                                                                                             'EDUCATION',
+                                                                                             'NEWS_AND_MAGAZINES',
+                                                                                             'BUSINESS',
+                                                                                             'PRODUCTIVITY',
+                                                                                             'TOOLS',
+                                                                                             'BOOKS_AND_REFERENCE',
+                                                                                             'LIBRARIES_AND_DEMO'] else 0, axis=1)
+        self.df['FULL_SOCIAL'] = self.df.apply(lambda row: 1\
+                                                    if row['mode_imputed_genreId'] in [  'COMMUNICATION',
+                                                                                         'FOOD_AND_DRINK',
+                                                                                         'SOCIAL',
+                                                                                         'SHOPPING',
+                                                                                         'DATING',
+                                                                                         'EVENTS',
+                                                                                         'WEATHER',
+                                                                                         'MAPS_AND_NAVIGATION',
+                                                                                         'AUTO_AND_VEHICLES'] else 0, axis=1)
+        self.df['FULL_LIFESTYLE'] = self.df.apply(lambda row: 1\
+                                                        if row['mode_imputed_genreId'] in [  'PERSONALIZATION',
+                                                                                             'SPORTS',
+                                                                                             'MUSIC_AND_AUDIO',
+                                                                                             'ENTERTAINMENT',
+                                                                                             'TRAVEL_AND_LOCAL',
+                                                                                             'LIFESTYLE',
+                                                                                             'PHOTOGRAPHY',
+                                                                                             'VIDEO_PLAYERS',
+                                                                                             'PARENTING',
+                                                                                             'COMICS',
+                                                                                             'ART_AND_DESIGN',
+                                                                                             'BEAUTY',
+                                                                                             'HOUSE_AND_HOME'] else 0, axis=1)
+        self.df['FULL_MEDICAL'] = self.df.apply(lambda row: 1\
+                                                        if row['mode_imputed_genreId'] in [  'HEALTH_AND_FITNESS',
+                                                                                             'MEDICAL'] else 0, axis=1)
+        # ------------------------- create nested market_leader\follower category sub-samples -------------------------
+        self.df['ML_GAME'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_GAME']==1 and row['market_leader']==1) else 0, axis=1)
+        self.df['ML_BUSINESS'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_BUSINESS']==1 and row['market_leader']==1) else 0, axis=1)
+        self.df['ML_SOCIAL'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_SOCIAL']==1 and row['market_leader']==1) else 0, axis=1)
+        self.df['ML_LIFESTYLE'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_LIFESTYLE']==1 and row['market_leader']==1) else 0, axis=1)
+        self.df['ML_MEDICAL'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_MEDICAL']==1 and row['market_leader']==1) else 0, axis=1)
+        self.df['MF_GAME'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_GAME']==1 and row['market_leader']==0) else 0, axis=1)
+        self.df['MF_BUSINESS'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_BUSINESS']==1 and row['market_leader']==0) else 0, axis=1)
+        self.df['MF_SOCIAL'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_SOCIAL']==1 and row['market_leader']==0) else 0, axis=1)
+        self.df['MF_LIFESTYLE'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_LIFESTYLE']==1 and row['market_leader']==0) else 0, axis=1)
+        self.df['MF_MEDICAL'] = self.df.apply(lambda row: 1\
+                                            if(row['FULL_MEDICAL']==1 and row['market_leader']==0) else 0, axis=1)
+        # --------------------- count and check -----------------------------------------------------
+        vs = [  'Tier1', 'Tier2', 'Tier3', 'market_leader',
+                'FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_LIFESTYLE', 'FULL_MEDICAL',
+                'ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_LIFESTYLE', 'ML_MEDICAL',
+                'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_LIFESTYLE', 'MF_MEDICAL']
+        for v in vs:
+            print('-------------------------- ' + v + ' --------------------------------------')
+            print(self.df[v].value_counts(dropna=False))
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
                               appids_to_remove=self.appids_to_remove,
                               appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def find_rows_contain_no_missing(self, df):
-        """
-        True means contains at least one (or more) missing
-        False in contains_missing means this row has no missing panels
-        """
-        df2 = df.copy(deep=True)
-        df3 = df2.loc[df2.isnull().any(axis=1)]
-        df2['contains_missing'] = False
-        df2['contains_missing'].loc[df3.index] = True
-        df4 = df2.loc[df2['contains_missing'] == False]
-        return df4.index.tolist()
-
-    def find_rows_contain_any_missing(self, df):
-        """
-        True means contains at least one (or more) missing
-        False in contains_missing means this row has no missing panels
-        """
-        df2 = df.copy(deep=True)
-        df3 = df2.loc[df2.isnull().any(axis=1)]
-        df2['contains_missing'] = False
-        df2['contains_missing'].loc[df3.index] = True
-        return df3.index.tolist()
-
-    def find_rows_contain_all_missing(self, df):
-        """
-        True means contains ALL missings in every single panel (no non-missing)
-        False in all_missing means this row contains at least one non-missing value
-        """
-        df2 = df.copy(deep=True)
-        df3 = df2.loc[df2.isnull().all(axis=1)]
-        df2['all_missing'] = False
-        df2['all_missing'].loc[df3.index] = True
-        return df3.index.tolist()
-
-    def find_rows_to_remove_after_imputation(self, var_list):
-        """
-        The var_list contains only imputed variables, remove rows contain any missing
-        """
-        appids_to_remove = []
-        for i in var_list:
-            df = self.select_the_var(var=i)
-            appids = self.find_rows_contain_any_missing(df=df)
-            print(self.initial_panel, ' has : ', len(appids),
-                  ' apps contains at least 1 missing in ', i)
-            appids_to_remove.extend(appids)
-        unique_appids = list(set(appids_to_remove))
-        print(self.initial_panel, ' has in TOTAL : ', len(unique_appids),
-              ' unique apps contains at least 1 missing in any of the imputed variables')
-        print()
-        self.appids_to_remove = unique_appids
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-    def drop_rows(self):
-        """
-        This function is used for deleting variables contain at least one missing after imputation
-        """
-        print(self.initial_panel, ' before remove rows : ', self.df.shape)
-        print('removing ', len(self.appids_to_remove), ' for all imputed variables.')
-        appids = self.appids_to_remove
-        print('removing ', len(self.appids_with_changing_developers), ' for appids that changed developers over time.')
-        appids.extend(self.appids_with_changing_developers)
-        unique_appids = list(set(appids))
-        print('removing in total ', len(unique_appids), ' unique appids.')
-        self.df = self.df.drop(index=unique_appids)
-        print(self.initial_panel, ' after remove rows : ', self.df.shape)
-        print()
-        # -------------------- save -----------------------------------
-        filename = self.initial_panel + '_imputed_and_deleted_missing.pickle'
-        q = pre_processing.panel_path / filename
-        pickle.dump(self.df, open(q, 'wb'))
-        print('finished deleting missing for', self.initial_panel, 'dataset')
-        print()
-        print()
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              appids_to_remove=self.appids_to_remove,
-                              appids_with_changing_developers=self.appids_with_changing_developers)
-
-
