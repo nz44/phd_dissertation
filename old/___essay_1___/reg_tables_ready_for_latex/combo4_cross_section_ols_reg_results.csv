@@ -1,0 +1,100 @@
+,Samples,Independent Vars,"Log Price Adjusted 
+With White Noise",Log Minimum Installs,Offers IAP,Contains Ads
+0,Art And Design,Constant,0.46*,6.3***,0.482**,0.209
+1,Art And Design,Niche,-0.024,-0.08,-0.122,0.094
+2,Comics,Constant,-1.449**,14.43***,1.519**,1.727***
+3,Comics,Niche,-0.088,1.599**,-0.093,0.045
+4,Personalization,Constant,0.384,4.788**,0.108,0.308**
+5,Personalization,Niche,0.122,-0.778,0.159**,-0.061
+6,Photography,Constant,1.321***,5.05***,0.157,-0.371*
+7,Photography,Niche,0.021,0.713,-0.053,0.069
+8,Auto And Vehicles,Constant,0.887,5.361,0.1,0.052
+9,Auto And Vehicles,Niche,0.421**,-0.166,0.138,-0.071
+10,Game Role Playing,Constant,-1.807***,18.16***,1.45***,1.399***
+11,Game Role Playing,Niche,-0.164,0.832**,0.04,0.23***
+12,Game Action,Constant,-1.002,15.643***,-0.329,1.414*
+13,Game Action,Niche,-0.405,1.876,-0.095,0.335
+14,Game Racing,Constant,0.792***,4.755***,0.256,0.393**
+15,Game Racing,Niche,-0.17*,0.875,0.054,0.185**
+16,Travel And Local,Constant,0.626**,6.627***,0.219*,0.405***
+17,Travel And Local,Niche,0.187,-0.131,0.032,0.138***
+18,Game Adventure,Constant,-0.799,17.535***,0.585,0.74*
+19,Game Adventure,Niche,0.039,0.11,-0.122,0.031
+20,Social,Constant,1.049***,3.421**,0.023,-0.21
+21,Social,Niche,0.224***,-0.684,-0.025,0.073
+22,Game Simulation,Constant,0.526,9.178***,0.645,0.665
+23,Game Simulation,Niche,0.118,0.032,0.071,-0.021
+24,Lifestyle,Constant,0.36,6.723***,0.468**,0.017
+25,Lifestyle,Niche,0.002,1.054*,0.037,0.172***
+26,Education,Constant,0.797,8.964***,-0.025,0.0
+27,Education,Niche,-0.134,1.818***,-0.043,0.165***
+28,Beauty,Constant,0.459**,6.821,-0.006,0.577
+29,Beauty,Niche,-0.029,1.691***,0.137,0.371***
+30,Game Casual,Constant,0.342*,8.101***,0.128,0.804***
+31,Game Casual,Niche,-0.092,0.637,0.087,0.129*
+32,Books And Reference,Constant,0.63*,7.422***,0.267*,0.353**
+33,Books And Reference,Niche,-0.137,0.559,-0.04,0.155**
+34,Business,Constant,0.404,5.617***,0.171,0.126
+35,Business,Niche,0.259**,0.554,-0.023,0.066*
+36,Finance,Constant,0.752**,5.251***,0.413***,0.169
+37,Finance,Niche,0.058,-0.873**,-0.237***,-0.143**
+38,Game Strategy,Constant,-0.216,11.431***,0.849,0.005
+39,Game Strategy,Niche,0.303***,-0.909**,-0.005,-0.023
+40,Sports,Constant,1.268,6.323,0.382*,0.205
+41,Sports,Niche,-0.191,0.12,0.06,-0.001
+42,Communication,Constant,1.61***,3.806***,0.185,-0.004
+43,Communication,Niche,0.03,-0.125,-0.166**,-0.072
+44,Dating,Constant,0.517,9.241***,0.498*,1.336***
+45,Dating,Niche,-0.008,-0.908*,0.105,-0.028
+46,Entertainment,Constant,0.365,10.629***,0.59**,0.304
+47,Entertainment,Niche,0.313*,-2.051***,0.058,-0.284***
+48,Game Board,Constant,0.592,6.783***,0.497,0.053
+49,Game Board,Niche,0.116,0.055,0.07,0.028
+50,Events,Constant,-0.007,16.699***,-0.492,-0.618
+51,Events,Niche,0.01,0.495,0.048,0.047
+52,Shopping,Constant,1.261,3.668***,0.295,0.06
+53,Shopping,Niche,0.1,-0.731,0.041,0.022
+54,Food And Drink,Constant,2.373***,2.831***,0.052,0.091
+55,Food And Drink,Niche,0.216*,-0.259,0.077,0.086
+56,Health And Fitness,Constant,0.893***,5.679***,0.146,-0.094
+57,Health And Fitness,Niche,0.059,-0.702,-0.242***,0.066
+58,House And Home,Constant,1.304***,3.664***,0.478**,0.278
+59,House And Home,Niche,-0.33**,1.502***,0.144,0.074
+60,Tools,Constant,0.938**,6.842***,0.069,0.037
+61,Tools,Niche,-0.433***,1.861***,0.162**,0.198***
+62,Libraries And Demo,Constant,-0.519,19.153***,0.777,1.328**
+63,Libraries And Demo,Niche,-0.21***,0.706,-0.15**,0.139
+64,Maps And Navigation,Constant,1.314***,3.564***,0.154,0.215***
+65,Maps And Navigation,Niche,0.187,-0.968*,-0.096,-0.21***
+66,Medical,Constant,0.821,10.781***,0.145,0.331
+67,Medical,Niche,-0.216,0.389,0.073,0.001
+68,Music And Audio,Constant,1.226**,6.267***,0.314,-0.327
+69,Music And Audio,Niche,-0.219,1.494***,0.031,0.278***
+70,News And Magazines,Constant,-0.46,9.533***,0.539*,0.706**
+71,News And Magazines,Niche,-0.019,-0.944**,0.326***,0.058
+72,Parenting,Constant,0.221,5.905***,0.364,-0.167
+73,Parenting,Niche,0.05,0.211,0.108,0.115
+74,Game Puzzle,Constant,-0.539,10.768*,1.04***,1.18***
+75,Game Puzzle,Niche,-0.114,0.68,0.065,0.116
+76,Video Players,Constant,1.142***,4.679***,0.06,0.109
+77,Video Players,Niche,0.021,0.251,-0.0,0.106
+78,Productivity,Constant,1.637**,6.37***,0.273,-0.012
+79,Productivity,Niche,0.06,-0.368,0.041,-0.115*
+80,Weather,Constant,0.335,6.127***,0.307**,0.287**
+81,Weather,Niche,0.278**,-0.522,-0.211***,-0.031
+82,Game Arcade,Constant,0.557*,9.488**,0.236,0.326
+83,Game Arcade,Niche,-0.087,0.45,0.002,0.066
+84,Game Casino,Constant,0.39,6.508***,0.367,0.265
+85,Game Casino,Niche,0.347***,-1.596**,-0.335***,-0.155
+86,Game Card,Constant,0.29,6.348***,0.258**,0.271**
+87,Game Card,Niche,0.006,-0.233,0.094,-0.103
+88,Game Educational,Constant,0.265,8.384***,0.564,-0.288
+89,Game Educational,Niche,-0.424***,1.625***,0.302***,0.019
+90,Game Music,Constant,0.208,8.134***,0.133,0.803***
+91,Game Music,Niche,-0.04,0.193,-0.158*,0.056
+92,Game Sports,Constant,0.943***,4.178***,0.077,0.331**
+93,Game Sports,Niche,-0.204,1.201,0.184,0.088
+94,Game Trivia,Constant,0.547,5.235,-0.231,0.539
+95,Game Trivia,Niche,0.174,-0.158,0.057,0.041
+96,Game Word,Constant,0.519,4.425**,0.241,0.215
+97,Game Word,Niche,0.017,0.275,0.134**,0.039

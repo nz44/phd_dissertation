@@ -1,0 +1,5 @@
+,parameter,pvalue
+const,0.71,0.003
+genreId_MEDICAL_NicheDummy,-0.105,0.574
+PostDummy,0.001,0.222
+genreId_MEDICAL_PostXNicheDummy,0.001,0.636

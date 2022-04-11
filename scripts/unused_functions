@@ -1,0 +1,383 @@
+text_cluster_size_bins = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1500]
+text_cluster_size_labels = ['[0, 1]', '(1, 2]', '(2, 3]', '(3, 5]',
+                            '(5, 10]', '(10, 20]', '(20, 30]', '(30, 50]',
+                            '(50, 100]', '(100, 200]', '(200, 500]', '(500, 1500]']
+combined_text_cluster_size_bins = [0, 10, 30, 100, 500, 1500]
+combined_text_cluster_size_labels = ['[0, 10]', '(10, 30]', '(30, 100]', '(100, 500]', '(500, 1500]']
+
+    # -----------------------------------------------------------------------------------------------------------------
+    # I am deciding to put niche dummy into dissertation appendix, because I think the continuous variable is better
+    # Still I need to replicate the results in proposal defense so that I cannot just throw it away
+    def _determine_niche_broad_cutoff(self):
+        print('----------------------------- _determine_niche_broad_cutoff ----------------------------')
+        d = self._numApps_per_cluster()
+        self.broad_niche_cutoff = copy.deepcopy(self.sub_sample_d)
+        self.broadDummy_labels = dict.fromkeys(self.ssnames.keys())
+        for k, s in self.broad_niche_cutoff.items():
+            for ss in s:
+                # ------------- find appropriate top_n for broad niche cutoff ----------------------
+                s1 = d[k][ss].to_numpy()
+                s_multiples = np.array([])
+                for i in range(len(s1) - 1):
+                    multiple = s1[i] / s1[i + 1]
+                    s_multiples = np.append(s_multiples, multiple)
+                # top_n equals to the first n numbers that are 2
+                top_n = 0
+                if len(s_multiples) > 2:
+                    for i in range(len(s_multiples) - 2):
+                        if s_multiples[i] >= 2 and top_n == i:
+                            top_n += 1
+                        elif s_multiples[i + 1] >= 1.5 and top_n == 0:
+                            top_n += 2
+                        elif s_multiples[i + 2] >= 1.5 and top_n == 0:
+                            top_n += 3
+                        elif s_multiples[0] <= 1.1 and top_n == 0:
+                            top_n += 2
+                        else:
+                            if top_n == 0:
+                                top_n = 1
+                else:
+                    top_n = 1
+                self.broad_niche_cutoff[name1][name2] = top_n
+                self.broadDummy_labels[name1][name2] = d[name1][name2][:top_n].index.tolist()
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+    def create_NicheDummy(self):
+        print('----------------------------- create_NicheDummy ----------------------------')
+        for name1, content1 in self.ssnames.items():
+            for name2 in content1:
+                label_col_name = name1 + '_' + name2 + '_kmeans_labels'
+                niche_col_name = name1 + '_' + name2 + '_NicheDummy'
+                self.cdf[niche_col_name] = self.cdf[label_col_name].apply(
+                    lambda x: 0 if x in self.broadDummy_labels[name1][name2] else 1)
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+
+    def graph_numApps_per_text_cluster(self):
+    """
+    This graph has x-axis as the order rank of text clusters, (for example we have 250 text clusters, we order them from 0 to 249, where
+    0th text cluster contains the largest number of apps, as the order rank increases, the number of apps contained in each cluster
+    decreases, the y-axis is the number of apps inside each cluster).
+    Second meeting with Leah discussed that we will abandon this graph because the number of clusters are too many and they
+    are right next to each other to further right of the graph.
+    """
+    d = self._numApps_per_cluster()
+    for name1, content1 in d.items():
+        for name2, content2 in content1.items():
+            df3 = content2.reset_index()
+            df3.columns = ['cluster_labels', 'Apps Count']
+            # -------------- plot ----------------------------------------------------------------
+            fig, ax = plt.subplots()
+            # color the top_n bars
+            # after sort descending, the first n ranked clusters (the number in broad_niche_cutoff) is broad
+            color = ['red'] * self.broad_niche_cutoff[name1][name2]
+            # and the rest of all clusters are niche
+            rest = len(df3.index) - self.broad_niche_cutoff[name1][name2]
+            color.extend(['blue'] * rest)
+            df3.plot.bar( x='cluster_labels',
+                          xlabel='Text Clusters',
+                          y='Apps Count',
+                          ylabel='Apps Count',
+                          ax=ax,
+                          color=color)
+            # customize legend
+            BRA = mpatches.Patch(color='red', label='broad apps')
+            NIA = mpatches.Patch(color='blue', label='niche apps')
+            ax.legend(handles=[BRA, NIA], loc='upper right')
+            ax.axes.xaxis.set_ticks([])
+            ax.yaxis.set_ticks_position('right')
+            ax.spines['left'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.grid(True)
+            # label the top n clusters
+            df4 = df3.iloc[:self.broad_niche_cutoff[name1][name2], ]
+            for index, row in df4.iterrows():
+                value = round(row['Apps Count'])
+                ax.annotate(value,
+                            (index, value),
+                            xytext=(0, 0.1), # 2 points to the right and 15 points to the top of the point I annotate
+                            textcoords='offset points')
+            plt.xlabel("Text Clusters")
+            plt.ylabel('Apps Count')
+            # ------------ set title and save ----------------------------------------
+            self._set_title_and_save_graphs(fig=fig,
+                                            file_keywords='numApps_count',
+                                            name1=name1,
+                                            name2=name2,
+                                            # graph_title='Histogram of Apps Count In Each Text Cluster',
+                                            relevant_folder_name = 'numApps_per_text_cluster')
+    return essay_1_stats_and_regs_201907(
+                               tcn=self.tcn,
+                               combined_df=self.cdf,
+                               broad_niche_cutoff=self.broad_niche_cutoff,
+                               broadDummy_labels=self.broadDummy_labels,
+                               reg_results=self.reg_results)
+
+
+    def _numClusters_per_cluster_size_bin(self, combine_clusters):
+        d = self._numApps_per_cluster()
+        res = dict.fromkeys(d.keys())
+        for k1, content1 in d.items():
+            res[k1] = dict.fromkeys(content1.keys())
+            for k2, df in content1.items():
+                df2 = df.copy(deep=True)
+                # since the min number of apps in a cluster is 1, not 0, so the smallest range (0, 1] is OK.
+                # there is an option include_loweest == True, however, it will return float, but I want integer bins, so I will leave it
+                # cannot set retbins == True because it will override the labels
+                if combine_clusters is True:
+                    df3 = df2.groupby(pd.cut(x=df2.iloc[:, 0],
+                                             bins=essay_1_stats_and_regs_201907.combined_text_cluster_size_bins,
+                                             include_lowest=True,
+                                             labels=essay_1_stats_and_regs_201907.combined_text_cluster_size_labels)
+                                  ).count()
+                else:
+                    df3 = df2.groupby(pd.cut(x=df2.iloc[:, 0],
+                                             bins=essay_1_stats_and_regs_201907.text_cluster_size_bins,
+                                             include_lowest=True,
+                                             labels=essay_1_stats_and_regs_201907.text_cluster_size_labels)
+                                  ).count()
+                df3.rename(columns={'Apps Count': 'Clusters Count'}, inplace=True)
+                res[k1][k2] = df3
+        return res
+
+    def graph_numClusters_per_cluster_size_bin(self, combine_clusters):
+        res = self._numClusters_per_cluster_size_bin(combine_clusters)
+        for name1, content1 in res.items():
+            for name2, dfres in content1.items():
+                dfres.reset_index(inplace=True)
+                dfres.columns = ['cluster_size_bin', 'Clusters Count']
+                fig, ax = plt.subplots()
+                fig.subplots_adjust(bottom=0.3)
+                dfres.plot.bar( x='cluster_size_bin',
+                                xlabel = 'Cluster Sizes Bins',
+                                y='Clusters Count',
+                                ylabel = 'Clusters Count', # default will show no y-label
+                                rot=40, # rot is **kwarg rotation for ticks
+                                grid=False, # because the default will add x grid, so turn it off first
+                                legend=None, # remove legend
+                                ax=ax # make sure to add ax=ax, otherwise this ax subplot is NOT on fig
+                                )
+                ax.spines['right'].set_visible(False)
+                ax.spines['top'].set_visible(False)
+                ax.yaxis.grid() # since pandas parameter grid = False or True, no options, so I will modify here
+                # ------------ set title and save ----------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                file_keywords='numClusters_count',
+                                                name1=name1,
+                                                name2=name2,
+                                                # graph_title='Histogram of Clusters In Each Cluster Size Bin',
+                                                relevant_folder_name='numClusters_per_cluster_size_bin')
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+    def _numApps_per_cluster_size_bin(self, combine_clusters):
+        d1 = self._numApps_per_cluster()
+        d3 = self._open_predicted_labels_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in self.ssnames.items():
+            res[name1] = dict.fromkeys(content1)
+            for name2 in content1:
+                df = d3[name1][name2].copy(deep=True)
+                # create a new column indicating the number of apps in the particular cluster for that app
+                predicted_label_col = name1 + '_' + name2 + '_kmeans_labels'
+                df['numApps_in_cluster'] = df[predicted_label_col].apply(
+                    lambda x: d1[name1][name2].loc[x])
+                # create a new column indicating the size bin the text cluster belongs to
+                if combine_clusters is True:
+                    df['cluster_size_bin'] = pd.cut(
+                                       x=df['numApps_in_cluster'],
+                                       bins=self.combined_text_cluster_size_bins,
+                                       include_lowest=True,
+                                       labels=self.combined_text_cluster_size_labels)
+                else:
+                    df['cluster_size_bin'] = pd.cut(
+                                       x=df['numApps_in_cluster'],
+                                       bins=self.text_cluster_size_bins,
+                                       include_lowest=True,
+                                       labels=self.text_cluster_size_labels)
+                # create a new column indicating grouped sum of numApps_in_cluster for each cluster_size
+                df2 = df.groupby('cluster_size_bin').count()
+                df3 = df2.iloc[:, 0].to_frame()
+                df3.columns = ['numApps_in_cluster_size_bin']
+                res[name1][name2] = df3
+        return res
+
+    def graph_numApps_per_cluster_size_bin(self, combine_clusters):
+        res = self._numApps_per_cluster_size_bin(combine_clusters)
+        for name1, content1 in res.items():
+            for name2, dfres in content1.items():
+                dfres.reset_index(inplace=True)
+                dfres.columns = ['cluster_size_bin', 'numApps_in_cluster_size_bin']
+                fig, ax = plt.subplots()
+                fig.subplots_adjust(bottom=0.3)
+                dfres.plot.bar( x='cluster_size_bin',
+                                xlabel = 'Cluster Size Bins',
+                                y='numApps_in_cluster_size_bin',
+                                ylabel = 'Apps Count', # default will show no y-label
+                                rot=40, # rot is **kwarg rotation for ticks
+                                grid=False, # because the default will add x grid, so turn it off first
+                                legend=None, # remove legend
+                                ax=ax # make sure to add ax=ax, otherwise this ax subplot is NOT on fig
+                                )
+                ax.spines['right'].set_visible(False)
+                ax.spines['top'].set_visible(False)
+                ax.yaxis.grid() # since pandas parameter grid = False or True, no options, so I will modify here
+                # ------------ set title and save ----------------------------------------
+                self._set_title_and_save_graphs(fig=fig,
+                                                file_keywords='numApps_per_cluster_size_bin',
+                                                name1=name1,
+                                                name2=name2,
+                                                # graph_title='Histogram of Apps Count In Each Cluster Size Bin',
+                                                relevant_folder_name='numApps_per_cluster_size_bin')
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+    def text_cluster_stats_at_app_level(self, combine_clusters):
+        d1 = self._open_predicted_labels_dict()
+        d2 = self._numApps_per_cluster()
+        d3 = self._numClusters_per_cluster_size_bin(combine_clusters)
+        d4 = self._numApps_per_cluster_size_bin(combine_clusters)
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in self.ssnames.items():
+            res[name1] = dict.fromkeys(content1)
+            for name2 in content1:
+                df = d1[name1][name2].copy(deep=True)
+                # set column names with name1 and name2 for future joining
+                predicted_label = name1 + '_' + name2 + '_kmeans_labels'
+                numApps_in_cluster = name1 + '_' + name2 + '_numApps_in_cluster'
+                cluster_size_bin = name1 + '_' + name2 + '_cluster_size_bin'
+                numClusters_in_cluster_size_bin = name1 + '_' + name2 + '_numClusters_in_cluster_size_bin'
+                numApps_in_cluster_size_bin = name1 + '_' + name2 + '_numApps_in_cluster_size_bin'
+                # create a new column indicating the number of apps in the particular cluster for that app
+                # (do not forget to use .squeeze() here because .loc will return a pandas series)
+                df[numApps_in_cluster] = df[predicted_label].apply(
+                    lambda x: d2[name1][name2].loc[x].squeeze())
+                # create a new column indicating the size bin the text cluster belongs to
+                if combine_clusters is True:
+                    df[cluster_size_bin] = pd.cut(
+                                       x=df[numApps_in_cluster],
+                                       bins=essay_1_stats_and_regs_201907.combined_text_cluster_size_bins,
+                                       include_lowest=True,
+                                       labels=essay_1_stats_and_regs_201907.combined_text_cluster_size_labels)
+                else:
+                    df[cluster_size_bin] = pd.cut(
+                                       x=df[numApps_in_cluster],
+                                       bins=essay_1_stats_and_regs_201907.text_cluster_size_bins,
+                                       include_lowest=True,
+                                       labels=essay_1_stats_and_regs_201907.text_cluster_size_labels)
+                # create a new column indicating number of cluster for each cluster size bin
+                df[numClusters_in_cluster_size_bin] = df[cluster_size_bin].apply(
+                    lambda x: d3[name1][name2].loc[x].squeeze())
+                # create a new column indicating grouped sum of numApps_in_cluster for each cluster_size
+                df[numApps_in_cluster_size_bin] = df[cluster_size_bin].apply(
+                    lambda x: d4[name1][name2].loc[x].squeeze())
+                res[name1][name2] = df
+        filename = self.initial_panel + '_dict_app_level_text_cluster_stats.pickle'
+        q = essay_1_stats_and_regs_201907.panel_essay_1_path / 'app_level_text_cluster_stats' / filename
+        pickle.dump(res, open(q, 'wb'))
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)
+
+    def _groupby_subsample_dfs_by_nichedummy(self):
+        d = self._slice_subsamples_dict()
+        res = dict.fromkeys(self.ssnames.keys())
+        for name1, content1 in d.items():
+            res[name1] = dict.fromkeys(content1.keys())
+            for name2, df in content1.items():
+                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
+                df2 = df.groupby([niche_dummy]).size().to_frame()
+                df2.rename(columns={0: name1 + '_' + name2}, index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
+                res[name1][name2] = df2
+        return res
+
+    def _combine_name2s_into_single_df(self, name12_list, d):
+        """
+        :param name2_list: such as ['full_full', 'minInstalls_Tier1', 'minInstalls_Tier2', 'minInstalls_Tier3']
+        :param d: the dictionary of single subsample df containing stats
+        :return:
+        """
+        df_list = []
+        for name1, content1 in d.items():
+            for name2, df in content1.items():
+                name12 = name1 + '_' + name2
+                if name12 in name12_list:
+                    df_list.append(df)
+        df2 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
+        l = df2.columns.tolist()
+        str_to_replace = {'categories_category_': '',
+                          'genreId_': '',
+                          'minInstalls_': '',
+                          'full_': '',
+                          'starDeveloper_': '',
+                          '_digital_firms': '',
+                          '_': ' '}
+        for col in l:
+            new_col = col
+            for k, v in str_to_replace.items():
+                new_col = new_col.replace(k, v)
+            new_col = new_col.title()
+            df2.rename(columns={col: new_col}, inplace=True)
+        df2.loc["Total"] = df2.sum(axis=0)
+        df2 = df2.sort_values(by='Total', axis=1, ascending=False)
+        df2 = df2.drop(labels='Total')
+        df2 = df2.T
+        return df2
+
+    def niche_by_subsamples_bar_graph(self, combo=None):
+        # each sub-sample is a horizontal bar in a single graph
+        fig, ax = plt.subplots(figsize=self.combo_barh_figsize[combo])
+        fig.subplots_adjust(left=0.2)
+        # -------------------------------------------------------------------------
+        res = self._groupby_subsample_dfs_by_nichedummy()
+        df = self._combine_name2s_into_single_df(name12_list=self.graph_combo_ssnames[combo],
+                                                 d=res)
+        f_name = combo + '_niche_by_subsamples_bar_graph.csv'
+        q = self.des_stats_tables_essay_1 / f_name
+        df.to_csv(q)
+        df.plot.barh(stacked=True,
+                     color={"Broad Apps": "orangered",
+                            "Niche Apps": "lightsalmon"},
+                     ax=ax)
+        ax.set_ylabel('Samples')
+        ax.set_yticklabels(ax.get_yticklabels(),
+                           fontsize=self.combo_barh_yticklabel_fontsize[combo])
+        ax.set_xlabel('Apps Count')
+        ax.xaxis.grid()
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        # graph_title = self.initial_panel + ' ' + self.combo_graph_titles[combo] + \
+        #               '\n Apps Count by Niche and Broad Types'
+        # ax.set_title(graph_title)
+        ax.legend()
+        # ------------------ save file -----------------------------------------------------------------
+        self._set_title_and_save_graphs(fig=fig,
+                                        file_keywords=self.combo_graph_titles[combo].lower().replace(' ', '_'),
+                                        relevant_folder_name='nichedummy_count_by_subgroup')
+        return essay_1_stats_and_regs_201907(
+                                   tcn=self.tcn,
+                                   combined_df=self.cdf,
+                                   broad_niche_cutoff=self.broad_niche_cutoff,
+                                   broadDummy_labels=self.broadDummy_labels,
+                                   reg_results=self.reg_results)

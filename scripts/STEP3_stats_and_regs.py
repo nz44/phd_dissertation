@@ -3,6 +3,9 @@ from pathlib import Path
 import pickle
 import copy
 import math
+
+from statsmodels.compat import lzip
+
 pd.set_option('display.max_colwidth', -1)
 pd.options.display.max_rows = 999
 pd.options.mode.chained_assignment = None
@@ -12,7 +15,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from sklearn import preprocessing
 from scipy.stats import boxcox
-import statsmodels.api as sm
+import statsmodels.formula.api as smf
+import statsmodels.stats.api as sms
+from statsmodels.compat.python import lzip
 from linearmodels import PooledOLS
 from linearmodels import RandomEffects
 from datetime import datetime
@@ -21,7 +26,7 @@ today = datetime.today()
 yearmonth = today.strftime("%Y%m")
 
 
-class essay_1_stats_and_regs_201907:
+class stats_and_regs:
     """2021 July 18
     This is the new version written based on the STEP10_ESSAY_2_3_Long_Table_Prep.py
     2022 Mar 26
@@ -31,77 +36,56 @@ class essay_1_stats_and_regs_201907:
     for different sub-samples by pooled regression with sample dummies.
     """
 
-    panel_essay_1_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/____WEB_SCRAPER____/__PANELS__/___essay_1___')
-    main_path = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___')
-    des_stats_tables_essay_1 = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/tables')
-    des_stats_graphs_essay_1 = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/___essay_1___/descriptive_stats/graphs')
-    des_stats_graphs_overall = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/__CODING__/PycharmProjects/GOOGLE_PLAY/overall_graphs')
+    full_sample_panel_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/___full_sample___')
+    nlp_stats_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/nlp_stats')
+    des_stats_tables = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/descriptive_stats_tables')
+    des_stats_graphs = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/descriptive_stats_graphs')
+    ols_results = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____OLS_RESULTS____')
+    panel_results = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____PANEL_RESULTS____')
 
-    graph_subsample_title_dict = {  'full_full': 'Full Sample',
-                                    'minInstalls_Tier1' : 'Minimum Installs Tier 1',
-                                    'minInstalls_Tier2': 'Minimum Installs Tier 2',
-                                    'minInstalls_Tier3': 'Minimum Installs Tier 3',
-                                    'categories_category_GAME': 'Gaming Apps',
-                                    'categories_category_SOCIAL': 'Social Apps',
-                                    'categories_category_LIFESTYLE': 'Lifestyle Apps',
-                                    'categories_category_MEDICAL': 'Medical Apps',
-                                    'categories_category_BUSINESS': 'Business Apps',
-                                    'genreId_ART_AND_DESIGN': 'Default Genre Art And Design',
-                                    'genreId_COMICS': 'Default Genre Comics',
-                                    'genreId_PERSONALIZATION': 'Default Genre Personalization',
-                                    'genreId_PHOTOGRAPHY': 'Default Genre Photography',
-                                    'genreId_AUTO_AND_VEHICLES': 'Default Genre Auto And Vehicles',
-                                    'genreId_GAME_ROLE_PLAYING': 'Default Genre Game Role Playing',
-                                    'genreId_GAME_ACTION': 'Default Genre Game Action',
-                                    'genreId_GAME_RACING': 'Default Genre Game Racing',
-                                    'genreId_TRAVEL_AND_LOCAL': 'Default Genre Travel And Local',
-                                    'genreId_GAME_ADVENTURE': 'Default Genre Game Adventure',
-                                    'genreId_SOCIAL': 'Default Genre Social',
-                                    'genreId_GAME_SIMULATION': 'Default Genre Game Simulation',
-                                    'genreId_LIFESTYLE': 'Default Genre Lifestyle',
-                                    'genreId_EDUCATION': 'Default Genre Education',
-                                    'genreId_BEAUTY': 'Default Genre Beauty',
-                                    'genreId_GAME_CASUAL': 'Default Genre Game Casual',
-                                    'genreId_BOOKS_AND_REFERENCE': 'Default Genre Books And Reference',
-                                    'genreId_BUSINESS': 'Default Genre Business',
-                                    'genreId_FINANCE': 'Default Genre Finance',
-                                    'genreId_GAME_STRATEGY': 'Default Genre Game Strategy',
-                                    'genreId_SPORTS': 'Default Genre Sports',
-                                    'genreId_COMMUNICATION': 'Default Genre Communication',
-                                    'genreId_DATING': 'Default Genre Dating',
-                                    'genreId_ENTERTAINMENT': 'Default Genre Entertainment',
-                                    'genreId_GAME_BOARD': 'Default Genre Game Board',
-                                    'genreId_EVENTS': 'Default Genre Events',
-                                    'genreId_SHOPPING': 'Default Genre Shopping',
-                                    'genreId_FOOD_AND_DRINK': 'Default Genre Food And Drink',
-                                    'genreId_HEALTH_AND_FITNESS': 'Default Genre Health And Fitness',
-                                    'genreId_HOUSE_AND_HOME': 'Default Genre House And Home',
-                                    'genreId_TOOLS': 'Default Genre Tools',
-                                    'genreId_LIBRARIES_AND_DEMO': 'Default Genre Libraries And Demo',
-                                    'genreId_MAPS_AND_NAVIGATION': 'Default Genre Maps And Navigation',
-                                    'genreId_MEDICAL': 'Default Genre Medical',
-                                    'genreId_MUSIC_AND_AUDIO': 'Default Genre Music And Audio',
-                                    'genreId_NEWS_AND_MAGAZINES': 'Default Genre News And Magazines',
-                                    'genreId_PARENTING': 'Default Genre Parenting',
-                                    'genreId_GAME_PUZZLE': 'Default Genre Game Puzzle',
-                                    'genreId_VIDEO_PLAYERS': 'Default Genre Video Players',
-                                    'genreId_PRODUCTIVITY': 'Default Genre Productivity',
-                                    'genreId_WEATHER': 'Default Genre Weather',
-                                    'genreId_GAME_ARCADE': 'Default Genre Game Arcade',
-                                    'genreId_GAME_CASINO': 'Default Genre Game Casino',
-                                    'genreId_GAME_CARD': 'Default Genre Game Card',
-                                    'genreId_GAME_EDUCATIONAL': 'Default Genre Game Educational',
-                                    'genreId_GAME_MUSIC': 'Default Genre Game Music',
-                                    'genreId_GAME_SPORTS': 'Default Genre Game Sports',
-                                    'genreId_GAME_TRIVIA': 'Default Genre Game Trivia',
-                                    'genreId_GAME_WORD': 'Default Genre Game Word',
-                                    'starDeveloper_top_digital_firms': 'Apps from Top Tier Firms',
-                                    'starDeveloper_non-top_digital_firms': 'Apps from Non-top Tier Firms'}
+    # ----------------------------- slicing variables --------------------------------------------------------------------
+    sub_sample_key_level1 = ['FULL', 'ML', 'MF']
+    FULL_sample_key_level2 = ['FULL', 'Tier1', 'Tier2', 'Tier3', 'top_firm', 'non_top_firm',
+                              'FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_LIFESTYLE', 'FULL_MEDICAL']
+    ML_sample_key_level2 = ['ML', 'ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_LIFESTYLE', 'ML_MEDICAL']
+    MF_sample_key_level2 = ['MF', 'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_LIFESTYLE', 'MF_MEDICAL']
+
+    sub_sample_d = { 'FULL': dict.fromkeys(FULL_sample_key_level2),
+                     'ML': dict.fromkeys(ML_sample_key_level2),
+                     'MF': dict.fromkeys(MF_sample_key_level2)}
+
+    sub_sample_l = FULL_sample_key_level2 + ML_sample_key_level2 + MF_sample_key_level2
+
+    graph_subsample_title_dict = {  'FULL_FULL': 'Full Sample',
+                                    'FULL_Tier1': 'Minimum Installs Tier 1',
+                                    'FULL_Tier2': 'Minimum Installs Tier 2',
+                                    'FULL_Tier3': 'Minimum Installs Tier 3',
+                                    'FULL_top_firm': 'Top Firm',
+                                    'FULL_non_top_firm': 'Non-top Firm',
+                                    'FULL_GAME': 'Gaming Apps',
+                                    'FULL_BUSINESS': 'Business Apps',
+                                    'FULL_SOCIAL': 'Social Apps',
+                                    'FULL_LIFESTYLE': 'Lifestyle Apps',
+                                    'FULL_MEDICAL': 'Medical Apps',
+                                    'ML': 'Market-leading Apps',
+                                    'ML_GAME': 'ML Gaming Apps',
+                                    'ML_BUSINESS': "ML Business Apps",
+                                    'ML_SOCIAL': 'ML Social Apps',
+                                    'ML_LIFESTYLE': 'ML Lifestyle Apps',
+                                    'ML_MEDICAL': 'ML Medical Apps',
+                                    'MF': 'Market Follower Apps',
+                                    'MF_GAME': 'MF Gaming Apps',
+                                    'MF_BUSINESS': 'MF Business Apps',
+                                    'MF_SOCIAL': 'MF Social Apps',
+                                    'MF_LIFESTYLE': 'MF Lifestyle Apps',
+                                    'MF_MEDICAL': 'MF Medical Apps'
+                                    }
 
     var_title_dict = {'ImputedminInstalls': 'Log Minimum Installs',
                       'Imputedprice': 'Log Price',
@@ -112,321 +96,267 @@ class essay_1_stats_and_regs_201907:
     group_by_var_x_label = {'NicheDummy' : 'Niche vs. Broad',
                             'cluster_size_bin': 'Size of K-Means Text Clusters'}
 
-    text_cluster_size_bins = [0, 1, 2, 3, 5, 10, 20, 30, 50, 100, 200, 500, 1500]
-    text_cluster_size_labels = ['[0, 1]', '(1, 2]', '(2, 3]', '(3, 5]',
-                                '(5, 10]', '(10, 20]', '(20, 30]', '(30, 50]',
-                                '(50, 100]', '(100, 200]', '(200, 500]', '(500, 1500]']
-    combined_text_cluster_size_bins = [0, 10, 30, 100, 500, 1500]
-    combined_text_cluster_size_labels = ['[0, 10]', '(10, 30]', '(30, 100]', '(100, 500]', '(500, 1500]']
-    multi_graph_combo_suptitle = {
-        'combo1': 'Full Sample and Minimum Install Sub-samples',
-        'combo2': 'Full Sample and Apps from Top and Non-top Tier Firms',
-        'combo3': 'Full Sample and Five Main Categorical Sub-samples',
-        'combo4': 'Default Categorical Sub-samples'
+    # ---------------- variables below has original version and imputed versions ----------------
+    # all y variables are time variant
+    # they have both imputed and original variables
+    balanced_y_vars = ['price', 'minInstalls', 'containsAdsdummy', 'offersIAPdummy']
+    scaled_balanced_y_vars = ['nlog_price', 'nlog_minInstalls', 'containsAdsdummy', 'offersIAPdummy']
+    imputed_balanced_y_vars = ['imputed_price', 'imputed_minInstalls', 'imputed_containsAdsdummy', 'imputed_offersIAPdummy']
+    scaled_imputed_balanced_y_vars = ['nlog_imputed_price', 'nlog_imputed_minInstalls', 'imputed_containsAdsdummy', 'imputed_offersIAPdummy']
+    # all the unbalanced variables are created based on the top_firm, which is based on deverloperClean, and which is based on imputed_developer, and imputed_minInstalls
+    # noisy_death is based on left merge indicator, so it's hard to say it is based on original or imputed variables
+    unbalanced_only_y_vars = ['noisy_death', 'T_TO_TIER1_minInstalls', 'T_TO_top_firm', 'MA']
+    # all control variables are time variant for the easier implementation of regression
+    control_vars = ['score', 'reviews', 'adultcontent']
+    scaled_control_vars = ['score', 'nlog_reviews', 'adultcontent']
+    imputed_control_vars = ['imputed_score', 'imputed_reviews', 'imputed_adultcontent']
+    scaled_imputed_control_vars = ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent']
+    # niche variables are calculated from kmeans on self.tcn + 'Clean' (which is in turn based on 'imputed_'+self.tcn)
+    # essentially all niche variables are imputed variables (based on imputed app descriptions)
+    niche_vars = ['continuous_niche', 'dummy_niche']
+    # -------------------------------------------------------------------------------------------
+    scale_var_dict = {
+        'nlog_plus_one': ['reviews', 'minInstalls', 'price']
     }
-    multi_graph_combo_fig_subplot_layout = {
-        'combo1': {'nrows': 2, 'ncols': 2,
-                   'figsize': (11, 8.5)},
-        'combo2': {'nrows': 1, 'ncols': 3,
-                   'figsize': (18, 6)},
-        'combo3': {'nrows': 2, 'ncols': 3,
-                   'figsize': (16.5, 8.5)},
-        'combo4': {'nrows': 7, 'ncols': 7,
-                   'figsize': (36, 36)}}
+    # -------------------- test names -----------------------------------------------------------
+    # https://www.statsmodels.org/dev/examples/notebooks/generated/regression_diagnostics.html
+    jb_test_names = ["Jarque-Bera", "Chi^2 two-tail prob.", "Skew", "Kurtosis"]
+    bp_test_names = ["Lagrange multiplier statistic", "p-value", "f-value", "f p-value"]
 
-    combo_barh_figsize = {
-        'combo1': (8, 5),
-        'combo2': (8, 5),
-        'combo3': (8, 5),
-        'combo4': (8, 16)
-    }
+    ##################################################################################################################
+    def __init__(self,
+                 initial_panel,
+                 all_panels,
+                 df=None,
+                 original_dict=None,
+                 imputed_dict=None,
+                 reg_results=None):
+        self.initial_panel = initial_panel
+        self.all_panels = all_panels
+        self.df = df
+        self.original_dict = original_dict
+        self.imputed_dict = imputed_dict
+        self.reg_results = reg_results
 
-    combo_barh_yticklabel_fontsize = {
-        'combo1': 10,
-        'combo2': 10,
-        'combo3': 10,
-        'combo4': 6
-    }
-
-    combo_graph_titles = {
-        'combo1': 'Full Sample and Minimum Installs Sub-samples',
-        'combo2': 'Full Sample and Sub-samples Developed by Top and Non-top Firms',
-        'combo3': 'Full Sample and Functional Category Sub-samples',
-        'combo4': 'Default App Genre Sub-sample'
-    }
-    all_y_reg_vars = ['LogWNImputedprice',
-                      'LogImputedminInstalls',
-                      'offersIAPTrue',
-                      'containsAdsTrue']
-    graph_dep_vars_ylabels = {
-        'Imputedprice': 'Price',
-        'LogImputedprice': 'Log Price',
-        'LogWNImputedprice': 'Log Price Adjusted \nWith White Noise',
-        'ImputedminInstalls': 'Minimum Installs',
-        'LogImputedminInstalls': 'Log Minimum Installs',
-        'both_IAP_and_ADS': 'Percentage Points',
-        'TRUE_offersIAPTrue': 'Percentage of Apps Offers IAP',
-        'TRUE_containsAdsTrue': 'Percentage of Apps Contains Ads',
-        'offersIAPTrue': 'Percentage of Apps Offers IAP',
-        'containsAdsTrue': 'Percentage of Apps Contains Ads'
-    }
-    graph_dep_vars_titles = {
-        'Imputedprice': 'Price',
-        'LogImputedprice': 'Log Price',
-        'LogWNImputedprice': 'Log Price Adjusted With White Noise',
-        'ImputedminInstalls': 'Minimum Installs',
-        'LogImputedminInstalls': 'Log Minimum Installs',
-        'both_IAP_and_ADS': 'Percentage of Apps that Offers IAP and Contains Ads',
-        'TRUE_offersIAPTrue': 'Percentage of Apps Offers IAP',
-        'TRUE_containsAdsTrue': 'Percentage of Apps Contains Ads',
-        'offersIAPTrue': 'Percentage of Apps Offers IAP',
-        'containsAdsTrue': 'Percentage of Apps Contains Ads'
-    }
-    dep_vars_reg_table_names = {
-        'Imputedprice' : 'Price',
-        'LogImputedprice': 'Log Price',
-        'LogWNImputedprice': 'Log Price Adjusted \nWith White Noise',
-        'ImputedminInstalls': 'Minimum Installs',
-        'LogImputedminInstalls': 'Log Minimum Installs',
-        'containsAdsTrue': 'Contains Ads',
-        'offersIAPTrue': 'Offers IAP'
-    }
-    combo_name12_reg_table_names = {'full_full': 'Full',
-                                    'minInstalls_Tier1' : 'Minimum Installs \nTier 1',
-                                    'minInstalls_Tier2': 'Minimum Installs \nTier 2',
-                                    'minInstalls_Tier3': 'Minimum Installs \nTier 3',
-                                    'categories_category_GAME': 'Gaming \nApps',
-                                    'categories_category_SOCIAL': 'Social \nApps',
-                                    'categories_category_LIFESTYLE': 'Lifestyle \nApps',
-                                    'categories_category_MEDICAL': 'Medical \nApps',
-                                    'categories_category_BUSINESS': 'Business \nApps',
-                                    'genreId_ART_AND_DESIGN': 'Art And Design',
-                                    'genreId_COMICS': 'Comics',
-                                    'genreId_PERSONALIZATION': 'Personalization',
-                                    'genreId_PHOTOGRAPHY': 'Photography',
-                                    'genreId_AUTO_AND_VEHICLES': 'Auto And Vehicles',
-                                    'genreId_GAME_ROLE_PLAYING': 'Game Role Playing',
-                                    'genreId_GAME_ACTION': 'Game Action',
-                                    'genreId_GAME_RACING': 'Game Racing',
-                                    'genreId_TRAVEL_AND_LOCAL': 'Travel And Local',
-                                    'genreId_GAME_ADVENTURE': 'Game Adventure',
-                                    'genreId_SOCIAL': 'Social',
-                                    'genreId_GAME_SIMULATION': 'Game Simulation',
-                                    'genreId_LIFESTYLE': 'Lifestyle',
-                                    'genreId_EDUCATION': 'Education',
-                                    'genreId_BEAUTY': 'Beauty',
-                                    'genreId_GAME_CASUAL': 'Game Casual',
-                                    'genreId_BOOKS_AND_REFERENCE': 'Books And Reference',
-                                    'genreId_BUSINESS': 'Business',
-                                    'genreId_FINANCE': 'Finance',
-                                    'genreId_GAME_STRATEGY': 'Game Strategy',
-                                    'genreId_SPORTS': 'Sports',
-                                    'genreId_COMMUNICATION': 'Communication',
-                                    'genreId_DATING': 'Dating',
-                                    'genreId_ENTERTAINMENT': 'Entertainment',
-                                    'genreId_GAME_BOARD': 'Game Board',
-                                    'genreId_EVENTS': 'Events',
-                                    'genreId_SHOPPING': 'Shopping',
-                                    'genreId_FOOD_AND_DRINK': 'Food And Drink',
-                                    'genreId_HEALTH_AND_FITNESS': 'Health And Fitness',
-                                    'genreId_HOUSE_AND_HOME': 'House And Home',
-                                    'genreId_TOOLS': 'Tools',
-                                    'genreId_LIBRARIES_AND_DEMO': 'Libraries And Demo',
-                                    'genreId_MAPS_AND_NAVIGATION': 'Maps And Navigation',
-                                    'genreId_MEDICAL': 'Medical',
-                                    'genreId_MUSIC_AND_AUDIO': 'Music And Audio',
-                                    'genreId_NEWS_AND_MAGAZINES': 'News And Magazines',
-                                    'genreId_PARENTING': 'Parenting',
-                                    'genreId_GAME_PUZZLE': 'Game Puzzle',
-                                    'genreId_VIDEO_PLAYERS': 'Video Players',
-                                    'genreId_PRODUCTIVITY': 'Productivity',
-                                    'genreId_WEATHER': 'Weather',
-                                    'genreId_GAME_ARCADE': 'Game Arcade',
-                                    'genreId_GAME_CASINO': 'Game Casino',
-                                    'genreId_GAME_CARD': 'Game Card',
-                                    'genreId_GAME_EDUCATIONAL': 'Game Educational',
-                                    'genreId_GAME_MUSIC': 'Game Music',
-                                    'genreId_GAME_SPORTS': 'Game Sports',
-                                    'genreId_GAME_TRIVIA': 'Game Trivia',
-                                    'genreId_GAME_WORD': 'Game Word',
-                                    'starDeveloper_top_digital_firms': 'Apps from \nTop Tier \nFirms',
-                                    'starDeveloper_non-top_digital_firms': 'Apps from \nNon-top Tier \nFirms'}
-    @property
-    def ssnames(self):
-        d = self._open_predicted_labels_dict()
-        res = dict.fromkeys(d.keys())
-        for name1, content1 in d.items():
-            res[name1] = list(content1.keys())
-        return res
-
-    @property
-    def graph_combo_ssnames(self):
-        res = dict.fromkeys(['combo1', 'combo2', 'combo3', 'combo4'])
-        combo_contains = {'combo1': ['full', 'minInstalls'],
-                          'combo2': ['full', 'starDeveloper'],
-                          'combo3': ['full', 'categories'],
-                          'combo4': ['genreId']}
-        for combo_name, content1 in combo_contains.items():
-            l = []
-            for name1 in content1:
-                for name2 in self.ssnames[name1]:
-                    l.append(name1 + '_' + name2)
-            res[combo_name] = l
-        return res
-
-    @classmethod
-    def _open_imputed_deleted_divided_df(cls):
-        f_name = cls.initial_panel + '_imputed_deleted_subsamples.pickle'
-        q = cls.panel_essay_1_path / f_name
+    # ====================== The set of functions below are regularly used common functions in pre_processing class =============================
+    def _open_df(self, balanced, keyword):
+        """
+        :param balanced:
+        :param keyword: could be any of 'merged', 'imputed', 'nlp' or 'reg_ready'
+        :return:
+        """
+        print('------------------------ open_df ' + keyword + ' ---------------------------')
+        if balanced is True:
+            f_name = self.initial_panel + '_balanced_' + keyword + '.pickle'
+        else:
+            f_name = self.initial_panel + '_unbalanced_' + keyword + '.pickle'
+        q = self.full_sample_panel_path / f_name
         with open(q, 'rb') as f:
             df = pickle.load(f)
         return df
 
-    @classmethod
-    def _open_predicted_labels_dict(cls):
-        f_name = cls.initial_panel + '_predicted_labels_dict.pickle'
-        q = cls.panel_essay_1_path / 'predicted_text_labels' / f_name
-        with open(q, 'rb') as f:
-            d = pickle.load(f)
-        return d
-
-    @classmethod
-    def _open_app_level_text_cluster_stats(cls):
-        filename = cls.initial_panel + '_dict_app_level_text_cluster_stats.pickle'
-        q = cls.panel_essay_1_path / 'app_level_text_cluster_stats' / filename
-        with open(q, 'rb') as f:
-            d = pickle.load(f)
-        return d
-
-    @classmethod
-    def _select_vars(cls, df,
-                     time_variant_vars_list=None,
-                     time_invariant_vars_list=None):
-        df2 = df.copy(deep=True)
-        tv_var_list = []
-        if time_variant_vars_list is not None:
-            for i in time_variant_vars_list:
-                vs = [i + '_' + j for j in cls.all_panels]
-                tv_var_list = tv_var_list + vs
-        ti_var_list = []
-        if time_invariant_vars_list is not None:
-            for i in time_invariant_vars_list:
-                ti_var_list.append(i)
-        total_vars = tv_var_list + ti_var_list
-        df2 = df2[total_vars]
-        return df2
-
-    @classmethod
-    def _set_title_and_save_graphs(cls, fig,
-                                   file_keywords,
-                                   relevant_folder_name,
-                                   graph_type='',
-                                   graph_title='',
-                                   name1='',
-                                   name2=''):
+    def _save_df(self, DF, balanced, keyword):
         """
-        generic internal function to save graphs according to essay 2 (non-leaders) and essay 3 (leaders).
-        name1 and name2 are the key names of essay_1_stats_and_regs_201907.ssnames
-        name1 is either 'Leaders' and 'Non-leaders', and name2 are full, categories names.
-        graph_title is what is the graph is.
-        """
-        # ------------ set title -------------------------------------------------------------------------
-        if graph_title != '':
-            if name1 != '' and name2 != '':
-                title = cls.initial_panel + ' ' + cls.graph_subsample_title_dict[name1+'_'+name2] + ' \n' + graph_title
-            else:
-                title = cls.initial_panel + ' ' + graph_title
-            title = title.title()
-            fig.suptitle(title, fontsize='medium')
-        # ------------ save ------------------------------------------------------------------------------
-        filename = cls.initial_panel + '_' + name1 + '_' + name2 + '_' + file_keywords + '_' + graph_type + '.png'
-        fig.savefig(cls.des_stats_graphs_essay_1 / relevant_folder_name / filename,
-                    facecolor='white',
-                    dpi=300)
-    # --------------------------------------------------------------------------------------------------------
-    def __init__(self,
-                 tcn,
-                 combined_df=None,
-                 broad_niche_cutoff=None,
-                 broadDummy_labels=None,
-                 reg_results=None):
-        self.tcn = tcn
-        self.cdf = combined_df
-        self.broad_niche_cutoff = broad_niche_cutoff
-        self.broadDummy_labels = broadDummy_labels
-        self.reg_results = reg_results
-
-    def open_cross_section_reg_df(self):
-        filename = self.initial_panel + '_cross_section_df.pickle'
-        q = self.panel_essay_1_path / 'cross_section_dfs' / filename
-        with open(q, 'rb') as f:
-            self.cdf = pickle.load(f)
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
-
-    def save_cross_section_reg_df(self):
-        filename = self.initial_panel + '_cross_section_df.pickle'
-        q = essay_1_stats_and_regs_201907.panel_essay_1_path / 'cross_section_dfs' / filename
-        pickle.dump(self.cdf, open(q, 'wb'))
-        print(self.initial_panel, ' SAVED CROSS SECTION DFS. ')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
-
-    def _slice_subsamples_dict(self):
-        """
-        :param vars: a list of variables you want to subset
+        I will save the df at the very end, which include imputed variables, sub-sample dummies and NLP niche variables
+        :param balanced: Whether to include appids that are missing in each subsequent month as compared to the original month
+        :param keyword: could be any of 'merged', 'imputed', 'nlp' or 'reg_ready'
         :return:
         """
-        df = self.cdf.copy(deep=True)
-        d = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in self.ssnames.items():
-            d[name1] = dict.fromkeys(content1)
-            for name2 in content1:
-                if name2 == 'full':
-                    d[name1][name2] = df
+        print('------------------------ _save_df ' + keyword + ' ---------------------------')
+        if balanced is True:
+            f_name = self.initial_panel + '_balanced_' + keyword + '.pickle'
+        else:
+            f_name = self.initial_panel + '_unbalanced_' + keyword + '.pickle'
+        q = self.full_sample_panel_path / f_name
+        pickle.dump(DF, open(q, 'wb'))
+        return None
+
+    def _x_and_y_vars(self, balanced, imputed, scaled, niche_vars, months, panel):
+        """
+        :param df: the dataframe that has all the variables
+        :param balanced: there are some y variables that only exist in the unbalanced dataset
+        :param imputed: whether the variables are imputed, note that y variables that only exist in unbalanced dataset are created from other imputed variables
+        :param scaled: natural log transformation of certain variables
+        :param months: a list of months, such as ['202001'] or self.all_panels
+        :return: a dictionary with keys 'x', 'y' or 'both'
+        """
+        # ----------------- unbalanced variables -------------------------------
+        y_vars = self.balanced_y_vars + self.unbalanced_only_y_vars
+        x_vars = niche_vars + self.control_vars
+        if scaled is True:
+            y_vars = self.scaled_balanced_y_vars + self.unbalanced_only_y_vars
+            x_vars = niche_vars + self.scaled_control_vars
+        if imputed is True:
+            y_vars = self.imputed_balanced_y_vars + self.unbalanced_only_y_vars
+            x_vars = niche_vars + self.imputed_control_vars
+            if scaled is True:
+                y_vars = self.scaled_imputed_balanced_y_vars + self.unbalanced_only_y_vars
+                x_vars = niche_vars + self.scaled_imputed_control_vars
+        # -------- balanced variables which only differs from unbalanced variables in terms of y variables --------
+        if balanced is True:
+            y_vars = self.balanced_y_vars
+            if scaled is True:
+                y_vars = self.scaled_balanced_y_vars
+            if imputed is True:
+                y_vars = self.imputed_balanced_y_vars
+                if scaled is True:
+                    y_vars = self.scaled_imputed_balanced_y_vars
+        if panel is True:
+            x_cols = [i + '_' + m for m in months for i in x_vars]
+            y_cols = [i + '_' + m for m in months for i in y_vars]
+            both_cols = x_cols + y_cols
+        else:
+            x_cols = {}
+            y_cols = {}
+            both_cols = {}
+            xy = x_vars + y_vars
+            for m in months:
+                x_cols[m] = [i + '_' + m for i in x_vars]
+                y_cols[m] = [i + '_' + m for i in y_vars]
+                both_cols[m] = [i + '_' + m for i in xy]
+        var_dict = {
+            'x': x_cols,
+            'y': y_cols,
+            'both': both_cols
+        }
+        return var_dict
+
+    def _scale_var_printout_descriptive_stats(self, df, k, ss, imputed):
+        """
+        :param df: A subsetted dataframe has no missing in the original variable columns
+                   The existing columns in this dataframe should all be numeric
+        :param scale_var_dict: key is the method and the value is a list of core variable names
+        :return:
+        """
+        folder = 'original'
+        for method, vars in self.scale_var_dict.items():
+            for var in vars:
+                vs = [var + '_' + m for m in self.all_panels]
+                if imputed is True:
+                    folder = 'imputed'
+                    vs = ['imputed_' + var + '_' + m for m in self.all_panels]
+                for v in vs:
+                    if method == 'nlog_plus_one':
+                        df['nlog_' + v] = df.apply(lambda row: np.log(row[v] + 1), axis=1)
+        for i in df.columns:
+            df[i] = pd.to_numeric(df[i])
+        f_name = k + '_' + ss + '.csv'
+        df.describe(include='all').to_csv(self.ols_results / 'var_statistics' / folder / f_name)
+        return df
+
+    def create_subsample_dict_and_merge_in_niche_vars_and_scale_vars(self, balanced):
+        """
+        :param balanced:
+        :return: The slicing dummies are based on imputed variables such as imputed_minInstalls, top firms (imputed_developer_ and developerClean_), and imputed_genreId
+                please refer to STEP2_pre_processing create_sub_sample_dummies.
+        """
+        print('------------------------ create_subsample_dict_and_merge_in_niche_vars ---------------------------')
+        # ----------- open imputed dataframe ------------------------------------------
+        self.df = self._open_df(balanced=balanced, keyword='imputed')
+        df2 = self.df.copy()
+        print(df2.shape)
+        # print(df2.columns)
+        res_original = copy.deepcopy(self.sub_sample_d)
+        res_imputed = copy.deepcopy(self.sub_sample_d)
+        # ----------- open nlp k means cluster labels ----------------------------------
+        filename = self.initial_panel + '_merged_niche_vars_with_appid.pickle'
+        q = self.nlp_stats_path / filename
+        with open(q, 'rb') as f:
+            niche_dict = pickle.load(f)
+        # ----------- slicing into sub-samples and merge in the nlp labels --------------
+        for k, s in res_original.items():
+            for ss in s.keys():
+                if ss == 'FULL':
+                    df3 = df2.copy()
                 else:
-                    d[name1][name2] = df.loc[df[name2]==1]
-        return d
+                    df3 = df2.loc[df2[ss]==1]
+                # --------------------------------------------------------
+                print(k + '---' + ss + ' before merging in niche variables')
+                print(df3.shape)
+                df3 = df3.merge(niche_dict[k][ss], how='outer', left_index=True, right_index=True)
+                df3 = df3.fillna(value=np.nan)
+                # make the time-invariant niche variables a set of time-variant variables
+                for m in self.all_panels:
+                    df3['continuous_niche_' + m] = df3['continuous_niche']
+                    df3['dummy_niche_' + m] = df3['dummy_niche']
+                df3.drop(['continuous_niche', 'dummy_niche'], axis=1, inplace=True)
+                print(k + '---' + ss + ' after merging in niche variables')
+                print(df3.shape)
+                # --------------------------------------------------------
+                print(k + '---' + ss + '---delete missing in the original variables')
+                v_dict = self._x_and_y_vars(balanced=balanced, imputed=False, scaled=False,
+                                            niche_vars=self.niche_vars,
+                                            months=self.all_panels, panel=True)
+                df4 = df3.dropna(axis=0, how='any', subset=v_dict['both'])
+                df4 = df4.loc[:, v_dict['both']]
+                print(df4.shape)
+                # print(df4.columns)
+                # --------------------------------------------------------
+                df4 = self._scale_var_printout_descriptive_stats(df=df4, k=k, ss=ss, imputed=False)
+                # --------------------------------------------------------
+                res_original[k][ss] = df4
+                # --------------------------------------------------------
+                print(k + '---' + ss + '---delete missing in the imputed variables')
+                v_dict = self._x_and_y_vars(balanced=balanced, imputed=True, scaled=False,
+                                            niche_vars=self.niche_vars,
+                                            months=self.all_panels, panel=True)
+                df5 = df3.dropna(axis=0, how='any', subset=v_dict['both'])
+                df5 = df5.loc[:, v_dict['both']]
+                print(df5.shape)
+                # print(df5.columns)
+                # --------------------------------------------------------
+                df5 = self._scale_var_printout_descriptive_stats(df=df5, k=k, ss=ss, imputed=True)
+                # --------------------------------------------------------
+                res_imputed[k][ss] = df5
+        self.original_dict = res_original
+        self.imputed_dict = res_imputed
+        return stats_and_regs(
+                        initial_panel=self.initial_panel,
+                        all_panels=self.all_panels,
+                        df=self.df,
+                        original_dict=self.original_dict,
+                        imputed_dict=self.imputed_dict)
 
-    def _cross_section_reg_get_xy_var_list(self, name1, name2, y_var, the_panel):
+    def _check_cross_sectional_ols_assumptions(self, balanced, imputed, niche_v, k, ss, y, sms_results):
         """
-        :param y_var: 'LogWNImputedprice','LogImputedminInstalls','offersIAPTrue','containsAdsTrue'
+        :param sms_results: statsmodel results object
         :return:
         """
-        time_invar_controls = ['size', 'DaysSinceReleased', 'contentRatingAdult']
-        x_var = [name1 + '_' + name2 + '_NicheDummy']
-        time_var_controls = ['Imputedscore_' + the_panel,
-                             'ZScoreImputedreviews_' + the_panel]
-        y_var = [y_var + '_' + the_panel]
-        all_vars = y_var + x_var + time_invar_controls + time_var_controls
-        print(name1, name2, the_panel)
-        print('cross section reg x and y variables are :')
-        print(all_vars)
-        return all_vars
+        if balanced is True:
+            b = 'balanced'
+        else:
+            b = 'unbalanced'
+        if imputed is True:
+            im = 'imputed'
+        else:
+            im = 'original'
+        # normality of residual --------------------------------------------------------------
+        test = sms.jarque_bera(sms_results.resid)
+        test = lzip(self.jb_test_names, test) # this is a list of tuples
+        test_df = pd.DataFrame(test, columns =['test_statistics', 'value'])
+        f_name = b + '_' + im + '_' + k + '_' + ss + '_' + y + '_jb_test' + '.csv'
+        save_f_name = self.ols_results / 'ols_assumptions_check' / b / im / niche_v / 'residual_normality' / f_name
+        test_df.to_csv(save_f_name)
+        # multi-collinearity -----------------------------------------------------------------
+        test = np.linalg.cond(sms_results.model.exog)
+        f_name = b + '_' + im + '_' + k + '_' + ss + '_' + y + '_multicollinearity.txt'
+        save_f_name = self.ols_results / 'ols_assumptions_check' / b / im / niche_v / 'multicollinearity' / f_name
+        with open(save_f_name, 'w') as f:
+            f.writelines(str(test))
+        # heteroskedasticity Breush-Pagan test -------------------------------------------------
+        test = sms.het_breuschpagan(sms_results.resid, sms_results.model.exog)
+        test = lzip(self.bp_test_names, test)
+        test_df = pd.DataFrame(test, columns =['test_statistics', 'value'])
+        f_name = b + '_' + im + '_' + k + '_' + ss + '_' + y + '_bp_test.csv'
+        save_f_name = self.ols_results / 'ols_assumptions_check' / b / im / niche_v / 'heteroskedasticity' / f_name
+        test_df.to_csv(save_f_name)
+        # linearity Harvey-Collier -------------------------------------------------------------
+        # this test not seem to work with my dataset because it raises singular matrix error message
+        # I guess for the dummy_niche regressor, the relationship is not a linear one
+        # I will visually plot the y variables against x variables to check linearity
+        return None
 
-    def _panel_reg_get_xy_var_list(self, name1, name2, y_var):
-        time_invar_controls = ['size', 'DaysSinceReleased', 'contentRatingAdult']
-        x_var = [name1 + '_' + name2 + '_NicheDummy']
-        time_var_x_vars = [name1 + '_' + name2 + '_PostXNicheDummy_' + i for i in self.all_panels] + \
-                          ['PostDummy_' + i for i in self.all_panels]
-        time_var_controls = ['DeMeanedImputedscore_' + i for i in self.all_panels] + \
-                            ['DeMeanedZScoreImputedreviews_' + i for i in self.all_panels]
-        y_var = [y_var + '_' + i for i in self.all_panels]
-        all_vars = y_var + x_var + time_var_x_vars + time_invar_controls + time_var_controls
-        print(name1, name2)
-        print('panel reg x and y variables are :')
-        print(all_vars)
-        return all_vars
-
-    def _cross_section_regression(self, y_var, df, the_panel):
+    def cross_section_regression(self, balanced):
         """
         https://www.statsmodels.org/stable/generated/statsmodels.regression.linear_model.RegressionResults.html#statsmodels.regression.linear_model.RegressionResults
         #https://www.statsmodels.org/stable/rlm.html
@@ -434,116 +364,128 @@ class essay_1_stats_and_regs_201907:
         source code for HC0, HC1, HC2, and HC3, white and Mackinnon
         https://www.statsmodels.org/dev/_modules/statsmodels/regression/linear_model.html
         https://timeseriesreasoning.com/contents/zero-inflated-poisson-regression-model/
+        do cross sectional regression with both imputed and original variables for robustness checks
+        # ---- ols regression assumptions check -----------------------
+        # https://www.statsmodels.org/dev/examples/notebooks/generated/regression_diagnostics.html
         """
-        # check the correlation among variables
-        # dfcorr = df.corr(method='pearson').round(2)
-        # print('The correlation table of the cross section regression dataframe is:')
-        # print(dfcorr)
-        # print()
-        all_vars = df.columns.values.tolist()
-        # y_var is a string without panel substring
-        for i in all_vars:
-            if y_var in i:
-                all_vars.remove(i)
-        independents_df = df[all_vars]
-        X = sm.add_constant(independents_df)
-        y = df[[y_var + '_' + the_panel]]
-        model = sm.OLS(y, X)
-        results = model.fit(cov_type='HC3')
-        return results
-
-    def _panel_reg_pooled_ols(self,
-                   y_var, df):
-        """
-        Internal function
-        return a dictionary containing all different type of panel reg results
-        I will not run fixed effects model here because they will drop time-invariant variables.
-        In addition, I just wanted to check whether for the time variant variables, the demeaned time variant variables
-        will have the same coefficient in POOLED OLS as the time variant variables in FE.
-        """
-        all_vars = df.columns.values.tolist()
-        # y_var is a string without panel substring
-        for i in all_vars:
-            if y_var in i:
-                all_vars.remove(i)
-        independents_df = df[all_vars]
-        X = sm.add_constant(independents_df)
-        y = df[[y_var]]
-        # https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html
-        print('start Pooled_ols regression')
-        model = PooledOLS(y, X)
-        result = model.fit(cov_type='clustered', cluster_entity=True)
-        return result
-
-    def _reg_for_all_subsamples_for_single_y_var(self, reg_type, y_var):
-        data = self._slice_subsamples_dict()
-        if reg_type == 'cross_section_ols':
-            reg_results = dict.fromkeys(self.all_panels)
-            for i in self.all_panels:
-                reg_results[i] = dict.fromkeys(self.ssnames.keys())
-                for name1, content1 in self.ssnames.items():
-                    reg_results[i][name1] = dict.fromkeys(content1)
-                    for name2 in content1:
-                        allvars = self._cross_section_reg_get_xy_var_list(
-                                              name1=name1,
-                                              name2=name2,
-                                              y_var=y_var,
-                                              the_panel=i)
-                        df = data[name1][name2][allvars]
-                        print(name1, name2, 'Cross Section Regression -- First Check Correlations')
-                        reg_results[i][name1][name2] = self._cross_section_regression(
-                                              y_var=y_var,
-                                              df=df,
-                                              the_panel=i)
-            for i in self.all_panels:
-                self._extract_and_save_reg_results(result=reg_results,
-                                                   reg_type=reg_type,
-                                                   y_var=y_var,
-                                                   the_panel=i)
-        elif reg_type == 'panel_pooled_ols':
-            reg_results = dict.fromkeys(self.ssnames.keys())
-            for name1, content1 in self.ssnames.items():
-                reg_results[name1] = dict.fromkeys(content1)
-                for name2 in content1:
-                    allvars = self._panel_reg_get_xy_var_list(
-                                              name1=name1,
-                                              name2=name2,
-                                              y_var=y_var)
-                    # ---------- convert to long for panel regression --------------------
-                    df = data[name1][name2][allvars]
-                    stubnames = [name1 + '_' + name2 + '_PostXNicheDummy', 'PostDummy',
-                                 y_var, 'DeMeanedImputedscore', 'DeMeanedZScoreImputedreviews']
-                    df = df.reset_index()
-                    ldf = pd.wide_to_long(
-                        df,
-                        stubnames=stubnames,
-                        i=['index'],
-                        j="panel",
-                        sep='_').reset_index()
-                    ldf["panel"] = pd.to_datetime(ldf["panel"], format='%Y%m')
-                    ldf = ldf.sort_values(by=["index", "panel"]).set_index('index')
-                    ldf = ldf.reset_index().set_index(['index', 'panel'])
-                    reg_results[name1][name2] = self._panel_reg_pooled_ols(
-                                                                  y_var=y_var,
-                                                                  df=ldf)
-            self._extract_and_save_reg_results(result=reg_results,
-                                               reg_type=reg_type,
-                                               y_var=y_var)
+        print('----------------------------- cross_section_regression ---------------------------------')
+        if balanced is True:
+            b = 'balanced'
         else:
-            reg_results = {}
-        return reg_results
+            b = 'unbalanced'
+        # one set of regression use continuous niche as independent var, the other set uses dummy niche
+        for niche_v in self.niche_vars:
+            original_vars = self._x_and_y_vars(balanced=balanced, imputed=False, scaled=True,
+                                               niche_vars=[niche_v],
+                                               months=self.all_panels, panel=False)
+            imputed_vars = self._x_and_y_vars(balanced=balanced, imputed=True, scaled=True,
+                                              niche_vars=[niche_v],
+                                              months=self.all_panels, panel=False)
+            for m in self.all_panels:
+                for k, s in self.sub_sample_d.items():
+                    for ss in s:
+                        dfo = self.original_dict[k][ss].copy()
+                        dfi = self.imputed_dict[k][ss].copy()
+                        # ================================ original variable ols ======================================
+                        for y in original_vars['y'][m]:
+                            o_x_str = ' + '.join(original_vars['x'][m])
+                            formula = y + ' ~ ' + o_x_str
+                            print(k + '--' + ss + '-- formula original --')
+                            print(formula)
+                            original_results = smf.ols(formula, data=dfo).fit()
+                            table = original_results.summary().tables[1].as_csv()
+                            f_name = b + '_' + m + '_' + k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
+                            save_f_name = self.ols_results / 'raw_results' / b / 'original' / niche_v / f_name
+                            with open(save_f_name, 'w') as fh:
+                                fh.write(table)
+                            self._check_cross_sectional_ols_assumptions(balanced=balanced,
+                                                                        imputed=False,
+                                                                        niche_v=niche_v,
+                                                                        k=k, ss=ss, y=y,
+                                                                        sms_results=original_results)
+                        # ================================ imputed variable ols =======================================
+                        for y in imputed_vars['y'][m]:
+                            i_x_str = ' + '.join(imputed_vars['x'][m])
+                            formula = y + ' ~ ' + i_x_str
+                            print(k + '--' + ss + '-- formula imputed --')
+                            print(formula)
+                            imputed_results = smf.ols(formula, data=dfi).fit()
+                            table = imputed_results.summary().tables[1].as_csv()
+                            f_name = b + '_' + m + '_' + k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
+                            save_f_name = self.ols_results / 'raw_results' / b / 'imputed' / niche_v / f_name
+                            with open(save_f_name, 'w') as fh:
+                                fh.write(table)
+                            self._check_cross_sectional_ols_assumptions(balanced=balanced,
+                                                                        imputed=False,
+                                                                        niche_v=niche_v,
+                                                                        k=k, ss=ss, y=y,
+                                                                        sms_results=imputed_results)
+        return stats_and_regs(
+                        initial_panel=self.initial_panel,
+                        all_panels=self.all_panels,
+                        df=self.df,
+                        original_dict=self.original_dict,
+                        imputed_dict=self.imputed_dict,
+                        reg_results = self.reg_results)
+
+    def export_ols_results(self, balanced, niche_vars):
+        print('----------------------------- export_ols_results ---------------------------------')
+        if balanced is True:
+            y_vars = self.balanced_y_vars
+            imputed_y_vars = ['imputed_' + i for i in y_vars]
+            b = 'balanced'
+        else:
+            y_vars = self.balanced_y_vars + self.unbalanced_only_y_vars
+            imputed_y_vars = ['imputed_' + i for i in y_vars] + self.unbalanced_only_y_vars
+            b = 'unbalanced'
+        all_y_vars = y_vars + imputed_y_vars
+        coef = [i + '_coef' for i in all_y_vars]
+        pvalue = [i + '_pvalue' for i in all_y_vars]
+        # -------------------------------------------------------------
+        for niche_v in niche_vars:
+            for m in self.all_panels:
+                res = pd.DataFrame(columns=coef + pvalue + ['imputed_nobs', 'original_nobs'],
+                                   index=self.sub_sample_l)
+                # print(res.head())
+                for k, s in self.sub_sample_d.items():
+                    for ss in s:
+                        for y in y_vars:
+                            # ------------ assigning to dataframe ---------------------------------------
+                            res.at[ss, 'imputed_'+y+'_coef'] = self.reg_results['ols'][b][m][k][ss][y]['imputed'].params[niche_v]
+                            res.at[ss, 'imputed_'+y+'_pvalue'] = self.reg_results['ols'][b][m][k][ss][y]['imputed'].pvalues[niche_v]
+                            res.at[ss, 'imputed_nobs'] = self.reg_results['ols'][b][m][k][ss][y]['imputed'].nobs
+                            res.at[ss, y+'_coef'] = self.reg_results['ols'][b][m][k][ss][y]['original'].params[niche_v]
+                            res.at[ss, y+'_pvalue'] = self.reg_results['ols'][b][m][k][ss][y]['original'].pvalues[niche_v]
+                            res.at[ss, 'original_nobs'] = self.reg_results['ols'][b][m][k][ss][y]['original'].nobs
+                            # --------------- print check -----------------------------------------------
+                            if niche_v == 'continuous_niche':
+                                print(b + ' -- ' + m + ' -- ' + k + ' -- ' + ss + ' -- ' + y + ' -- ' + niche_v + ' -- original parameters')
+                                print(self.reg_results['ols'][b][m][k][ss][y]['original'].params[niche_v])
+                                print(res.loc[ss, y+'_coef'])
+                            # print(b + ' -- ' + m + ' -- ' + k + ' -- ' + ss + ' -- ' + y + ' -- ' + niche_v + ' -- imputed parameters')
+                            # print(self.reg_results['ols'][b][m][k][ss][y]['imputed'].params[niche_v])
+                # print('-------------- ' + b + ' -- ' + m + ' -- ' + niche_v + ' --- ols results table head --------------')
+                # print(res.head())
+                f_name = niche_v + '_' + m + '_OLS_RESULTS.csv'
+                res.to_csv(self.ols_results / f_name)
+                print('saved ' + niche_v + ' ' + m + ' OLS results dataframe')
+        return stats_and_regs(
+                        initial_panel=self.initial_panel,
+                        all_panels=self.all_panels,
+                        df=self.df,
+                        original_dict=self.original_dict,
+                        imputed_dict=self.imputed_dict,
+                        reg_results = self.reg_results)
+
 
     def reg_for_all_subsamples_for_all_y_vars(self, reg_type):
         res = dict.fromkeys(self.all_y_reg_vars)
         for y in self.all_y_reg_vars:
             res[y] = self._reg_for_all_subsamples_for_single_y_var(reg_type=reg_type, y_var=y)
         self.reg_results = res
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def _extract_and_save_reg_results(self, result, reg_type, y_var, the_panel=None):
         for name1, content1 in self.ssnames.items():
@@ -723,12 +665,9 @@ class essay_1_stats_and_regs_201907:
             filename = combo + '_' + reg_type + '_reg_results.csv'
             adf.to_csv(self.main_path / 'reg_tables_ready_for_latex' / filename)
             res2[combo] = adf
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def set_row_and_column_groups(self, df, result_type, table_type):
         """
@@ -841,19 +780,6 @@ class essay_1_stats_and_regs_201907:
             df2.set_index(['Samples', 'Independent Vars'], inplace=True)
         return df2
 
-    def convert_to_latex(self, df, result_type, table_type):
-        """
-        df is the output of self.set_row_and_column_groups(self, df, result_type)
-        """
-        f_name = result_type + '_' + table_type + '_NicheDummy_Combined.tex'
-        df.to_latex(buf=regression.reg_table_path / f_name,
-                   multirow=True,
-                   multicolumn=True,
-                   longtable=True,
-                   position='h!',
-                   escape=False)
-        return df
-
     def combine_app_level_text_cluster_stats_with_df(self):
         df = self._open_imputed_deleted_divided_df()
         d = self._open_app_level_text_cluster_stats()
@@ -910,363 +836,8 @@ class essay_1_stats_and_regs_201907:
                 d[name1][name2] = s2.rename('Apps Count').to_frame()
         return d
 
-    def determine_niche_broad_cutoff(self):
-        d = self._numApps_per_cluster()
-        self.broad_niche_cutoff = dict.fromkeys(self.ssnames.keys())
-        self.broadDummy_labels = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in self.ssnames.items():
-            self.broad_niche_cutoff[name1] = dict.fromkeys(content1)
-            self.broadDummy_labels[name1] = dict.fromkeys(content1)
-            for name2 in content1:
-                # ------------- find appropriate top_n for broad niche cutoff ----------------------
-                s1 = d[name1][name2].to_numpy()
-                s_multiples = np.array([])
-                for i in range(len(s1) - 1):
-                    multiple = s1[i] / s1[i + 1]
-                    s_multiples = np.append(s_multiples, multiple)
-                # top_n equals to the first n numbers that are 2
-                top_n = 0
-                if len(s_multiples) > 2:
-                    for i in range(len(s_multiples) - 2):
-                        if s_multiples[i] >= 2 and top_n == i:
-                            top_n += 1
-                        elif s_multiples[i + 1] >= 1.5 and top_n == 0:
-                            top_n += 2
-                        elif s_multiples[i + 2] >= 1.5 and top_n == 0:
-                            top_n += 3
-                        elif s_multiples[0] <= 1.1 and top_n == 0:
-                            top_n += 2
-                        else:
-                            if top_n == 0:
-                                top_n = 1
-                else:
-                    top_n = 1
-                self.broad_niche_cutoff[name1][name2] = top_n
-                self.broadDummy_labels[name1][name2] = d[name1][name2][:top_n].index.tolist()
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
 
-    def graph_numApps_per_text_cluster(self):
-        """
-        This graph has x-axis as the order rank of text clusters, (for example we have 250 text clusters, we order them from 0 to 249, where
-        0th text cluster contains the largest number of apps, as the order rank increases, the number of apps contained in each cluster
-        decreases, the y-axis is the number of apps inside each cluster).
-        Second meeting with Leah discussed that we will abandon this graph because the number of clusters are too many and they
-        are right next to each other to further right of the graph.
-        """
-        d = self._numApps_per_cluster()
-        for name1, content1 in d.items():
-            for name2, content2 in content1.items():
-                df3 = content2.reset_index()
-                df3.columns = ['cluster_labels', 'Apps Count']
-                # -------------- plot ----------------------------------------------------------------
-                fig, ax = plt.subplots()
-                # color the top_n bars
-                # after sort descending, the first n ranked clusters (the number in broad_niche_cutoff) is broad
-                color = ['red'] * self.broad_niche_cutoff[name1][name2]
-                # and the rest of all clusters are niche
-                rest = len(df3.index) - self.broad_niche_cutoff[name1][name2]
-                color.extend(['blue'] * rest)
-                df3.plot.bar( x='cluster_labels',
-                              xlabel='Text Clusters',
-                              y='Apps Count',
-                              ylabel='Apps Count',
-                              ax=ax,
-                              color=color)
-                # customize legend
-                BRA = mpatches.Patch(color='red', label='broad apps')
-                NIA = mpatches.Patch(color='blue', label='niche apps')
-                ax.legend(handles=[BRA, NIA], loc='upper right')
-                ax.axes.xaxis.set_ticks([])
-                ax.yaxis.set_ticks_position('right')
-                ax.spines['left'].set_visible(False)
-                ax.spines['top'].set_visible(False)
-                ax.grid(True)
-                # label the top n clusters
-                df4 = df3.iloc[:self.broad_niche_cutoff[name1][name2], ]
-                for index, row in df4.iterrows():
-                    value = round(row['Apps Count'])
-                    ax.annotate(value,
-                                (index, value),
-                                xytext=(0, 0.1), # 2 points to the right and 15 points to the top of the point I annotate
-                                textcoords='offset points')
-                plt.xlabel("Text Clusters")
-                plt.ylabel('Apps Count')
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                file_keywords='numApps_count',
-                                                name1=name1,
-                                                name2=name2,
-                                                # graph_title='Histogram of Apps Count In Each Text Cluster',
-                                                relevant_folder_name = 'numApps_per_text_cluster')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
 
-    def _numClusters_per_cluster_size_bin(self, combine_clusters):
-        d = self._numApps_per_cluster()
-        res = dict.fromkeys(d.keys())
-        for k1, content1 in d.items():
-            res[k1] = dict.fromkeys(content1.keys())
-            for k2, df in content1.items():
-                df2 = df.copy(deep=True)
-                # since the min number of apps in a cluster is 1, not 0, so the smallest range (0, 1] is OK.
-                # there is an option include_loweest == True, however, it will return float, but I want integer bins, so I will leave it
-                # cannot set retbins == True because it will override the labels
-                if combine_clusters is True:
-                    df3 = df2.groupby(pd.cut(x=df2.iloc[:, 0],
-                                             bins=essay_1_stats_and_regs_201907.combined_text_cluster_size_bins,
-                                             include_lowest=True,
-                                             labels=essay_1_stats_and_regs_201907.combined_text_cluster_size_labels)
-                                  ).count()
-                else:
-                    df3 = df2.groupby(pd.cut(x=df2.iloc[:, 0],
-                                             bins=essay_1_stats_and_regs_201907.text_cluster_size_bins,
-                                             include_lowest=True,
-                                             labels=essay_1_stats_and_regs_201907.text_cluster_size_labels)
-                                  ).count()
-                df3.rename(columns={'Apps Count': 'Clusters Count'}, inplace=True)
-                res[k1][k2] = df3
-        return res
-
-    def graph_numClusters_per_cluster_size_bin(self, combine_clusters):
-        res = self._numClusters_per_cluster_size_bin(combine_clusters)
-        for name1, content1 in res.items():
-            for name2, dfres in content1.items():
-                dfres.reset_index(inplace=True)
-                dfres.columns = ['cluster_size_bin', 'Clusters Count']
-                fig, ax = plt.subplots()
-                fig.subplots_adjust(bottom=0.3)
-                dfres.plot.bar( x='cluster_size_bin',
-                                xlabel = 'Cluster Sizes Bins',
-                                y='Clusters Count',
-                                ylabel = 'Clusters Count', # default will show no y-label
-                                rot=40, # rot is **kwarg rotation for ticks
-                                grid=False, # because the default will add x grid, so turn it off first
-                                legend=None, # remove legend
-                                ax=ax # make sure to add ax=ax, otherwise this ax subplot is NOT on fig
-                                )
-                ax.spines['right'].set_visible(False)
-                ax.spines['top'].set_visible(False)
-                ax.yaxis.grid() # since pandas parameter grid = False or True, no options, so I will modify here
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                file_keywords='numClusters_count',
-                                                name1=name1,
-                                                name2=name2,
-                                                # graph_title='Histogram of Clusters In Each Cluster Size Bin',
-                                                relevant_folder_name='numClusters_per_cluster_size_bin')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
-
-    def _numApps_per_cluster_size_bin(self, combine_clusters):
-        d1 = self._numApps_per_cluster()
-        d3 = self._open_predicted_labels_dict()
-        res = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in self.ssnames.items():
-            res[name1] = dict.fromkeys(content1)
-            for name2 in content1:
-                df = d3[name1][name2].copy(deep=True)
-                # create a new column indicating the number of apps in the particular cluster for that app
-                predicted_label_col = name1 + '_' + name2 + '_kmeans_labels'
-                df['numApps_in_cluster'] = df[predicted_label_col].apply(
-                    lambda x: d1[name1][name2].loc[x])
-                # create a new column indicating the size bin the text cluster belongs to
-                if combine_clusters is True:
-                    df['cluster_size_bin'] = pd.cut(
-                                       x=df['numApps_in_cluster'],
-                                       bins=self.combined_text_cluster_size_bins,
-                                       include_lowest=True,
-                                       labels=self.combined_text_cluster_size_labels)
-                else:
-                    df['cluster_size_bin'] = pd.cut(
-                                       x=df['numApps_in_cluster'],
-                                       bins=self.text_cluster_size_bins,
-                                       include_lowest=True,
-                                       labels=self.text_cluster_size_labels)
-                # create a new column indicating grouped sum of numApps_in_cluster for each cluster_size
-                df2 = df.groupby('cluster_size_bin').count()
-                df3 = df2.iloc[:, 0].to_frame()
-                df3.columns = ['numApps_in_cluster_size_bin']
-                res[name1][name2] = df3
-        return res
-
-    def graph_numApps_per_cluster_size_bin(self, combine_clusters):
-        res = self._numApps_per_cluster_size_bin(combine_clusters)
-        for name1, content1 in res.items():
-            for name2, dfres in content1.items():
-                dfres.reset_index(inplace=True)
-                dfres.columns = ['cluster_size_bin', 'numApps_in_cluster_size_bin']
-                fig, ax = plt.subplots()
-                fig.subplots_adjust(bottom=0.3)
-                dfres.plot.bar( x='cluster_size_bin',
-                                xlabel = 'Cluster Size Bins',
-                                y='numApps_in_cluster_size_bin',
-                                ylabel = 'Apps Count', # default will show no y-label
-                                rot=40, # rot is **kwarg rotation for ticks
-                                grid=False, # because the default will add x grid, so turn it off first
-                                legend=None, # remove legend
-                                ax=ax # make sure to add ax=ax, otherwise this ax subplot is NOT on fig
-                                )
-                ax.spines['right'].set_visible(False)
-                ax.spines['top'].set_visible(False)
-                ax.yaxis.grid() # since pandas parameter grid = False or True, no options, so I will modify here
-                # ------------ set title and save ----------------------------------------
-                self._set_title_and_save_graphs(fig=fig,
-                                                file_keywords='numApps_per_cluster_size_bin',
-                                                name1=name1,
-                                                name2=name2,
-                                                # graph_title='Histogram of Apps Count In Each Cluster Size Bin',
-                                                relevant_folder_name='numApps_per_cluster_size_bin')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
-
-    def text_cluster_stats_at_app_level(self, combine_clusters):
-        d1 = self._open_predicted_labels_dict()
-        d2 = self._numApps_per_cluster()
-        d3 = self._numClusters_per_cluster_size_bin(combine_clusters)
-        d4 = self._numApps_per_cluster_size_bin(combine_clusters)
-        res = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in self.ssnames.items():
-            res[name1] = dict.fromkeys(content1)
-            for name2 in content1:
-                df = d1[name1][name2].copy(deep=True)
-                # set column names with name1 and name2 for future joining
-                predicted_label = name1 + '_' + name2 + '_kmeans_labels'
-                numApps_in_cluster = name1 + '_' + name2 + '_numApps_in_cluster'
-                cluster_size_bin = name1 + '_' + name2 + '_cluster_size_bin'
-                numClusters_in_cluster_size_bin = name1 + '_' + name2 + '_numClusters_in_cluster_size_bin'
-                numApps_in_cluster_size_bin = name1 + '_' + name2 + '_numApps_in_cluster_size_bin'
-                # create a new column indicating the number of apps in the particular cluster for that app
-                # (do not forget to use .squeeze() here because .loc will return a pandas series)
-                df[numApps_in_cluster] = df[predicted_label].apply(
-                    lambda x: d2[name1][name2].loc[x].squeeze())
-                # create a new column indicating the size bin the text cluster belongs to
-                if combine_clusters is True:
-                    df[cluster_size_bin] = pd.cut(
-                                       x=df[numApps_in_cluster],
-                                       bins=essay_1_stats_and_regs_201907.combined_text_cluster_size_bins,
-                                       include_lowest=True,
-                                       labels=essay_1_stats_and_regs_201907.combined_text_cluster_size_labels)
-                else:
-                    df[cluster_size_bin] = pd.cut(
-                                       x=df[numApps_in_cluster],
-                                       bins=essay_1_stats_and_regs_201907.text_cluster_size_bins,
-                                       include_lowest=True,
-                                       labels=essay_1_stats_and_regs_201907.text_cluster_size_labels)
-                # create a new column indicating number of cluster for each cluster size bin
-                df[numClusters_in_cluster_size_bin] = df[cluster_size_bin].apply(
-                    lambda x: d3[name1][name2].loc[x].squeeze())
-                # create a new column indicating grouped sum of numApps_in_cluster for each cluster_size
-                df[numApps_in_cluster_size_bin] = df[cluster_size_bin].apply(
-                    lambda x: d4[name1][name2].loc[x].squeeze())
-                res[name1][name2] = df
-        filename = self.initial_panel + '_dict_app_level_text_cluster_stats.pickle'
-        q = essay_1_stats_and_regs_201907.panel_essay_1_path / 'app_level_text_cluster_stats' / filename
-        pickle.dump(res, open(q, 'wb'))
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
-
-    def _groupby_subsample_dfs_by_nichedummy(self):
-        d = self._slice_subsamples_dict()
-        res = dict.fromkeys(self.ssnames.keys())
-        for name1, content1 in d.items():
-            res[name1] = dict.fromkeys(content1.keys())
-            for name2, df in content1.items():
-                niche_dummy = name1 + '_' + name2 + '_NicheDummy'
-                df2 = df.groupby([niche_dummy]).size().to_frame()
-                df2.rename(columns={0: name1 + '_' + name2}, index={0: 'Broad Apps', 1: 'Niche Apps'}, inplace=True)
-                res[name1][name2] = df2
-        return res
-
-    def _combine_name2s_into_single_df(self, name12_list, d):
-        """
-        :param name2_list: such as ['full_full', 'minInstalls_Tier1', 'minInstalls_Tier2', 'minInstalls_Tier3']
-        :param d: the dictionary of single subsample df containing stats
-        :return:
-        """
-        df_list = []
-        for name1, content1 in d.items():
-            for name2, df in content1.items():
-                name12 = name1 + '_' + name2
-                if name12 in name12_list:
-                    df_list.append(df)
-        df2 = functools.reduce(lambda a, b: a.join(b, how='inner'), df_list)
-        l = df2.columns.tolist()
-        str_to_replace = {'categories_category_': '',
-                          'genreId_': '',
-                          'minInstalls_': '',
-                          'full_': '',
-                          'starDeveloper_': '',
-                          '_digital_firms': '',
-                          '_': ' '}
-        for col in l:
-            new_col = col
-            for k, v in str_to_replace.items():
-                new_col = new_col.replace(k, v)
-            new_col = new_col.title()
-            df2.rename(columns={col: new_col}, inplace=True)
-        df2.loc["Total"] = df2.sum(axis=0)
-        df2 = df2.sort_values(by='Total', axis=1, ascending=False)
-        df2 = df2.drop(labels='Total')
-        df2 = df2.T
-        return df2
-
-    def niche_by_subsamples_bar_graph(self, combo=None):
-        # each sub-sample is a horizontal bar in a single graph
-        fig, ax = plt.subplots(figsize=self.combo_barh_figsize[combo])
-        fig.subplots_adjust(left=0.2)
-        # -------------------------------------------------------------------------
-        res = self._groupby_subsample_dfs_by_nichedummy()
-        df = self._combine_name2s_into_single_df(name12_list=self.graph_combo_ssnames[combo],
-                                                 d=res)
-        f_name = combo + '_niche_by_subsamples_bar_graph.csv'
-        q = self.des_stats_tables_essay_1 / f_name
-        df.to_csv(q)
-        df.plot.barh(stacked=True,
-                     color={"Broad Apps": "orangered",
-                            "Niche Apps": "lightsalmon"},
-                     ax=ax)
-        ax.set_ylabel('Samples')
-        ax.set_yticklabels(ax.get_yticklabels(),
-                           fontsize=self.combo_barh_yticklabel_fontsize[combo])
-        ax.set_xlabel('Apps Count')
-        ax.xaxis.grid()
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        # graph_title = self.initial_panel + ' ' + self.combo_graph_titles[combo] + \
-        #               '\n Apps Count by Niche and Broad Types'
-        # ax.set_title(graph_title)
-        ax.legend()
-        # ------------------ save file -----------------------------------------------------------------
-        self._set_title_and_save_graphs(fig=fig,
-                                        file_keywords=self.combo_graph_titles[combo].lower().replace(' ', '_'),
-                                        relevant_folder_name='nichedummy_count_by_subgroup')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
 
     def _prepare_pricing_vars_for_graph_group_by_var(self,
                                                      group_by_var,
@@ -1613,12 +1184,9 @@ class essay_1_stats_and_regs_201907:
                                             #             ' Cross Section Descriptive Statistics of \n' + \
                                             #             self.graph_dep_vars_titles[key_vars[i]] + the_panel,
                                             relevant_folder_name='pricing_vars_stats')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
 
     def graph_corr_heatmap_among_dep_vars(self, the_panel):
@@ -1769,12 +1337,9 @@ class essay_1_stats_and_regs_201907:
                                             #       ' ' + self.graph_dep_vars_titles[dep_var] + \
                                             #       " \nRegress on Niche Dummy Coefficient Parallel Trends",
                                             relevant_folder_name='parallel_trend_nichedummy')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def cat_var_count(self, cat_var, the_panel=None):
         if the_panel is not None:
@@ -1832,12 +1397,9 @@ class essay_1_stats_and_regs_201907:
         dcols = ['ImputedcontentRating_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def count_number_of_days_since_released(self):
         """
@@ -1868,12 +1430,9 @@ class essay_1_stats_and_regs_201907:
         dcols = ['Imputedfree_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def add_white_noise_to_Imputedprice(self):
         """
@@ -1894,12 +1453,9 @@ class essay_1_stats_and_regs_201907:
         dcols = ['Imputedprice_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def log_transform_pricing_vars(self):
         df1 = self._select_vars(df=self.cdf,
@@ -1919,12 +1475,9 @@ class essay_1_stats_and_regs_201907:
                 + ['WNImputedprice_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+            tcn=self.tcn,
+            df=self.cdf)
 
     def box_cox_transform_pricing_vars(self):
         """
@@ -1941,12 +1494,9 @@ class essay_1_stats_and_regs_201907:
                 + ['WNImputedprice_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def create_generic_true_false_dummies(self, cat_var):
         df1 = self._select_vars(df=self.cdf, time_variant_vars_list=['Imputed' + cat_var])
@@ -1955,12 +1505,9 @@ class essay_1_stats_and_regs_201907:
         dcols = ['Imputed' + cat_var + '_' + i for i in self.all_panels]
         df1.drop(dcols, axis=1, inplace=True)
         self.cdf = self.cdf.join(df1, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def create_NicheDummy(self):
         for name1, content1 in self.ssnames.items():
@@ -1969,12 +1516,9 @@ class essay_1_stats_and_regs_201907:
                 niche_col_name = name1 + '_' + name2 + '_NicheDummy'
                 self.cdf[niche_col_name] = self.cdf[label_col_name].apply(
                     lambda x: 0 if x in self.broadDummy_labels[name1][name2] else 1)
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def create_PostDummy(self):
         start_covid_us = datetime.strptime('202003', "%Y%m")
@@ -1989,12 +1533,9 @@ class essay_1_stats_and_regs_201907:
                 POST_dummies.append('PostDummy_' + i)
         print('CREATED the following post dummies:')
         print(POST_dummies)
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def create_PostXNiche_interactions(self):
         PostXNiche_dummies = []
@@ -2008,12 +1549,9 @@ class essay_1_stats_and_regs_201907:
                     PostXNiche_dummies.append(postxnichedummy)
         print('CREATED the following post niche interaction dummies:')
         print(PostXNiche_dummies)
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def standardize_continuous_vars(self, con_var, method):
         """
@@ -2040,12 +1578,9 @@ class essay_1_stats_and_regs_201907:
             print(df3[i].describe().round(3))
             print()
         self.cdf = self.cdf.join(df3, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     # I will first standardize variables and then demean them
     def create_demean_time_variant_vars(self, time_variant_vars):
@@ -2066,12 +1601,9 @@ class essay_1_stats_and_regs_201907:
             dfs.append(sub_df[ts_idm])
         df_new = functools.reduce(lambda a, b: a.join(b, how='inner'), dfs)
         self.cdf = self.cdf.join(df_new, how='inner')
-        return essay_1_stats_and_regs_201907(
-                                   tcn=self.tcn,
-                                   combined_df=self.cdf,
-                                   broad_niche_cutoff=self.broad_niche_cutoff,
-                                   broadDummy_labels=self.broadDummy_labels,
-                                   reg_results=self.reg_results)
+        return stats_and_regs(
+                           tcn=self.tcn,
+                           df=self.cdf)
 
     def create_var_definition_latex(self):
         df = pd.DataFrame()
@@ -2185,6 +1717,25 @@ class essay_1_stats_and_regs_201907:
                     escape=False)
         return df
 
+
+
+    # ==================================================================================================
+    # COMPARE the coefficient from different samples
+    # ==================================================================================================
+    """
+    Apr 2, 2022
+    https://www.theanalysisfactor.com/compare-regression-coefficients/
+    Simply include an interaction term between Sex (male/female) and any predictor whose coefficient you want to compare.  
+    If you want to compare all of them because you believe that all predictors have different effects for men and women, 
+    then include an interaction term between sex and each predictor.  If you have 6 predictors, that means 6 interaction terms.
+    In such a model, if Sex is a dummy variable (and it should be), two things happen:
+    1.the coefficient for each predictor becomes the coefficient for that variable ONLY for the reference group.
+    2. the interaction term between sex and each predictor represents the DIFFERENCE in the coefficients between 
+    the reference group and the comparison group.  If you want to know the coefficient for the comparison group, 
+    you have to add the coefficients for the predictor alone and that predictor’s interaction with Sex.
+    The beauty of this approach is that the p-value for each interaction term gives you a significance 
+    test for the difference in those coefficients.
+    """
 
 
 

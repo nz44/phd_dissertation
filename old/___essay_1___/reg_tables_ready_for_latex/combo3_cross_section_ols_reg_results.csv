@@ -1,0 +1,24 @@
+,Samples,Independent Vars,"Log Price Adjusted 
+With White Noise",Log Minimum Installs,Offers IAP,Contains Ads
+0,Full,Constant,0.976***,4.282***,0.108***,0.093***
+1,Full,Niche,-0.116***,1.16***,0.156***,0.174***
+2,"Gaming 
+Apps",Constant,0.55***,6.879***,0.219***,0.329***
+3,"Gaming 
+Apps",Niche,-0.156***,0.294**,0.086***,0.109***
+4,"Business 
+Apps",Constant,0.74***,5.398***,0.163***,0.229***
+5,"Business 
+Apps",Niche,-0.128***,0.558***,0.098***,0.145***
+6,"Social 
+Apps",Constant,1.324***,2.582***,0.102**,0.018
+7,"Social 
+Apps",Niche,0.033,0.783***,0.014,0.073**
+8,"Lifestyle 
+Apps",Constant,0.904***,4.26***,0.169***,0.065
+9,"Lifestyle 
+Apps",Niche,-0.276***,1.723***,0.168***,0.187***
+10,"Medical 
+Apps",Constant,1.687***,4.665***,0.081,0.014
+11,"Medical 
+Apps",Niche,-0.495***,1.618***,0.145**,0.028

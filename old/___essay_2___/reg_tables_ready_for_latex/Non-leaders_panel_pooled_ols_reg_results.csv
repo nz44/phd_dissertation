@@ -1,0 +1,50 @@
+,Samples,Independent Vars,"Log Price Adjusted 
+With White Noise",Log Minimum Installs,Offers IAP,Contains Ads
+0,"Followers 
+Full",Constant,0.484***,9.223***,0.048***,0.379***
+1,"Followers 
+Full",Niche,-0.069**,0.92***,0.002,0.144***
+2,"Followers 
+Full",Post,0.014**,0.184***,0.26***,-0.001
+3,"Followers 
+Full",PostNiche,-0.01,-0.004,0.11***,-0.0
+4,"Followers 
+Gaming Apps",Constant,0.375***,11.731***,0.081***,0.669***
+5,"Followers 
+Gaming Apps",Niche,-0.229***,0.195,0.009**,0.144***
+6,"Followers 
+Gaming Apps",Post,0.004,0.18***,0.411***,-0.001
+7,"Followers 
+Gaming Apps",PostNiche,0.003,0.019,0.053***,0.0
+8,"Followers 
+Business Apps",Constant,0.439***,9.376***,0.006,0.323***
+9,"Followers 
+Business Apps",Niche,0.028,0.707***,0.007,0.051
+10,"Followers 
+Business Apps",Post,-0.004,0.166***,0.279***,-0.004
+11,"Followers 
+Business Apps",PostNiche,0.008,0.015,0.034,0.002
+12,"Followers 
+Social Apps",Constant,0.653***,7.229***,-0.017,0.28***
+13,"Followers 
+Social Apps",Niche,-0.022,0.69***,-0.016**,0.073**
+14,"Followers 
+Social Apps",Post,0.009,0.187***,0.276***,-0.003
+15,"Followers 
+Social Apps",PostNiche,0.006,-0.033,0.043,0.003
+16,"Followers 
+Lifestyle Apps",Constant,0.504***,8.573***,0.045***,0.378***
+17,"Followers 
+Lifestyle Apps",Niche,-0.164***,1.121***,0.001,0.142***
+18,"Followers 
+Lifestyle Apps",Post,0.004,0.19***,0.237***,-0.001
+19,"Followers 
+Lifestyle Apps",PostNiche,0.004,0.0,0.12***,-0.001
+20,"Followers 
+Medical Apps",Constant,0.602***,9.082***,0.134***,0.169**
+21,"Followers 
+Medical Apps",Niche,-0.033,0.05,-0.047,-0.082
+22,"Followers 
+Medical Apps",Post,-0.01,0.121**,0.34***,0.0
+23,"Followers 
+Medical Apps",PostNiche,0.012,0.027,0.004,-0.005*

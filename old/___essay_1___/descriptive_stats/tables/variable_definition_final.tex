@@ -1,0 +1,42 @@
+\begin{longtable}[h!]{lll}
+\toprule
+               &                   &                                                                                          Definitions \\
+Type & Variables &                                                                                                      \\
+\midrule
+\endfirsthead
+
+\toprule
+               &                   &                                                                                          Definitions \\
+Type & Variables &                                                                                                      \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{{Continued on next page}} \\
+\midrule
+\endfoot
+
+\bottomrule
+\endlastfoot
+\multirow{15}{*}{Time Variant} & ContainsAds &              \makecell[l]{Dummy variable equals 1 if an app \\ contains advertisement, 0 otherwise.} \\
+               & OffersIAP &              \makecell[l]{Dummy variable equals 1 if an app \\ offers in-app-purchase, 0 otherwise.} \\
+               & Paid &    \makecell[l]{Dummy variable equals 1 if an app charges a positive \\ price upfront, 0 otherwise.} \\
+               & Price &                                                                      \makecell[l]{App price in USD.} \\
+               & Post &   \makecell[l]{Dummy variable equals 1 if the observation \\is after Mar 2020 (inclusive), and 0 if the \\observation is before Mar 2020}\\
+               & PostNiche &  \makecell[l]{Interaction variable between Post and Niche,\\ which equals 1 if and only if the observation \\equals to 1 for both Post and Niche.}\\
+               & PostNicheScale &   \makecell[l]{Interaction variable between Post and \\NicheScale dummies, which equals 1 if and only \\if the observation equals to 1 for \\both Post and NicheScale.}\\
+               & Score &                                \makecell[l]{An app's verage score in a period, \\between 1 and 5} \\
+               & Score (DeMeaned) &   \makecell[l]{Demeaning the score across all panels \\within each app.}\\
+               & Tier1 &   \makecell[l]{Dummy variable equals 1 if the app \\has minimum installs above 10,000,000 \\(inclusive) in a panel, 0 otherwise.}\\
+               & Tier1 (DeMeaned) &                                  \makecell[l]{Demeaning Tier1 across all panels \\ within each app.} \\
+               & Tier2 &   \makecell[l]{Dummy variable equals 1 if the app \\has minimum installs below 10,000,000 and \\above 100,000 (inclusive), 0 otherwise.}\\
+               & Tier2 (DeMeaned) &                                  \makecell[l]{Demeaning Tier2 across all panels \\ within each app.} \\
+               & Reviews &                                                \makecell[l]{Number of reviews of an app in a panel.} \\
+               & Reviews (DeMeaned ZScore) &   \makecell[l]{Demeaning Z-Score standardized \\number of reviews across all panels within each app.} \\
+\cline{1-3}
+\multirow{6}{*}{Time Invariant} & ContentRatingAdult &                  \makecell[l]{Dummy variable equals 1 if the app has \\ adult content, 0 otherwise.} \\
+               & Size &                                                                              \makecell[l]{Size (MB)} \\
+               & DaysReleased &                     \makecell[l]{Number of days since the app was \\ launched on Google Play Store.} \\
+               & TopFirm &                  \makecell[l]{Dummy variable equals 1 if the app is \\ owned by a Top Digital Firm.} \\
+               & Niche &   \makecell[l]{Dummy variable equals 1 if an app \\is a niche-type app, 0 if an app is broad-type app.}\\
+               & NicheScale （0-19） &   \makecell[l]{20 dummy variables representing the degree of niche property \\of an app. $NicheScale_{0}$ equals to 1 represents that the app is \\the most broad type, while $NicheScale_{19}$ equals to 1 \\represents that the app is the most niche type.}\\
+\end{longtable}
