@@ -41,9 +41,9 @@ class stats_and_regs:
     nlp_stats_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/nlp_stats')
     des_stats_tables = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/descriptive_stats_tables')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____DESCRIPTIVE_STATS____/TABLES')
     des_stats_graphs = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/descriptive_stats_graphs')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____DESCRIPTIVE_STATS____/GRAPHS')
     ols_results = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____OLS_RESULTS____')
     panel_results = Path(
@@ -56,45 +56,32 @@ class stats_and_regs:
     ML_sample_key_level2 = ['ML', 'ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_LIFESTYLE', 'ML_MEDICAL']
     MF_sample_key_level2 = ['MF', 'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_LIFESTYLE', 'MF_MEDICAL']
 
+    sub_sample_categorical_vars = ['MF_CAT', 'ML_CAT', 'FULL_CAT', 'FULL_TIER', 'FULL_FIRM']
+    sub_sample_graph_cat_vars_d = {'FULL':['FULL_CAT', 'FULL_TIER', 'FULL_FIRM'],
+                                   'ML':['ML_CAT'],
+                                   'MF':['MF_CAT']}
+
+    regplot_color_palette = {'FULL':{'FULL_CAT': sns.color_palette("hls", 5),
+                                     'FULL_TIER': sns.color_palette("hls", 3),
+                                     'FULL_FIRM': sns.color_palette("hls", 2)},
+                             'ML':{'ML_CAT': sns.color_palette("hls", 5)},
+                             'MF':{'MF_CAT': sns.color_palette("hls", 5)}}
+
     sub_sample_d = { 'FULL': dict.fromkeys(FULL_sample_key_level2),
                      'ML': dict.fromkeys(ML_sample_key_level2),
                      'MF': dict.fromkeys(MF_sample_key_level2)}
 
     sub_sample_l = FULL_sample_key_level2 + ML_sample_key_level2 + MF_sample_key_level2
 
-    graph_subsample_title_dict = {  'FULL_FULL': 'Full Sample',
-                                    'FULL_Tier1': 'Minimum Installs Tier 1',
-                                    'FULL_Tier2': 'Minimum Installs Tier 2',
-                                    'FULL_Tier3': 'Minimum Installs Tier 3',
-                                    'FULL_top_firm': 'Top Firm',
-                                    'FULL_non_top_firm': 'Non-top Firm',
-                                    'FULL_GAME': 'Gaming Apps',
-                                    'FULL_BUSINESS': 'Business Apps',
-                                    'FULL_SOCIAL': 'Social Apps',
-                                    'FULL_LIFESTYLE': 'Lifestyle Apps',
-                                    'FULL_MEDICAL': 'Medical Apps',
-                                    'ML': 'Market-leading Apps',
-                                    'ML_GAME': 'ML Gaming Apps',
-                                    'ML_BUSINESS': "ML Business Apps",
-                                    'ML_SOCIAL': 'ML Social Apps',
-                                    'ML_LIFESTYLE': 'ML Lifestyle Apps',
-                                    'ML_MEDICAL': 'ML Medical Apps',
-                                    'MF': 'Market Follower Apps',
-                                    'MF_GAME': 'MF Gaming Apps',
-                                    'MF_BUSINESS': 'MF Business Apps',
-                                    'MF_SOCIAL': 'MF Social Apps',
-                                    'MF_LIFESTYLE': 'MF Lifestyle Apps',
-                                    'MF_MEDICAL': 'MF Medical Apps'
-                                    }
+    graph_layout_categorical = plt.subplots(3, 2)
+    graph_layout_full_firm = plt.subplots(2, 1)
+    graph_layout_full_tiers = plt.subplots(3, 1)
 
-    var_title_dict = {'ImputedminInstalls': 'Log Minimum Installs',
-                      'Imputedprice': 'Log Price',
-                      'offersIAPTrue': 'Percentage of Apps Offers IAP',
-                      'containsAdsTrue': 'Percentage of Apps Contains Ads',
-                      'both_IAP_and_ADS': 'Percentage of Apps Contains Ads and Offers IAP'}
+    core_dummy_y_vars_d = {'original': ['containsAdsdummy', 'offersIAPdummy', 'noisy_death', 'T_TO_TIER1_minInstalls', 'MA'],
+                           'imputed':  ['imputed_containsAdsdummy', 'imputed_offersIAPdummy', 'noisy_death', 'T_TO_TIER1_minInstalls', 'MA']}
+    core_continuous_y_vars_d = {'original': ['nlog_price', 'nlog_minInstalls'],
+                                'imputed':  ['nlog_imputed_price', 'nlog_imputed_minInstalls']}
 
-    group_by_var_x_label = {'NicheDummy' : 'Niche vs. Broad',
-                            'cluster_size_bin': 'Size of K-Means Text Clusters'}
 
     # ---------------- variables below has original version and imputed versions ----------------
     # all y variables are time variant
@@ -238,10 +225,39 @@ class stats_and_regs:
                 for v in vs:
                     if method == 'nlog_plus_one':
                         df['nlog_' + v] = df.apply(lambda row: np.log(row[v] + 1), axis=1)
-        for i in df.columns:
+        num_cols = [x for x in list(df.columns) if x not in self.sub_sample_categorical_vars]
+        for i in num_cols:
             df[i] = pd.to_numeric(df[i])
         f_name = k + '_' + ss + '.csv'
-        df.describe(include='all').to_csv(self.ols_results / 'var_statistics' / folder / f_name)
+        df.describe(include=[np.number]).to_csv(self.ols_results / 'var_statistics' / folder / f_name)
+        return df
+
+    def _create_categorical_sub_sample_vars(self, df):
+        """
+        :param df: should be self._open_df(balanced=balanced, keyword='imputed')
+        :return:
+        """
+        print('------------------------ _create_categorical_sub_sample_vars ----------------------')
+        # print(list(df.columns))
+        # --------- create categorical sub-sample slicing variables for future graphing --------
+        for v in ['ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_LIFESTYLE', 'ML_MEDICAL',
+                  'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_LIFESTYLE', 'MF_MEDICAL',
+                  'Tier1', 'Tier2', 'Tier3', 'top_firm', 'non_top_firm',
+                  'FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_LIFESTYLE', 'FULL_MEDICAL']:
+            # print(df[v].value_counts(dropna=False))
+            df[v + '_cat'] = df.apply(lambda row: v if row[v] == 1 else '', axis=1)
+            # print(df[v + '_cat'].value_counts(dropna=False))
+        df['ML_CAT'] = df['ML_GAME_cat'] + df['ML_BUSINESS_cat'] + df['ML_SOCIAL_cat'] + \
+                       df['ML_LIFESTYLE_cat'] + df['ML_MEDICAL_cat']
+        df['MF_CAT'] = df['MF_GAME_cat'] + df['MF_BUSINESS_cat'] + df['MF_SOCIAL_cat'] + \
+                       df['MF_LIFESTYLE_cat'] + df['MF_MEDICAL_cat']
+        df['FULL_TIER'] = df['Tier1_cat'] + df['Tier2_cat'] + df['Tier3_cat']
+        df['FULL_FIRM'] = df['top_firm_cat'] + df['non_top_firm_cat']
+        df['FULL_CAT'] = df['FULL_GAME_cat'] + df['FULL_BUSINESS_cat'] + df['FULL_SOCIAL_cat'] + \
+                         df['FULL_LIFESTYLE_cat'] + df['FULL_MEDICAL_cat']
+        for v in ['ML_CAT', 'MF_CAT', 'FULL_TIER', 'FULL_FIRM', 'FULL_CAT']:
+            df[v] = df[v].astype("category")
+        print(df[['ML_CAT', 'MF_CAT', 'FULL_TIER', 'FULL_FIRM', 'FULL_CAT']].dtypes)
         return df
 
     def create_subsample_dict_and_merge_in_niche_vars_and_scale_vars(self, balanced):
@@ -254,23 +270,25 @@ class stats_and_regs:
         # ----------- open imputed dataframe ------------------------------------------
         self.df = self._open_df(balanced=balanced, keyword='imputed')
         df2 = self.df.copy()
+        df2 = self._create_categorical_sub_sample_vars(df=df2)
         print(df2.shape)
-        # print(df2.columns)
+        # print(list(df2.columns))
+        # -------- create empty dictionary placeholder for dictionary of dataframes
         res_original = copy.deepcopy(self.sub_sample_d)
         res_imputed = copy.deepcopy(self.sub_sample_d)
-        # ----------- open nlp k means cluster labels ----------------------------------
+        # ----------- open nlp k means cluster labels ------------------------------------------
         filename = self.initial_panel + '_merged_niche_vars_with_appid.pickle'
         q = self.nlp_stats_path / filename
         with open(q, 'rb') as f:
             niche_dict = pickle.load(f)
-        # ----------- slicing into sub-samples and merge in the nlp labels --------------
         for k, s in res_original.items():
+            # ----------- slicing into sub-samples and merge in the nlp labels -----------------
             for ss in s.keys():
                 if ss == 'FULL':
                     df3 = df2.copy()
                 else:
                     df3 = df2.loc[df2[ss]==1]
-                # --------------------------------------------------------
+                # ------------------------------------------------------------------------------
                 print(k + '---' + ss + ' before merging in niche variables')
                 print(df3.shape)
                 df3 = df3.merge(niche_dict[k][ss], how='outer', left_index=True, right_index=True)
@@ -288,9 +306,9 @@ class stats_and_regs:
                                             niche_vars=self.niche_vars,
                                             months=self.all_panels, panel=True)
                 df4 = df3.dropna(axis=0, how='any', subset=v_dict['both'])
-                df4 = df4.loc[:, v_dict['both']]
+                df4 = df4.loc[:, v_dict['both']+self.sub_sample_categorical_vars]
                 print(df4.shape)
-                # print(df4.columns)
+                # print(list(df4.columns))
                 # --------------------------------------------------------
                 df4 = self._scale_var_printout_descriptive_stats(df=df4, k=k, ss=ss, imputed=False)
                 # --------------------------------------------------------
@@ -301,9 +319,9 @@ class stats_and_regs:
                                             niche_vars=self.niche_vars,
                                             months=self.all_panels, panel=True)
                 df5 = df3.dropna(axis=0, how='any', subset=v_dict['both'])
-                df5 = df5.loc[:, v_dict['both']]
+                df5 = df5.loc[:, v_dict['both']+self.sub_sample_categorical_vars]
                 print(df5.shape)
-                # print(df5.columns)
+                # print(list(df5.columns))
                 # --------------------------------------------------------
                 df5 = self._scale_var_printout_descriptive_stats(df=df5, k=k, ss=ss, imputed=True)
                 # --------------------------------------------------------
@@ -316,6 +334,282 @@ class stats_and_regs:
                         df=self.df,
                         original_dict=self.original_dict,
                         imputed_dict=self.imputed_dict)
+
+    def table_cat_y_variables_against_niche_dummy(self, balanced):
+        """
+        you must run create_subsample_dict_and_merge_in_niche_vars_and_scale_vars before running this
+        :param balanced:
+        :return:
+        """
+        print('------------------------ table_cat_y_variables_against_niche_dummy ---------------------------')
+        if balanced is True:
+            b = 'balanced'
+        else:
+            b = 'unbalanced'
+        original_vars = self._x_and_y_vars(balanced=balanced, imputed=False, scaled=True,
+                                           niche_vars=['dummy_niche'],
+                                           months=self.all_panels, panel=False)
+        imputed_vars = self._x_and_y_vars(balanced=balanced, imputed=True, scaled=True,
+                                          niche_vars=['dummy_niche'],
+                                          months=self.all_panels, panel=False)
+        for m in self.all_panels:
+            x_var = 'dummy_niche_' + m
+            data_d = {'original': {'data': self.original_dict,
+                                   'y_vars': original_vars['y'][m]},
+                      'imputed': {'data': self.imputed_dict,
+                                  'y_vars': imputed_vars['y'][m]}}
+            for im, content in data_d.items():
+                dummy_ys = []
+                dummy_y_names = []
+                for y_var in content['y_vars']:
+                    if any([i in y_var for i in ['containsAds', 'offersIAP', 'MA', 'noisy_death', 'T_TO_TIER1']]):
+                        dummy_y_names.append(y_var)
+                        y_var_true = y_var.replace('_'+m, '') + '_true'
+                        dummy_ys.append(y_var_true)
+                        y_var_false = y_var.replace('_'+m, '') + '_false'
+                        dummy_ys.append(y_var_false)
+                # combine the value counts into a single dataframe and graph them in a single horizontal bar graph
+                INDEX1 = []
+                for i in self.sub_sample_l:
+                    INDEX1 = INDEX1 + [i] * 2
+                INDEX2 = ['Niche', 'Broad'] * len(self.sub_sample_l)
+                dfg_dummy = pd.DataFrame(columns=dummy_ys,
+                                         index=[INDEX1, INDEX2])
+                print(dfg_dummy.head())
+                for y_var in dummy_y_names:
+                    y_var_true = y_var.replace('_' + m, '') + '_true'
+                    y_var_false = y_var.replace('_' + m, '') + '_false'
+                    for k, s in content['data'].items():
+                        for ss in s.keys():
+                            df = content['data'][k][ss].copy()
+                            df2 = df.value_counts(subset=[x_var, y_var]).to_frame().reset_index()
+                            df2.rename(columns={df2.columns[2]: 'n'}, inplace=True)
+                            print(ss)
+                            print(df2)
+                            # some y variables in some months have only 0s in either or both niche broad apps.
+                            if 1 in df2.loc[df2[x_var] == 1, y_var].unique():
+                                v11 = df2.loc[(df2[x_var] == 1) & (df2[y_var] == 1), 'n'].squeeze()
+                            else:
+                                v11 = 0
+                            if 1 in df2.loc[df2[x_var] == 0, y_var].unique():
+                                v01 = df2.loc[(df2[x_var] == 0) & (df2[y_var] == 1), 'n'].squeeze()
+                            else:
+                                v01 = 0
+                            dfg_dummy.at[(ss, 'Niche'), y_var_true] = v11
+                            dfg_dummy.at[(ss, 'Broad'), y_var_true] = v01
+                            # some y variables in some months have only 1s in either or both niche broad apps.
+                            if 0 in df2.loc[df2[x_var] == 1, y_var].unique():
+                                v10 = df2.loc[(df2[x_var] == 1) & (df2[y_var] == 0), 'n'].squeeze()
+                            else:
+                                v10 = 0
+                            if 0 in df2.loc[df2[x_var] == 0, y_var].unique():
+                                v00 = df2.loc[(df2[x_var] == 0) & (df2[y_var] == 0), 'n'].squeeze()
+                            else:
+                                v00 = 0
+                            dfg_dummy.at[(ss, 'Niche'), y_var_false] = v10
+                            dfg_dummy.at[(ss, 'Broad'), y_var_false] = v00
+                f_name = 'cat_y_vars_counts_against_niche.csv'
+                dfg_dummy.to_csv(self.des_stats_tables / b / im / m / 'dummy_niche' / f_name)
+        return stats_and_regs(
+            initial_panel=self.initial_panel,
+            all_panels=self.all_panels,
+            df=self.df,
+            original_dict=self.original_dict,
+            imputed_dict=self.imputed_dict,
+            reg_results=self.reg_results)
+
+    def graph_y_variables_against_niche(self, balanced):
+        """
+        you must run create_subsample_dict_and_merge_in_niche_vars_and_scale_vars before running this
+        :param balanced:
+        :return:
+        """
+        print('------------------------ graph_y_variables_against_niche ---------------------------')
+        fig_params = {'x_axis_ss': {'FULL':  {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['FULL']),
+                                              'figsize': (18, 7),
+                                              'gridspec_kw': {'width_ratios': [3.7, 1.5, 1]}},
+                                      'ML':  {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['ML']),
+                                              'figsize': (14, 7),
+                                              'gridspec_kw': None},
+                                      'MF':  {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['MF']),
+                                              'figsize': (14, 7),
+                                              'gridspec_kw': None}},
+                      'y_axis_ss': {'FULL':   {'nrows': len(self.sub_sample_graph_cat_vars_d['FULL']),
+                                              'ncols': 1,
+                                              'figsize': (7, 15),
+                                              'gridspec_kw': {'height_ratios': [2.8, 1.4, 1]}},
+                                      'ML':  {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['ML']),
+                                              'figsize': (14, 7),
+                                              'gridspec_kw': None},
+                                      'MF':  {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['MF']),
+                                              'figsize': (14, 7),
+                                              'gridspec_kw': None}},
+                      'hue_ss': {'FULL':     {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['FULL']),
+                                              'figsize': (18, 7),
+                                              'gridspec_kw': {'width_ratios': None}},
+                                    'ML':    {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['ML']),
+                                              'figsize': (14, 7),
+                                              'gridspec_kw': None},
+                                    'MF':    {'nrows': 1,
+                                              'ncols': len(self.sub_sample_graph_cat_vars_d['MF']),
+                                              'figsize': (14, 7),
+                                              'gridspec_kw': None}}
+                      }
+        if balanced is True:
+            b = 'balanced'
+        else:
+            b = 'unbalanced'
+        for x_var in ['continuous_niche', 'dummy_niche']:
+            original_vars = self._x_and_y_vars(balanced=balanced, imputed=False, scaled=True,
+                                               niche_vars=[x_var],
+                                               months=self.all_panels, panel=False)
+            imputed_vars = self._x_and_y_vars(balanced=balanced, imputed=True, scaled=True,
+                                              niche_vars=[x_var],
+                                              months=self.all_panels, panel=False)
+            for m in self.all_panels:
+                x_var_m = x_var + '_' + m
+                data_d = {'original': {'data': self.original_dict,
+                                       'y_vars': original_vars['y'][m]},
+                          'imputed': {'data': self.imputed_dict,
+                                      'y_vars': imputed_vars['y'][m]}}
+                for im, content in data_d.items():
+                    for k, s in content['data'].items():
+                        for ss in s.keys():
+                            if ss in ['FULL', 'MF', 'ML']:
+                                df = content['data'][k][ss].copy()
+                                print(ss)
+                                for y_var in self.core_dummy_y_vars_d[im] + self.core_continuous_y_vars_d[im]:
+                                    print('*************************** prepare graph dataframe *****************************')
+                                    y_var_m = y_var + '_' + m
+                                    var_cols = [x_var_m, y_var_m] + self.sub_sample_graph_cat_vars_d[ss]
+                                    df2 = df[var_cols]
+                                    print(list(df2.columns))
+                                    print(y_var + ' VS ' + x_var)
+                                    print('*************************** start graphing dummy y and dummy niche ***************************')
+                                    if y_var in self.core_dummy_y_vars_d[im] and x_var == 'dummy_niche':
+                                        fig, axes = plt.subplots(nrows=fig_params['x_axis_ss'][ss]['nrows'],
+                                                                 ncols=fig_params['x_axis_ss'][ss]['ncols'],
+                                                                 figsize=fig_params['x_axis_ss'][ss]['figsize'],
+                                                                 gridspec_kw=fig_params['x_axis_ss'][ss]['gridspec_kw'],
+                                                                 sharey='row', sharex='col')
+                                        sns.set_style("whitegrid")
+                                        for i in range(len(self.sub_sample_graph_cat_vars_d[ss])):
+                                            if len(self.sub_sample_graph_cat_vars_d[ss]) > 1:
+                                                this_ax = axes[i]
+                                            else:
+                                                this_ax = axes  # because a single nrows=1, ncols=1 axes is not a numpy array thus not subscriptable
+                                            # the bar with total niche and broad apps, with a lighter color
+                                            sns.countplot(x=self.sub_sample_graph_cat_vars_d[ss][i],
+                                                          data=df2, hue=x_var_m, ax=this_ax,
+                                                          hue_order=[1, 0], # important for legend labels
+                                                          palette={1: 'pink', 0: 'lightsteelblue'})
+                                            # on top of the previous total bar, the bar with y_var is True niche and broad apps, with a darker color
+                                            df5 = df2.loc[df2[y_var_m]==1]
+                                            if df5.shape[0] > 0:
+                                                sns.countplot(x=self.sub_sample_graph_cat_vars_d[ss][i],
+                                                              data=df5, hue=x_var_m, ax=this_ax,
+                                                              hue_order=[1, 0], # important for legend labels
+                                                              palette={1: 'crimson', 0: 'steelblue'})
+                                                handles, labels = this_ax.get_legend_handles_labels()
+                                                labels = ['Niche', 'Broad', 'Niche and ' + y_var + ' True',
+                                                          'Broad and ' + y_var + ' True']
+                                            else:
+                                                # some y variables such as noisy death has 0 ==1 in some months
+                                                handles, labels = this_ax.get_legend_handles_labels()
+                                                labels = ['Niche', 'Broad']
+                                            this_ax.set(xlabel=None)
+                                            this_ax.get_legend().remove()
+                                        fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, -0.04),
+                                                   ncol=len(labels))
+                                    print('*************************** start graphing continuous y and dummy niche *************************** ')
+                                    if y_var in self.core_continuous_y_vars_d[im] and x_var == 'dummy_niche':
+                                        fig, axes = plt.subplots(nrows=fig_params['x_axis_ss'][ss]['nrows'],
+                                                                 ncols=fig_params['x_axis_ss'][ss]['ncols'],
+                                                                 figsize=fig_params['x_axis_ss'][ss]['figsize'],
+                                                                 gridspec_kw=fig_params['x_axis_ss'][ss]['gridspec_kw'],
+                                                                 sharey='row', sharex='col')
+                                        sns.set_style("whitegrid")
+                                        for i in range(len(self.sub_sample_graph_cat_vars_d[ss])):
+                                            if len(self.sub_sample_graph_cat_vars_d[ss]) > 1:
+                                                this_ax = axes[i]
+                                            else:
+                                                this_ax = axes  # because a single nrows=1, ncols=1 axes is not a numpy array thus not subscriptable
+                                            sns.boxplot(x=self.sub_sample_graph_cat_vars_d[ss][i],
+                                                        hue_order=[1, 0],
+                                                        y=y_var_m, hue=x_var_m, data=df2, ax=this_ax)
+                                            handles, labels = this_ax.get_legend_handles_labels()
+                                            labels = ['Niche', 'Broad']
+                                            this_ax.set(xlabel=None)
+                                            this_ax.get_legend().remove()
+                                        fig.legend(handles, labels, loc='upper left', bbox_to_anchor=(0.13, 0.87), ncol=1)
+                                    print('*************************** start graphing dummy y and continuous niche ***************************')
+                                    if y_var in self.core_dummy_y_vars_d[im] and x_var == 'continuous_niche':
+                                        fig, axes = plt.subplots(nrows=fig_params['y_axis_ss'][ss]['nrows'],
+                                                                 ncols=fig_params['y_axis_ss'][ss]['ncols'],
+                                                                 figsize=fig_params['y_axis_ss'][ss]['figsize'],
+                                                                 gridspec_kw=fig_params['y_axis_ss'][ss]['gridspec_kw'],
+                                                                 sharey='row', sharex='col')
+                                        sns.set_style("whitegrid")
+                                        for i in range(len(self.sub_sample_graph_cat_vars_d[ss])):
+                                            if len(self.sub_sample_graph_cat_vars_d[ss]) > 1:
+                                                this_ax = axes[i]
+                                            else:
+                                                this_ax = axes  # because a single nrows=1, ncols=1 axes is not a numpy array thus not subscriptable
+                                            sns.boxplot(x=x_var_m,
+                                                        hue_order=[1, 0], orient='h',
+                                                        y=self.sub_sample_graph_cat_vars_d[ss][i], hue=y_var_m,
+                                                        data=df2, ax=this_ax)
+                                            handles, labels = this_ax.get_legend_handles_labels()
+                                            labels = ['True', 'False']
+                                            this_ax.set(ylabel=None)
+                                            this_ax.get_legend().remove()
+                                        fig.legend(handles, labels, loc='upper left', bbox_to_anchor=(0.13, 0.87), ncol=1, title=y_var)
+                                    print('*************************** start graphing continuous y and continuous niche ************************')
+                                    if y_var in self.core_continuous_y_vars_d[im] and x_var == 'continuous_niche':
+                                        print(df2.dtypes)
+                                        fig, axes = plt.subplots(nrows=fig_params['hue_ss'][ss]['nrows'],
+                                                                 ncols=fig_params['hue_ss'][ss]['ncols'],
+                                                                 figsize=fig_params['hue_ss'][ss]['figsize'],
+                                                                 gridspec_kw=fig_params['hue_ss'][ss]['gridspec_kw'],
+                                                                 sharey='row', sharex='col')
+                                        sns.set_style("whitegrid")
+                                        for i in range(len(self.sub_sample_graph_cat_vars_d[ss])):
+                                            if len(self.sub_sample_graph_cat_vars_d[ss]) > 1:
+                                                this_ax = axes[i]
+                                            else:
+                                                this_ax = axes  # because a single nrows=1, ncols=1 axes is not a numpy array thus not subscriptable
+                                            ss_cats = df2[self.sub_sample_graph_cat_vars_d[ss][i]].unique().tolist()
+                                            print(ss_cats)
+                                            for j in range(len(ss_cats)):
+                                                cat = ss_cats[j]
+                                                the_color = self.regplot_color_palette[ss][self.sub_sample_graph_cat_vars_d[ss][i]][j]
+                                                print(cat)
+                                                df3 = df2.loc[df2[self.sub_sample_graph_cat_vars_d[ss][i]]==cat]
+                                                sns.regplot(x=x_var_m, y=y_var_m,
+                                                            truncate=False,
+                                                            color=the_color,
+                                                            data=df3, ax=this_ax,
+                                                            label=cat)
+                                            handles, labels = this_ax.get_legend_handles_labels()
+                                            this_ax.legend(handles=handles, labels=labels, loc='upper left', bbox_to_anchor=(-0.2, 1), ncol=1)
+                                    # ----------------- save ---------------------------------------
+                                    f_name = ss + '_' + y_var + '.png'
+                                    q = self.des_stats_graphs / b / im / m / x_var / f_name
+                                    fig.savefig(q, facecolor='w', edgecolor='w', dpi=300, bbox_inches='tight')
+        return stats_and_regs(
+            initial_panel=self.initial_panel,
+            all_panels=self.all_panels,
+            df=self.df,
+            original_dict=self.original_dict,
+            imputed_dict=self.imputed_dict,
+            reg_results=self.reg_results)
 
     def _check_cross_sectional_ols_assumptions(self, balanced, imputed, niche_v, k, ss, y, sms_results):
         """
@@ -334,12 +628,12 @@ class stats_and_regs:
         test = sms.jarque_bera(sms_results.resid)
         test = lzip(self.jb_test_names, test) # this is a list of tuples
         test_df = pd.DataFrame(test, columns =['test_statistics', 'value'])
-        f_name = b + '_' + im + '_' + k + '_' + ss + '_' + y + '_jb_test' + '.csv'
+        f_name = k + '_' + ss + '_' + y + '_jb_test' + '.csv'
         save_f_name = self.ols_results / 'ols_assumptions_check' / b / im / niche_v / 'residual_normality' / f_name
         test_df.to_csv(save_f_name)
         # multi-collinearity -----------------------------------------------------------------
         test = np.linalg.cond(sms_results.model.exog)
-        f_name = b + '_' + im + '_' + k + '_' + ss + '_' + y + '_multicollinearity.txt'
+        f_name = k + '_' + ss + '_' + y + '_multicollinearity.txt'
         save_f_name = self.ols_results / 'ols_assumptions_check' / b / im / niche_v / 'multicollinearity' / f_name
         with open(save_f_name, 'w') as f:
             f.writelines(str(test))
@@ -347,7 +641,7 @@ class stats_and_regs:
         test = sms.het_breuschpagan(sms_results.resid, sms_results.model.exog)
         test = lzip(self.bp_test_names, test)
         test_df = pd.DataFrame(test, columns =['test_statistics', 'value'])
-        f_name = b + '_' + im + '_' + k + '_' + ss + '_' + y + '_bp_test.csv'
+        f_name = k + '_' + ss + '_' + y + '_bp_test.csv'
         save_f_name = self.ols_results / 'ols_assumptions_check' / b / im / niche_v / 'heteroskedasticity' / f_name
         test_df.to_csv(save_f_name)
         # linearity Harvey-Collier -------------------------------------------------------------
@@ -383,7 +677,7 @@ class stats_and_regs:
                                               months=self.all_panels, panel=False)
             for m in self.all_panels:
                 for k, s in self.sub_sample_d.items():
-                    for ss in s:
+                    for ss in s.keys():
                         dfo = self.original_dict[k][ss].copy()
                         dfi = self.imputed_dict[k][ss].copy()
                         # ================================ original variable ols ======================================
@@ -394,7 +688,7 @@ class stats_and_regs:
                             print(formula)
                             original_results = smf.ols(formula, data=dfo).fit()
                             table = original_results.summary().tables[1].as_csv()
-                            f_name = b + '_' + m + '_' + k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
+                            f_name = k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
                             save_f_name = self.ols_results / 'raw_results' / b / 'original' / niche_v / f_name
                             with open(save_f_name, 'w') as fh:
                                 fh.write(table)
@@ -411,12 +705,12 @@ class stats_and_regs:
                             print(formula)
                             imputed_results = smf.ols(formula, data=dfi).fit()
                             table = imputed_results.summary().tables[1].as_csv()
-                            f_name = b + '_' + m + '_' + k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
+                            f_name = k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
                             save_f_name = self.ols_results / 'raw_results' / b / 'imputed' / niche_v / f_name
                             with open(save_f_name, 'w') as fh:
                                 fh.write(table)
                             self._check_cross_sectional_ols_assumptions(balanced=balanced,
-                                                                        imputed=False,
+                                                                        imputed=True,
                                                                         niche_v=niche_v,
                                                                         k=k, ss=ss, y=y,
                                                                         sms_results=imputed_results)
@@ -428,47 +722,63 @@ class stats_and_regs:
                         imputed_dict=self.imputed_dict,
                         reg_results = self.reg_results)
 
-    def export_ols_results(self, balanced, niche_vars):
-        print('----------------------------- export_ols_results ---------------------------------')
+    def summarize_ols_results(self, balanced):
+        """
+        :param balanced:
+        :return:
+        """
+        print('----------------------------- summarize_ols_results ---------------------------------')
         if balanced is True:
-            y_vars = self.balanced_y_vars
-            imputed_y_vars = ['imputed_' + i for i in y_vars]
             b = 'balanced'
         else:
-            y_vars = self.balanced_y_vars + self.unbalanced_only_y_vars
-            imputed_y_vars = ['imputed_' + i for i in y_vars] + self.unbalanced_only_y_vars
             b = 'unbalanced'
-        all_y_vars = y_vars + imputed_y_vars
-        coef = [i + '_coef' for i in all_y_vars]
-        pvalue = [i + '_pvalue' for i in all_y_vars]
-        # -------------------------------------------------------------
-        for niche_v in niche_vars:
-            for m in self.all_panels:
-                res = pd.DataFrame(columns=coef + pvalue + ['imputed_nobs', 'original_nobs'],
-                                   index=self.sub_sample_l)
-                # print(res.head())
-                for k, s in self.sub_sample_d.items():
-                    for ss in s:
-                        for y in y_vars:
-                            # ------------ assigning to dataframe ---------------------------------------
-                            res.at[ss, 'imputed_'+y+'_coef'] = self.reg_results['ols'][b][m][k][ss][y]['imputed'].params[niche_v]
-                            res.at[ss, 'imputed_'+y+'_pvalue'] = self.reg_results['ols'][b][m][k][ss][y]['imputed'].pvalues[niche_v]
-                            res.at[ss, 'imputed_nobs'] = self.reg_results['ols'][b][m][k][ss][y]['imputed'].nobs
-                            res.at[ss, y+'_coef'] = self.reg_results['ols'][b][m][k][ss][y]['original'].params[niche_v]
-                            res.at[ss, y+'_pvalue'] = self.reg_results['ols'][b][m][k][ss][y]['original'].pvalues[niche_v]
-                            res.at[ss, 'original_nobs'] = self.reg_results['ols'][b][m][k][ss][y]['original'].nobs
-                            # --------------- print check -----------------------------------------------
-                            if niche_v == 'continuous_niche':
-                                print(b + ' -- ' + m + ' -- ' + k + ' -- ' + ss + ' -- ' + y + ' -- ' + niche_v + ' -- original parameters')
-                                print(self.reg_results['ols'][b][m][k][ss][y]['original'].params[niche_v])
-                                print(res.loc[ss, y+'_coef'])
-                            # print(b + ' -- ' + m + ' -- ' + k + ' -- ' + ss + ' -- ' + y + ' -- ' + niche_v + ' -- imputed parameters')
-                            # print(self.reg_results['ols'][b][m][k][ss][y]['imputed'].params[niche_v])
-                # print('-------------- ' + b + ' -- ' + m + ' -- ' + niche_v + ' --- ols results table head --------------')
-                # print(res.head())
-                f_name = niche_v + '_' + m + '_OLS_RESULTS.csv'
-                res.to_csv(self.ols_results / f_name)
-                print('saved ' + niche_v + ' ' + m + ' OLS results dataframe')
+        for niche_v in self.niche_vars:
+            for im in ['original', 'imputed']:
+                all_vars = self._x_and_y_vars(balanced=balanced, imputed=False, scaled=True,
+                                              niche_vars=[niche_v],
+                                              months=self.all_panels, panel=False)
+                if im == 'imputed':
+                    all_vars = self._x_and_y_vars(balanced=balanced, imputed=True, scaled=True,
+                                                  niche_vars=[niche_v],
+                                                  months=self.all_panels, panel=False)
+                # ------------------- create empty dataframe to hold the statistics ------------------------------
+                all_ss = self.FULL_sample_key_level2 + self.MF_sample_key_level2 + self.ML_sample_key_level2
+                index1 = []
+                for i in self.all_panels:
+                    index1 = index1 + [i] * len(all_ss)
+                index2 = all_ss * len(self.all_panels)
+                y_core_ls = [i.replace('_'+self.initial_panel, '') for i in all_vars['y'][self.initial_panel]]
+                # print(y_core_ls)
+                res_df = pd.DataFrame(columns=y_core_ls, index=[index1, index2])
+                # print(res_df.head())
+                for m in self.all_panels:
+                    for y in all_vars['y'][m]:
+                        # print(y)
+                        y_core = y.replace('_'+m, '')
+                        # print(y_core)
+                        for k, s in self.sub_sample_d.items():
+                            for ss in s:
+                                f_name = k + '_' + ss + '_' + y + '_OLS_RESULTS.csv'
+                                df = pd.read_csv(self.ols_results / 'raw_results' / b / im / niche_v / f_name)
+                                # remove whitespaces in column names and the first column (which will be set as index)
+                                df[df.columns[0]] = df[df.columns[0]].str.strip()
+                                df.set_index(df.columns[0], inplace=True)
+                                df.columns = df.columns.str.strip()
+                                df['P>|t|']=df['P>|t|'].astype(np.float64)
+                                pvalue = df.loc[niche_v+'_'+m, 'P>|t|']
+                                coef = df.loc[niche_v+'_'+m, 'coef']
+                                if pvalue <= 0.01:
+                                    asterisk = '***'
+                                elif pvalue <= 0.05 and pvalue > 0.01:
+                                    asterisk = '**'
+                                elif pvalue <= 0.1 and pvalue > 0.05:
+                                    asterisk = '*'
+                                else:
+                                    asterisk = ''
+                                res_df.at[(m, ss), y_core] = str(round(coef, 2)) + asterisk
+                f_name = b + '_' + niche_v + '_' + im  + '_ols_cross_sectional_results.csv'
+                save_f_name = self.ols_results / 'summary_results' / f_name
+                res_df.to_csv(save_f_name)
         return stats_and_regs(
                         initial_panel=self.initial_panel,
                         all_panels=self.all_panels,
@@ -478,51 +788,6 @@ class stats_and_regs:
                         reg_results = self.reg_results)
 
 
-    def reg_for_all_subsamples_for_all_y_vars(self, reg_type):
-        res = dict.fromkeys(self.all_y_reg_vars)
-        for y in self.all_y_reg_vars:
-            res[y] = self._reg_for_all_subsamples_for_single_y_var(reg_type=reg_type, y_var=y)
-        self.reg_results = res
-        return stats_and_regs(
-                           tcn=self.tcn,
-                           df=self.cdf)
-
-    def _extract_and_save_reg_results(self, result, reg_type, y_var, the_panel=None):
-        for name1, content1 in self.ssnames.items():
-            for name2 in content1:
-                # ---------- specify the rows to extract ---------------
-                index_to_extract = {
-                    'cross_section_ols': ['const', name1 + '_' + name2 + '_NicheDummy'],
-                    'panel_pooled_ols': [
-                                            'const',
-                                             name1 + '_' + name2 + '_NicheDummy',
-                                            'PostDummy',
-                                             name1 + '_' + name2 + '_PostXNicheDummy']
-                }
-                # ---------- get the coefficients ----------------------
-                if reg_type == 'cross_section_ols':
-                    x = result[the_panel][name1][name2].params
-                else:
-                    x = result[name1][name2].params
-                x = x.to_frame()
-                x.columns = ['parameter']
-                y = x.loc[index_to_extract[reg_type]]
-                # ---------- get the pvalues ---------------------------
-                if reg_type == 'cross_section_ols':
-                    z1 = result[the_panel][name1][name2].pvalues
-                else:
-                    z1 = result[name1][name2].pvalues
-                z1 = z1.to_frame()
-                z1.columns = ['pvalue']
-                z2 = z1.loc[index_to_extract[reg_type]]
-                y2 = y.join(z2, how='inner')
-                y2 = y2.round(3)
-                if the_panel is None:
-                    filename = y_var + '_' + name1 + '_' + name2 + '_' + reg_type + '.csv'
-                else:
-                    filename = y_var + '_' + name1 + '_' + name2 + '_' + reg_type + '_' + the_panel + '.csv'
-                y2.to_csv(self.main_path / 'reg_results_tables' / filename)
-                print(name1, name2, 'Reg results are saved in the reg_results_tables folder')
 
     def _create_cross_section_reg_results_df_for_parallel_trend_beta_graph(self, alpha):
         """
