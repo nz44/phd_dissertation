@@ -352,7 +352,7 @@ class stats_and_regs:
         imputed_vars = self._x_and_y_vars(balanced=balanced, imputed=True, scaled=True,
                                           niche_vars=['dummy_niche'],
                                           months=self.all_panels, panel=False)
-        for m in self.all_panels:
+        for m in ['202104', '202105', '202106', '202107']:
             x_var = 'dummy_niche_' + m
             data_d = {'original': {'data': self.original_dict,
                                    'y_vars': original_vars['y'][m]},
