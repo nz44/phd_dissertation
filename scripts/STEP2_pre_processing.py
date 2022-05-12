@@ -628,6 +628,14 @@ class pre_processing():
                       balanced,
                       time_invariant_var_list=None):
         print('----------------------- _count_missing -------------------------')
+        if balanced is True:
+            b = 'balanced'
+        else:
+            b = 'unbalanced'
+        if before_imputation is True:
+            im = 'before_imputation'
+        else:
+            im = 'after_imputation'
         self.df = self.df.fillna(value=np.nan)
         if before_imputation is True:
             # time_invariant var usually comes in with month in its names because of the way the data has been scraped in every month
@@ -668,16 +676,7 @@ class pre_processing():
                     summary_df.at['time_invariant', v_col] = rows_original - df3.shape[0]
         # -------------------- save the summary dataframe -----------------------------
         filename = self.initial_panel + '_count_missing_by_month_and_in_each_var.csv'
-        if before_imputation is True:
-            if balanced is True:
-                q = self.missing_stats_path / 'before_imputation' / 'balanced'/ filename
-            else:
-                q = self.missing_stats_path / 'before_imputation' / 'unbalanced' / filename
-        else:
-            if balanced is True:
-                q = self.missing_stats_path / 'after_imputation' / 'balanced' / filename
-            else:
-                q = self.missing_stats_path / 'after_imputation' / 'unbalanced' / filename
+        q = self.missing_stats_path / im / b / filename
         summary_df.to_csv(q)
         return None
 
@@ -689,7 +688,7 @@ class pre_processing():
         print('------------------------- impute_missing -------------------------------------')
         print('Open merge dataframe')
         self.df = self._open_df(balanced=balanced, keyword='merge')
-        # print(self.df.columns)
+        # print(list(self.df.columns))
         tvls = list(imputation_var_methods_dict['time_variant'].keys())
         tils = list(imputation_var_methods_dict['time_invariant'].keys())
         self._count_missing(   time_variant_var_list=tvls,
@@ -775,6 +774,37 @@ class pre_processing():
             self.df['imputed_adultcontent_' + m] = self.df.apply(
                 lambda row: _adult_dummy(row['imputed_contentRating_' + m]), axis=1)
             print(self.df['imputed_adultcontent_' + m].value_counts(dropna=False))
+        print('saving to the imputed dataframe')
+        self._save_df(DF=self.df, balanced=balanced, keyword='imputed')
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn)
+
+    def create_daysreleased_var(self, balanced):
+        print('-------------------- create_daysreleased_var -------------------------')
+        print('Open imputed dataframe')
+        self.df = self._open_df(balanced=balanced, keyword='imputed')
+        print(list(self.df.columns))
+        self.df = self.df.fillna(value=np.nan)
+        # ----------------------------------------------------------------------
+        # This column is already in datetime format
+        # create imputed daysreleased based on imputed_released and daysreleased based on released
+        v_names = {'released': 'daysreleased', 'imputed_released': 'imputed_daysreleased'}
+        for m in self.all_panels:
+            for r_v, days_v in v_names.items():
+                print(self.df[r_v+'_'+m].dtype)
+                print(self.df[r_v+'_'+m].describe())
+                month_dt = datetime.strptime(m, "%Y%m")
+                self.df[days_v+'_'+m] = self.df.apply(lambda row: month_dt - row[r_v+'_'+m], axis=1)
+                self.df[days_v+'_'+m] = self.df[days_v+'_'+m].dt.days
+                # since released is imputed by mode (faster than previous, and this variable is not worth the time to use previous method)
+                # we are going to change the negative datetime to 0
+                self.df[days_v+'_'+m] = self.df.apply(lambda row: 0\
+                    if row[days_v+'_'+m] < 0 else row[days_v+'_'+m], axis=1)
+                print(self.df[days_v+'_'+m].dtype)
+                print(self.df[days_v+'_'+m].describe())
+        print(list(self.df.columns))
         print('saving to the imputed dataframe')
         self._save_df(DF=self.df, balanced=balanced, keyword='imputed')
         return pre_processing(df=self.df,
