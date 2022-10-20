@@ -6,6 +6,7 @@ pd.options.display.max_colwidth = None
 import warnings
 warnings.filterwarnings('ignore')
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import copy
 import math
@@ -18,21 +19,25 @@ import functools
 import itertools
 import re
 import os
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 tqdm.pandas()
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 from sklearn.decomposition import TruncatedSVD
+from sklearn.decomposition import PCA
 from scipy.spatial.distance import cdist
 from sklearn.pipeline import Pipeline
 from sklearn import metrics
 vectorizer = TfidfVectorizer()
 import spacy
-nlp = spacy.load('en_core_web_sm')
-from spacy.lang.en.stop_words import STOP_WORDS
-stopwords = list(STOP_WORDS)
+import spacy_fastlang
+nlp = spacy.load("en_core_web_sm")
+nlp.add_pipe("language_detector")
+import nltk
+from nltk.corpus import words
 import matplotlib
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import seaborn
 import copy
 #################################################################################################################
@@ -50,11 +55,12 @@ class pre_processing():
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/nlp_graphs')
     nlp_stats_path = Path(
         '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/nlp_stats')
-    tokenizer = nlp.Defaults.create_tokenizer(nlp)
+    niche_text_path = Path(
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/niche_check_app_descriptions')
     des_stats_tables = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/descriptive_stats_tables')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____DESCRIPTIVE_STATS____/TABLES')
     des_stats_graphs = Path(
-        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/__PANELS__/descriptive_stats_graphs')
+        '/home/naixin/Insync/naixin88@sina.cn/OneDrive/_____GWU_ECON_PHD_____/___Dissertation___/___WEB_SCRAPER___/____DESCRIPTIVE_STATS____/GRAPHS')
 
     # https://www.forbes.com/top-digital-companies/list/3/#tab:rank
     # https://companiesmarketcap.com/tech/largest-tech-companies-by-market-cap/
@@ -298,9 +304,11 @@ class pre_processing():
                  tcn,
                  df=None,
                  ss_text_cols=None,
+                 optimal_tf_idf_para=None,
                  tf_idf_matrices=None,
-                 optimal_svd_dict=None,
+                 optimal_svd_df=None,
                  svd_matrices=None,
+                 pca_matrices=None,
                  optimal_k_cluster_dict=None,
                  output_labels=None):
         self.initial_panel = initial_panel
@@ -308,12 +316,15 @@ class pre_processing():
         self.tcn = tcn
         self.df = df
         self.ss_text_cols = ss_text_cols
+        self.optimal_tf_idf_para = optimal_tf_idf_para
         self.tf_idf_matrices = tf_idf_matrices
-        self.optimal_svd_dict = optimal_svd_dict
+        self.optimal_svd_df = optimal_svd_df
         self.svd_matrices = svd_matrices
+        self.pca_matrices = pca_matrices
         self.optimal_k_cluster_dict = optimal_k_cluster_dict
         self.output_labels = output_labels
-
+    # 20220922 note: I deleted slice_text_cols_for_sub_samples because I only do NLP for the full sample and I will delete non-english text descriptions,
+    # and use frequent based term to do clustering (Beil, Ester, Xu 2002)
     # ====================== The set of functions below are regularly used common functions in pre_processing class =============================
     def _open_df(self, balanced, keyword):
         """
@@ -614,12 +625,6 @@ class pre_processing():
                     else row['imputed_' + var], axis=1)
         # check the number of rows that have missing in app descriptions in all months (which cannot be imputed)
         return self.df
-
-    def _remove_stopwords(self, text):
-        text = text.lower()
-        tokens_without_sw = [word for word in text.split() if word not in stopwords]
-        filtered_sentence = (" ").join(tokens_without_sw)
-        return filtered_sentence
 
     # count the rows that are all nan in each month
     def _count_missing(self,
@@ -1152,8 +1157,8 @@ class pre_processing():
 
     ##################################################################################################################
     ### NLP for each sub-samples
-    ##################################################################################################################
-    def clean_and_prepare_app_description(self, balanced):
+    #################################################################################################################
+    def clean_and_prepare_app_description(self, balanced, keep_only_unique_words):
         """
         # _________________ process text __________________________________________________
         # Adding ^ in []  excludes any character in
@@ -1165,78 +1170,249 @@ class pre_processing():
         self.df = self._open_df(balanced=balanced, keyword='imputed')
         print(self.df.columns)
         self.df = self.df.fillna(value=np.nan)
-        def _clean_app_descriptions(x):
-            x2 = re.sub(r'[^\w\s]', '', x)
-            x3 = re.sub(r'[0-9]', '', x2)
-            x4 = self._remove_stopwords(x3)
-            return x4
-        self.df[self.tcn + 'Clean'] = self.df.apply(
-                lambda row: _clean_app_descriptions(row['imputed_'+self.tcn])\
-                    if pd.notnull(row['imputed_'+self.tcn]) else np.nan, axis=1)
-        print(self.initial_panel, ' finished cleaning ', self.tcn + 'Clean')
-        print()
-        print('saving the imputed dataframe')
-        self._save_df(DF=self.df, balanced=balanced, keyword='imputed')
+        print('1. removing the np.nan rows')
+        print('before removing np.nan in imputed description')
+        print(self.df.shape)
+        self.df = self.df.dropna(subset=['imputed_'+self.tcn])
+        print('after removing np.nan in imputed description')
+        print(self.df.shape)
+        print('2. create a column of SpaCy NLP object')
+        self.df[self.tcn + '_NLP'] = self.df.progress_apply(
+                lambda row: nlp(row['imputed_'+self.tcn].lower()), axis=1)
+        print('3. remove non-english app description')
+        self.df[self.tcn + 'Clean'] = self.df.progress_apply(
+                lambda row: 1 if row[self.tcn + '_NLP']._.language == 'en' else 0, axis=1)
+        print(self.df[self.tcn + '_english'].describe())
+        print('before removing non-english in imputed description')
+        print(self.df.shape)
+        self.df = self.df.loc[self.df[self.tcn + '_english']==1]
+        print('after removing non-english in imputed description')
+        print(self.df.shape)
+        print('4. remove stop words, keep only alphabetic characters, remove digits, remove single character word')
+        self.df[self.tcn + 'Clean'] = self.df.progress_apply(
+                lambda row: [w for w in row[self.tcn + '_NLP'] if (w.is_alpha) and (not w.is_stop) and (not w.is_digit) and (len(w.shape_)>1)], axis=1)
+        print('5. get the roots of the words')
+        self.df[self.tcn + 'Clean'] = self.df[self.tcn + 'Clean'].progress_apply(lambda x: [w.lemma_ for w in x])
+        # this step is taking too long, and you will truncate svd so ignoring the irreleven non-english words that appear less frequently
+        if keep_only_unique_words is True:
+            print('6. remove non-english vocabulary from text descriptions and keep only unique words')
+            self.df[self.tcn + 'Clean'] = self.df[self.tcn + 'Clean'].progress_apply(lambda x: list(set(x).intersection(set(words.words()))))
+        print('7. get the number of words in app descriptions')
+        self.df['length_token_app_description'] = self.df.apply(
+                lambda row: len(row[self.tcn + 'Clean']), axis=1)
+        print(self.df[['length_token_app_description']].head())
+        print(self.df['length_token_app_description'].describe())
+        print('7. Join the list of text to string in cleaned app description')
+        self.df[self.tcn + 'Clean'] = self.df[self.tcn + 'Clean'].progress_apply(lambda x: " ".join(x))
         # ---------- save a sample of app description text, their mode and their cleaned mode -------------------------
+        print('8. saving the imputed dataframe with new self.tcn + Clean column (based on imputed + self.tcn) and a sample of that column')
         df2 = self.df.copy(deep=True)
         df3 = df2[[self.tcn + 'Clean']]
         df3 = df3.sample(n=20)
-        filename = self.initial_panel + '_cleaned_time_invariant_' + self.tcn + '.csv'
+        filename = self.initial_panel + '_cleaned_time_invariant_' + self.tcn + '.xlsx'
         q = self.check_app_descriptions / filename
-        df3.to_csv(q)
+        df3.to_excel(q)
+        self._save_df(DF=self.df, balanced=balanced, keyword='imputed')
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn)
 
-    def slice_text_cols_for_sub_samples(self, balanced):
-        print('----------------------------- slice_text_cols_for_sub_samples ----------------------------')
-        print('Open imputed dataframe')
+    def _graph_histogram_token(self, df, bins, before_or_after):
+        df['length_token_app_description_cut'] = pd.cut(df['length_token_app_description'],
+                                                             bins=bins, precision=0)
+        fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10),
+                                 sharey='row', sharex='col')
+        sns.set_style("darkgrid")
+        axes = sns.countplot(data=df, x='length_token_app_description_cut', color='royalblue')
+        axes.grid(True)
+        axes.set_xlabel('Number of Words in An App\' Description')
+        axes.set_ylabel('Apps Count')
+        axes.get_yaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        axes.set_xticklabels(axes.get_xticklabels(), rotation=90)
+        f_name = before_or_after + '_removing_too_short_too_long_histogram_of_num_words_in_app_description.png'
+        q = self.nlp_graph_path / f_name
+        fig.savefig(q, facecolor='w', edgecolor='w', dpi=300, bbox_inches='tight')
+        return None
+
+    def remove_text_descriptions_with_too_few_or_too_many_tokens(self, balanced,
+                                          LB_token_length_to_remove=None,
+                                          UP_token_length_to_remove=None):
+        print('-------------------- remove_text_descriptions_with_too_few_or_too_many_tokens ---------------------')
+        # after looking at the description of 'length_token_app_description' and the histogram and remove app descriptions that
+        # are either too short or too long, use the lower bound and upper bound percentage points
         self.df = self._open_df(balanced=balanced, keyword='imputed')
-        self.df = self.df.fillna(value=np.nan)
-        print('total missing in app description mode clean column')
-        print(self.df[self.tcn + 'Clean'].isnull().sum())
-        d = copy.deepcopy(self.sub_sample_d)
-        for k, s in d.items():
-            for ss in s:
-                if ss == 'FULL':
-                    ps = self.df[self.tcn + 'Clean'].copy(deep=True)
-                else:
-                    ps = self.df.loc[self.df[ss] == 1, [self.tcn + 'Clean']].squeeze().copy(deep=True)
-                # remove np.nan
-                print(k + '--' + ss + ' before deleting np.nan')
-                print(ps.size)
-                ps = ps[pd.notnull(ps)]
-                print(k + '--' + ss + ' after deleting np.nan')
-                print(ps.size)
-                d[k][ss] = ps
-        self.ss_text_cols = d
+        print(self.df.shape)
+        self._graph_histogram_token(df=self.df, bins=20, before_or_after='before')
+        if LB_token_length_to_remove is not None and UP_token_length_to_remove is not None:
+            print('before removing rows that token length below ' + str(LB_token_length_to_remove) + ' and above ' + str(UP_token_length_to_remove))
+            print(self.df.shape)
+            df2 = self.df.loc[(self.df['length_token_app_description']>=LB_token_length_to_remove) & (self.df['length_token_app_description']<=UP_token_length_to_remove)]
+            print('after removing token length too short and too long')
+            print(df2.shape)
+            self._graph_histogram_token(df=df2, bins=20, before_or_after='after')
+            # select the text columns and save
+            self.ss_text_cols = df2[self.tcn + 'Clean']
+            print(self.ss_text_cols.shape)
+            f_name = self.initial_panel + '_full_clean_app_descriptions.pickle'
+            q = self.nlp_stats_path / f_name
+            pickle.dump(self.ss_text_cols, open(q, 'wb'))
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
                               ss_text_cols=self.ss_text_cols)
 
-    def tf_idf_transformation(self):
-        print('----------------------------- tf_idf_transformation ----------------------------------')
-        pipe = Pipeline(steps=[('tfidf',
-                                TfidfVectorizer(
-                                    stop_words='english',
-                                    strip_accents='unicode',
-                                    max_features=1500))])
-        matrix_df_dict = copy.deepcopy(self.sub_sample_d)
-        for sample, content in self.ss_text_cols.items():
-            for ss_name, col in content.items():
-                print('TF-IDF TRANSFORMATION')
-                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                matrix = pipe.fit_transform(col)
-                matrix_df = pd.DataFrame(matrix.toarray(),
-                                         columns=pipe['tfidf'].get_feature_names())
-                matrix_df['app_ids'] = col.index.tolist()
-                matrix_df.set_index('app_ids', inplace=True)
-                matrix_df_dict[sample][ss_name] = matrix_df
-                print(matrix_df.shape)
-        self.tf_idf_matrices = matrix_df_dict
+    def find_optimal_tfidf_parameters(self, binary, trim=True):
+        print('----------------------------- transform_several_tf_idf_matrices_with_different_parameters ----------------------------------')
+        """
+        After ignoring terms that appear in more than 50% of the documents (as set by max_df=0.5) [ignoring too frequent words]
+        and ignore terms that appear in less than 5% of the documents (as set by min_df+0.05) [ignoring too infrequent words]
+        https://scikit-learn.org/stable/auto_examples/text/plot_document_clustering.html
+        create matrices that loop through 0.5-0.99 max_df and 0.01-0.49 min_df
+        the criteria is the percentage of non-zero entries in tf-idf matrix. choose the combination with the smallest non-zero percentage
+        """
+        filename = self.initial_panel + '_full_clean_app_descriptions.pickle'
+        q = self.nlp_stats_path / filename
+        self.ss_text_cols = pickle.load(open(q, 'rb'))
+        print(self.ss_text_cols.shape)
+        # ---------------------------------------------------------------------------------------
+        if trim is True:
+            parameters = {'coarse': {'max_df': [0.5, 0.6, 0.7, 0.8, 0.9],
+                                     'min_df': [0.01, 0.02, 0.03]},
+                          'fine': {'max_df': [0.5, 0.6, 0.7, 0.8, 0.9],
+                                   'min_df': [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01]}}
+            df = pd.DataFrame(columns = ['type', 'max_df', 'min_df', 'percentage_nonzero', 'feature_number'])
+            for n in ['coarse', 'fine']:
+                for i in range(len(parameters[n]['max_df'])):
+                    for j in range(len(parameters[n]['min_df'])):
+                        maxdf = parameters[n]['max_df'][i]
+                        mindf = parameters[n]['min_df'][j]
+                        print('max_df--', str(maxdf), 'min_df--', str(mindf))
+                        vectorizer = TfidfVectorizer(stop_words='english',
+                                                     strip_accents='unicode',
+                                                     analyzer='word',
+                                                     # binary should be true when you are using only unique words each app description
+                                                     binary=binary,
+                                                     max_df=maxdf,
+                                                     min_df=mindf)
+                        matrix = vectorizer.fit_transform(self.ss_text_cols)
+                        # ------------------- get the table with words and app id ----------------------
+                        matrix_df = pd.DataFrame(matrix.toarray(),
+                                                 columns=vectorizer.get_feature_names())
+                        matrix_df['app_ids'] = self.ss_text_cols.index.tolist()
+                        matrix_df.set_index('app_ids', inplace=True)
+                        print(matrix_df.shape)
+                        df = df.append({'type':n,
+                                        'max_df': maxdf,
+                                        'min_df': mindf,
+                                        'percentage_nonzero': matrix.nnz / np.prod(matrix.shape),
+                                        'feature_number': matrix.shape[1]},
+                                        ignore_index=True)
+            # ------------------- save parameters ---------------------------------------------------------
+            print('parameter_grid')
+            print(df)
+            filename = self.initial_panel + '_tf_idf_optimal_parameters.xlsx'
+            q = self.nlp_stats_path / filename
+            df.to_excel(q)
+        else:
+            vectorizer = TfidfVectorizer(stop_words='english',
+                                         strip_accents='unicode',
+                                         analyzer='word',
+                                         # binary should be true when you are using only unique words each app description
+                                         binary=binary)
+            matrix = vectorizer.fit_transform(self.ss_text_cols)
+            matrix_df = pd.DataFrame(matrix.toarray(),
+                                     columns=vectorizer.get_feature_names())
+            matrix_df['app_ids'] = self.ss_text_cols.index.tolist()
+            matrix_df.set_index('app_ids', inplace=True)
+            print('the tfidf matrix dimension without setting maxdf and mindf')
+            print(matrix_df.shape)
+            # print(list(matrix_df.columns))
+        # ---------------- no need to make decision now ----------------------------------
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              tf_idf_matrices=self.tf_idf_matrices)
+    def graph_optimal_tfidf_param(self, picked_fine_maxdf=None, picked_fine_mindf=None):
+        print('------------------------------ graph_optimal_tfidf_param --------------------------------')
+        filename = self.initial_panel + '_tf_idf_optimal_parameters.xlsx'
+        q = self.nlp_stats_path / filename
+        df = pd.read_excel(q)
+        # graph the min_df on the x-axis, and the percentage of nonzero cells on the y-axis, hue is max_df
+        for n in ['coarse', 'fine']:
+            df2 = df.loc[df['type']==n]
+            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10),
+                                     sharey='row', sharex='col')
+            sns.set_style("darkgrid")
+            axes = sns.lineplot(data=df2, x='min_df', y='feature_number', hue='max_df')
+            axes.grid(True)
+            axes.set_xlabel('threshold_min')
+            axes.set_ylabel('Column Number (Unique Words)')
+            axes.get_yaxis().set_major_formatter(
+                matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+            if picked_fine_maxdf is not None and picked_fine_mindf is not None and n == 'fine':
+                cols = df2.loc[(df2.max_df==picked_fine_maxdf) & (df2.min_df==picked_fine_mindf), 'feature_number'].squeeze()
+                max_cols = df2.feature_number.max()
+                axes.axvline(x=picked_fine_mindf, ymin=0, ymax=cols/max_cols, color='red', linestyle='--')
+                axes.axhline(y=cols, xmin=0, xmax=picked_fine_mindf/0.01, color='red', linestyle='--')
+            axes.legend(title="threshold_max",
+                        bbox_to_anchor=(1.02, 0.3), loc='upper left', borderaxespad=0.1)
+            print('ticks')
+            tick_locations = df2['min_df'].loc[df2['max_df']==0.5].tolist()
+            print(tick_locations)
+            axes.set_xticks(ticks=tick_locations, minor=False)
+            f_name = self.initial_panel + '_' + n + '_TFIDF_MIN_MAX_DF.png'
+            q = self.nlp_graph_path / f_name
+            fig.savefig(q, facecolor='w', edgecolor='w', dpi=300, bbox_inches='tight')
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              tf_idf_matrices=self.tf_idf_matrices)
+    def transform_tfidf_matrix(self, binary, picked_maxdf=None, picked_mindf=None):
+        """
+        20220926: The reason I chose maxdf = 0.9 and mindf = 0.02 because it scrafices the smallest amount of word variaty but reduces the largest amount of word columns
+        See the graph.
+        """
+        print('----------------------------- transform_tfidf_matrix ---------------------------')
+        filename = self.initial_panel + '_full_clean_app_descriptions.pickle'
+        q = self.nlp_stats_path / filename
+        self.ss_text_cols = pickle.load(open(q, 'rb'))
+        print(self.ss_text_cols.shape)
+        if picked_mindf is not None and picked_maxdf is not None:
+            vectorizer = TfidfVectorizer(stop_words='english',
+                                         strip_accents='unicode',
+                                         analyzer='word',
+                                         # binary should be true when you are using only unique words within each app description
+                                         binary=binary,
+                                         max_df=picked_maxdf,
+                                         min_df=picked_mindf)
+        else:
+            vectorizer = TfidfVectorizer(stop_words='english',
+                                         strip_accents='unicode',
+                                         analyzer='word',
+                                         binary=binary)
+        matrix = vectorizer.fit_transform(self.ss_text_cols)
+        # ------------------- get the table with words and app id ----------------------
+        matrix_df = pd.DataFrame(matrix.toarray(),
+                                 columns=vectorizer.get_feature_names())
+        matrix_df['app_ids'] = self.ss_text_cols.index.tolist()
+        matrix_df.set_index('app_ids', inplace=True)
+        print(matrix_df.shape)
+        print(matrix_df.head())
+        # ---------------- save tf-idf matrices dictionary -------------------------------------------
+        if picked_mindf is not None and picked_maxdf is not None:
+            filename = self.initial_panel + '_' + str(picked_maxdf) + '_' + str(picked_mindf) + '_FULL_TFIDF_MATRIX.pickle'
+        else:
+            filename = self.initial_panel + '_FULL_TFIDF_MATRIX.pickle'
+        q = self.nlp_stats_path / filename
+        pickle.dump(matrix_df, open(q, 'wb'))
+        self.tf_idf_matrices = matrix_df
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
@@ -1244,189 +1420,118 @@ class pre_processing():
                               ss_text_cols=self.ss_text_cols,
                               tf_idf_matrices=self.tf_idf_matrices)
 
-    def find_optimal_svd_component_plot(self):
+    def find_optimal_svd_component(self, picked_tfidf_param):
         """
         https://medium.com/swlh/truncated-singular-value-decomposition-svd-using-amazon-food-reviews-891d97af5d8d
         https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.TruncatedSVD.html
+        I picked 0.6_0.01 is because the flatter part of the curve is more obvious above 95% and more words is better.
         """
-        print('----------------------------- find_optimal_svd_component_plot ----------------------------')
-        for sample, content in self.tf_idf_matrices.items():
-            for ss_name, matrix in content.items():
-                print('FIND OPTIMAL SVD COMPONENTS')
-                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                n_comp = np.round(np.linspace(0, matrix.shape[1]-1, 20))
-                n_comp = n_comp.astype(int)
-                explained = []
-                for x in tqdm(n_comp):
-                    svd = TruncatedSVD(n_components=x)
-                    svd.fit(matrix)
-                    explained.append(svd.explained_variance_ratio_.sum())
-                    print("Number of components = %r and explained variance = %r" % (x, svd.explained_variance_ratio_.sum()))
-                fig, ax = plt.subplots()
-                ax.plot(n_comp, explained)
-                ax.grid()
-                plt.xlabel('Number of components')
-                plt.ylabel("Explained Variance")
-                plt.title(self.initial_panel + sample + ss_name + " Plot of Number of components v/s explained variance")
-                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_optimal_svd_graph.png'
-                fig.savefig(self.nlp_graph_path / 'optimal_svd_comp' / filename, facecolor='white', dpi=300)
-                plt.show()
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              ss_text_cols=self.ss_text_cols,
-                              tf_idf_matrices=self.tf_idf_matrices)
-
-    def find_optimal_svd_component_dict(self, cutoff_percent_explained):
-        print('----------------------------- find_optimal_svd_component_dict ----------------------------')
-        d = copy.deepcopy(self.sub_sample_d)
-        for k, s in d.items():
-            for ss in s:
-                print('FIND OPTIMAL SVD COMPONENTS')
-                matrix = self.tf_idf_matrices[k][ss]
-                n_comp = np.round(np.linspace(0, matrix.shape[1] - 1, 40))
-                n_comp = n_comp.astype(int)
-                x = 0
-                while x <= len(n_comp)-1:
-                    svd = TruncatedSVD(n_components=n_comp[x])
-                    svd.fit(matrix)
-                    print(self.initial_panel, ' -- ', k, ' -- ', ss)
-                    print('Number of Components: ', n_comp[x])
-                    print('Explained Variance Ratio: ', svd.explained_variance_ratio_.sum())
-                    if svd.explained_variance_ratio_.sum() < cutoff_percent_explained:
-                        x += 1 # continue the while loop to test next ncomp
-                    else:
-                        d[k][ss] = n_comp[x]
-                        print(k + '--' + ss + "--The Optimal SVD Component is = %r and the explained variance = %r" % (
-                        n_comp[x], svd.explained_variance_ratio_.sum()))
-                        x = len(n_comp) # set the x value so to break the while loop
-        # ----------------- save -----------------------------------------------
-        self.optimal_svd_dict = d
-        filename = self.initial_panel + '_optimal_svd_dict.pickle'
+        print('----------------------------- find_optimal_svd_component ----------------------------')
+        # ---------------- open tf-idf matrices dictionary -------------------------------------------
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_FULL_TFIDF_MATRIX.pickle'
         q = self.nlp_stats_path / filename
-        pickle.dump(d, open(q, 'wb'))
+        self.tf_idf_matrices = pickle.load(open(q, 'rb'))
+        print(self.tf_idf_matrices.shape)
+        self.optimal_svd_df = pd.DataFrame(columns=['n_component', 'explained_ratio'])
+        n_comp = np.round(np.arange(start=1, stop=self.tf_idf_matrices.shape[1]-1, step=100))
+        n_comp = n_comp.astype(int)
+        print(n_comp)
+        explained = []
+        for x in tqdm(n_comp):
+            svd = TruncatedSVD(n_components=x)
+            svd.fit(self.tf_idf_matrices)
+            explained.append(svd.explained_variance_ratio_.sum())
+            print("Number of components = %r and explained variance = %r" % (x, svd.explained_variance_ratio_.sum()))
+            self.optimal_svd_df = self.optimal_svd_df.append({
+                              'n_component': x,
+                              'explained_ratio': svd.explained_variance_ratio_.sum()},
+                              ignore_index=True)
+        # ----------------- save optimal svd dictionary --------------------------------------------------------------
+        filename = self.initial_panel + '_FULL_optimal_svd_comp_' + picked_tfidf_param + '.xlsx'
+        q = self.nlp_stats_path / filename
+        self.optimal_svd_df.to_excel(q)
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
                               ss_text_cols=self.ss_text_cols,
                               tf_idf_matrices=self.tf_idf_matrices,
-                              optimal_svd_dict=self.optimal_svd_dict)
+                              optimal_svd_df=self.optimal_svd_df)
 
-    def truncate_svd(self, random_state):
+    def graph_svd_optimal_components(self, picked_tfidf_param, picked_cutoff=None):
+        print('------------------------------- graph_svd_optimal_components ---------------------------------')
+        filename = self.initial_panel + '_FULL_optimal_svd_comp_' + picked_tfidf_param + '.xlsx'
+        q = self.nlp_stats_path / filename
+        self.optimal_svd_df = pd.read_excel(q)
+        n_comp = self.optimal_svd_df['n_component'].tolist()
+        explained = self.optimal_svd_df['explained_ratio'].tolist()
+        # ---------------------- plot and save graph ------------------------------------------------------------
+        fig, ax = plt.subplots()
+        sns.set_style("darkgrid")
+        ax.plot(n_comp, explained)
+        ax.grid(True)
+        ax.get_xaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        ax.set_yticks(ticks=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], minor=False)
+        if picked_cutoff is not None:
+            df2 = self.optimal_svd_df.loc[self.optimal_svd_df.explained_ratio>=picked_cutoff]
+            explained_ratio = df2.explained_ratio.min()
+            cols = df2.loc[df2.explained_ratio.idxmin(), 'n_component'].squeeze()
+            max_cols = self.optimal_svd_df.loc[self.optimal_svd_df.explained_ratio.idxmax(), 'n_component'].squeeze()
+            max_ratio = self.optimal_svd_df.explained_ratio.max()
+            ax.axvline(x=cols, ymin=0, ymax=explained_ratio/max_ratio, color='red', linestyle='--')
+            ax.axhline(y=explained_ratio, xmin=0, xmax=cols/max_cols, color='red', linestyle='--')
+        plt.xlabel('Number of Columns (unique words)')
+        plt.ylabel("Explained Variance")
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_FULL_optimal_svd_graph.png'
+        fig.savefig(self.nlp_graph_path / 'optimal_svd_comp' / filename, facecolor='white', dpi=300)
+        plt.show()
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              tf_idf_matrices=self.tf_idf_matrices,
+                              optimal_svd_df=self.optimal_svd_df)
+
+    def truncate_svd(self, picked_tfidf_param, expalined_ratio_cutoff, random_state):
         print('----------------------------- truncate_svd ----------------------------')
-        f_name = self.initial_panel + '_optimal_svd_dict.pickle'
-        q = self.nlp_stats_path / f_name
-        with open(q, 'rb') as f:
-            self.optimal_svd_dict = pickle.load(f)
-        # -------------------------------------------------------------------------
-        matrix_df_dict = dict.fromkeys(self.ss_text_cols.keys())
-        for sample, content in matrix_df_dict.items():
-            matrix_df_dict[sample] = dict.fromkeys(self.ss_text_cols[sample].keys())
-        for sample, content in self.tf_idf_matrices.items():
-            for ss_name, matrix in content.items():
-                print('TRUNCATE SVD')
-                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                svd = TruncatedSVD(n_components=self.optimal_svd_dict[sample][ss_name],
-                                   random_state=random_state)
-                matrix_transformed = svd.fit_transform(matrix)
-                print(matrix_transformed.shape)
-                matrix_transformed_df = pd.DataFrame(matrix_transformed)  # do not need to assign column names because those do not correspond to each topic words (they have been transformed)
-                matrix_transformed_df['app_ids'] = matrix.index.tolist()
-                matrix_transformed_df.set_index('app_ids', inplace=True)
-                matrix_df_dict[sample][ss_name] = matrix_transformed_df
-        self.svd_matrices = matrix_df_dict
+        filename = self.initial_panel + '_FULL_TFIDF_MATRIX.pickle'
+        q = self.nlp_stats_path / filename
+        self.tf_idf_matrices = pickle.load(open(q, 'rb'))
+        filename = self.initial_panel + '_FULL_optimal_svd_comp_' + picked_tfidf_param + '.xlsx'
+        q = self.nlp_stats_path / filename
+        self.optimal_svd_df = pd.read_excel(q)
+        svddf = self.optimal_svd_df.loc[self.optimal_svd_df['explained_ratio'] >= expalined_ratio_cutoff].sort_values(by='explained_ratio')
+        # pick the n_comp that generate explained ratio just above the cutoff
+        n_comp = svddf['n_component'].iloc[0]
+        print(picked_tfidf_param)
+        print(svddf)
+        print(n_comp)
+        svd = TruncatedSVD(n_components=n_comp,
+                           random_state=random_state)
+        matrix_transformed = svd.fit_transform(self.tf_idf_matrices)
+        matrix_transformed_df = pd.DataFrame(
+            matrix_transformed)  # do not need to assign column names because those do not correspond to each topic words (they have been transformed)
+        matrix_transformed_df['app_ids'] = self.tf_idf_matrices.index.tolist()
+        matrix_transformed_df.set_index('app_ids', inplace=True)
+        print(matrix_transformed_df.shape)
+        print(matrix_transformed_df.head())
+        self.svd_matrices = matrix_transformed_df
+        # ----------------- save -------------------------------------------
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_cutoff_' + str(expalined_ratio_cutoff) + '_FULL_SVD_MATRIX.pickle'
+        q = self.nlp_stats_path / filename
+        pickle.dump(self.svd_matrices, open(q, 'wb'))
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
                               ss_text_cols=self.ss_text_cols,
                               tf_idf_matrices=self.tf_idf_matrices,
-                              optimal_svd_dict=self.optimal_svd_dict,
+                              optimal_svd_df=self.optimal_svd_df,
                               svd_matrices=self.svd_matrices)
 
-    def optimal_k_elbow(self, type):
-        """
-        https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f
-        https://scikit-learn.org/stable/modules/clustering.html
-        https://www.geeksforgeeks.org/elbow-method-for-optimal-value-of-k-in-kmeans/
-        1. Distortion: It is calculated as the average of the squared distances from the cluster centers of the respective clusters.
-           Typically, the Euclidean distance metric is used.
-        2. Inertia: It is the sum of squared distances of samples to their closest cluster center.
-        type is whether 'distortion' or 'inertia'
-        """
-        print('----------------------------- optimal_k_elbow ----------------------------')
-        for sample, content in self.svd_matrices.items():
-            for ss_name, matrix in content.items():
-                print(self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                n_cluster_list = np.round(np.linspace(1, matrix.shape[0] - 0.8 * matrix.shape[0], 10))
-                n_cluster_list = n_cluster_list.astype(int)
-                metrics = []
-                metrics_dict = {}
-                for k in tqdm(n_cluster_list):
-                    km = KMeans(n_clusters=k)
-                    km = km.fit(matrix)
-                    if type == 'distortion':
-                        distortion = sum(np.min(cdist(matrix,
-                                                        km.cluster_centers_,
-                                                        'euclidean'), axis=1)) / matrix.shape[0]
-                        metrics.append(distortion)
-                        metrics_dict[k] = distortion
-                        print('DISTORTION -- ', self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                        print(k, distortion)
-                        y_label = 'Distortions'
-                        title = self.initial_panel + sample + ss_name + ' Elbow Method (Distortion)'
-                        f_name = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_distortion.png'
-                        dict_f_name = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_distortion_dict.pickle'
-                    elif type == 'inertia':
-                        metrics.append(km.inertia_)
-                        metrics_dict[k] = km.inertia_
-                        print('INERTIA -- ', self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                        print(k, km.inertia_)
-                        y_label = 'Inertia'
-                        title = self.initial_panel + sample + ss_name + ' Elbow Method (Inertia)'
-                        f_name = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_inertia.png'
-                        dict_f_name = self.initial_panel + '_' + sample + '_' + ss_name + '_elbow_inertia_dict.pickle'
-                fig, ax = plt.subplots()
-                ax.plot(n_cluster_list, metrics, 'bx-')
-                ax.grid()
-                plt.xlabel('k')
-                plt.ylabel(y_label)
-                plt.title(title)
-                fig.savefig(self.nlp_graph_path / 'optimal_clusters' / f_name, facecolor='white', dpi=300)
-                plt.show()
-                # ----------------- save -----------------------------------------------
-                q = self.nlp_stats_path / dict_f_name
-                pickle.dump(metrics_dict, open(q, 'wb'))
-        return pre_processing(df=self.df,
-                              initial_panel=self.initial_panel,
-                              all_panels=self.all_panels,
-                              tcn=self.tcn,
-                              ss_text_cols=self.ss_text_cols,
-                              tf_idf_matrices=self.tf_idf_matrices,
-                              optimal_svd_dict=self.optimal_svd_dict,
-                              svd_matrices=self.svd_matrices)
-
-    def determine_optimal_k_from_elbow(self, type):
-        """
-        :param type: 'distortion' or 'inertia'
-        :return:
-        """
-        print('----------------------------- determine_optimal_k_from_elbow ----------------------------')
-        df_list = []
-        for sample_name1, content in self.sub_sample_d.items():
-            for sample_name2 in content:
-                f_name = self.initial_panel + '_' + sample_name1 + '_' + sample_name2 + '_elbow_' + type + '_dict.pickle'
-                q = self.nlp_stats_path / f_name
-                with open(q, 'rb') as f:
-                    d = pickle.load(f)
-                    df = pd.DataFrame(d, index=[0]) # https://stackoverflow.com/questions/17839973/constructing-pandas-dataframe-from-values-in-variables-gives-valueerror-if-usi
-                    df = df.T
-                    df_list.append(df)
-        return df_list
-
-    def optimal_k_silhouette(self):
+    def optimal_k_table(self, method, picked_tfidf_param, expalined_ratio_cutoff, num_intervals_between_cluster):
         """
         https://medium.com/analytics-vidhya/how-to-determine-the-optimal-k-for-k-means-708505d204eb
         https://medium.com/@kunal_gohrani/different-types-of-distance-metrics-used-in-machine-learning-e9928c5e26c7
@@ -1436,108 +1541,208 @@ class pre_processing():
         To clarify, b is the distance between a sample and the nearest cluster that the sample is not a part of.
         Note that Silhouette Coefficient is only defined if number of labels is 2 <= n_labels <= n_samples - 1.
         """
-        print('----------------------------- optimal_k_silhouette ----------------------------')
-        d = copy.deepcopy(self.sub_sample_d)
-        for sample, content in self.svd_matrices.items():
-            d[sample] = dict.fromkeys(content.keys())
-            for ss_name, matrix in content.items():
-                # starting from 2 because this score need to calculate between cluster estimators
-                n_cluster_list = np.round(np.linspace(2, matrix.shape[0] - 0.9 * matrix.shape[0], 10))
-                n_cluster_list = n_cluster_list.astype(int)
-                silhouette_scores = []
-                silhouette_scores_dict = {}
-                print('SILHOUETTE SCORE -- ', self.initial_panel, ' -- ', sample, ' -- ', ss_name)
-                for k in tqdm(n_cluster_list):
-                    km = KMeans(n_clusters=k)
-                    km = km.fit(matrix)
-                    labels = km.labels_
-                    s_score = silhouette_score(matrix, labels, metric='cosine')
-                    silhouette_scores.append(s_score)
-                    silhouette_scores_dict[k] = s_score
-                d[sample][ss_name] = silhouette_scores_dict
-                fig, ax = plt.subplots()
-                ax.plot(n_cluster_list, silhouette_scores, 'bx-')
-                ax.grid()
-                plt.xlabel('k')
-                plt.ylabel('silhouette_scores (cosine distance)')
-                plt.title(self.initial_panel + sample + ss_name + ' Silhouette Scores For Optimal k')
-                filename = self.initial_panel + '_' + sample + '_' + ss_name + '_silhouette_optimal_cluster.png'
-                fig.savefig(self.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
-                plt.show()
+        print('-------------------------------- optimal_k_table ----------------------------------')
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_cutoff_' + str(expalined_ratio_cutoff) + '_FULL_SVD_MATRIX.pickle'
+        q = self.nlp_stats_path / filename
+        self.svd_matrices = pickle.load(open(q, 'rb'))
+        print(self.svd_matrices.shape)
+        n_comp = self.svd_matrices.shape[1]
+        sdf = pd.DataFrame(columns=['k_cluster', method+'_score'])
+        n_cluster_list = np.round(np.linspace(2, self.svd_matrices.shape[0]-1, num_intervals_between_cluster))
+        n_cluster_list = n_cluster_list.astype(int)
+        print('find the ', method, ' scores of the following k clusters')
+        print(n_cluster_list)
+        scores = []
+        print(method, ' -- ', self.initial_panel, ' _TF-IDF-MAXDF-MINDF_ ', picked_tfidf_param, ' _SVD-NCOMP_ ', n_comp)
+        for x in tqdm(n_cluster_list):
+            km = KMeans(n_clusters=x)
+            km = km.fit(self.svd_matrices)
+            labels = km.labels_
+            if method == 'silhouette':
+                s_score = silhouette_score(self.svd_matrices, labels, metric='cosine')
+            elif method == 'elbow':
+                s_score = km.inertia_
+            scores.append(s_score)
+            sdf = sdf.append({'k_cluster': x,
+                              method+'_score': s_score},
+                              ignore_index=True)
         # ----------------- save -----------------------------------------------
-        dict_f_name = self.initial_panel + '_silhouette_score_dict.pickle'
-        q = self.nlp_stats_path / dict_f_name
-        pickle.dump(d, open(q, 'wb'))
+        f_name = self.initial_panel + '_FULL_' + picked_tfidf_param + '_cutoff_' + str(expalined_ratio_cutoff) + '_svd_cols_' + str(n_comp) + '_' + method + '_score_df.xlsx'
+        q = self.nlp_stats_path / f_name
+        sdf.to_excel(q)
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
                               ss_text_cols=self.ss_text_cols,
                               tf_idf_matrices=self.tf_idf_matrices,
-                              optimal_svd_dict=self.optimal_svd_dict,
+                              optimal_svd_df=self.optimal_svd_df,
                               svd_matrices=self.svd_matrices)
 
-    def determine_optimal_k_from_silhouette(self):
-        print('----------------------------- determine_optimal_k_from_silhouette ----------------------------')
-        dict_f_name = self.initial_panel + '_silhouette_score_dict.pickle'
-        q = self.nlp_stats_path / dict_f_name
-        with open(q, 'rb') as f:
-            res = pickle.load(f)
-        d = copy.deepcopy(self.sub_sample_d)
-        for k, s in d.items():
-            for ss in s:
-                df = copy.deepcopy(res[k][ss])
-                df2 = pd.DataFrame(df, index=[0])
-                df3 = df2.T
-                optimal_k = df3.idxmax(axis=0)
-                print(self.initial_panel, ' -- ', k, ' -- ', ss, ' -- ', ' Optimal K From Global Max of Silhouette Score')
-                print(optimal_k)
-                print()
-                d[k][ss] = optimal_k
-        # ----------------- save -----------------------------------------------
-        self.optimal_k_cluster_dict = d
-        dict_f_name = self.initial_panel + '_optimal_k_from_global_max_of_silhouette_score.pickle'
-        q = self.nlp_stats_path / dict_f_name
-        pickle.dump(d, open(q, 'wb'))
+    def graph_optimal_k(self, method, picked_tfidf_param,
+                        picked_svd_comp, expalined_ratio_cutoff, picked_optimal_k=None):
+        print('--------------------------- graph_optimal_k ----------------------------------')
+        f_name = self.initial_panel + '_FULL_' + picked_tfidf_param + '_cutoff_' + str(expalined_ratio_cutoff) + '_svd_cols_' + str(picked_svd_comp) + '_' + method + '_score_df.xlsx'
+        q = self.nlp_stats_path / f_name
+        df = pd.read_excel(q)
+        n_cluster_list = df['k_cluster'].tolist()
+        scores = df[method + '_score'].tolist()
+        fig, ax = plt.subplots()
+        sns.set_style("darkgrid")
+        ax.grid(True)
+        ax.plot(n_cluster_list, scores, 'bx-')
+        if picked_optimal_k is not None:
+            score_of_picked_k = df.loc[df['k_cluster']==picked_optimal_k, method + '_score'].squeeze()
+            max_score = df.loc[df.k_cluster.idxmin(), method + '_score'].squeeze()
+            max_cluster = df.k_cluster.max()
+            ax.axvline(x=picked_optimal_k, ymin=0, ymax=score_of_picked_k/max_score, color='red', linestyle='--')
+            ax.axhline(y=score_of_picked_k, xmin=0, xmax=picked_optimal_k/max_cluster, color='red', linestyle='--')
+        plt.xlabel('k')
+        if method == 'silhouette':
+            plt.ylabel('silhouette scores (cosine distance)')
+        elif method == 'elbow':
+            plt.ylabel('inertia scores')
+        ax.get_xaxis().set_major_formatter(
+                matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        ax.get_yaxis().set_major_formatter(
+                matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        ax.set_xticks(ticks=n_cluster_list, minor=False)
+        filename = self.initial_panel + '_FULL_' + picked_tfidf_param + '_cutoff_' + str(expalined_ratio_cutoff) + '_svd_cols_' + str(picked_svd_comp) + '_' + method + '_graph.png'
+        fig.savefig(self.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
+        plt.show()
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
                               ss_text_cols=self.ss_text_cols,
                               tf_idf_matrices=self.tf_idf_matrices,
-                              optimal_svd_dict=self.optimal_svd_dict,
+                              optimal_svd_df=self.optimal_svd_df,
+                              svd_matrices=self.svd_matrices)
+
+    def refine_optimal_k_cluster(self, picked_tfidf_param, expalined_ratio_cutoff, picked_svd_comp,
+                                 picked_LB_num_cluster, picked_UP_num_cluster, intervals):
+        """
+        :return:
+        """
+        print('----------------------------- refine_optimal_k_cluster ----------------------------')
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_cutoff_' + str(expalined_ratio_cutoff) + '_FULL_SVD_MATRIX.pickle'
+        q = self.nlp_stats_path / filename
+        self.svd_matrices = pickle.load(open(q, 'rb'))
+        n_cluster_list = np.round(np.linspace(picked_LB_num_cluster, picked_UP_num_cluster, intervals))
+        n_cluster_list = n_cluster_list.astype(int)
+        # draw both silhouette and inertia score graphs
+        silhouette_scores = []
+        inertia_scores = []
+        print('SILHOUETTE SCORE -- ', self.initial_panel, ' _TF-IDF-MAXDF-MINDF_ ', picked_tfidf_param, ' _SVD-NCOMP_ ',
+              str(picked_svd_comp))
+        sdf = pd.DataFrame(columns=['tf_idf_maxdf_mindf', 'svd_comp', 'k_cluster', 'silhouette_score', 'inertia_score'])
+        for x in tqdm(n_cluster_list):
+            km = KMeans(n_clusters=x)
+            km = km.fit(self.svd_matrices)
+            labels = km.labels_
+            s_score = silhouette_score(self.svd_matrices, labels, metric='cosine')
+            silhouette_scores.append(s_score)
+            e_score = km.inertia_
+            inertia_scores.append(e_score)
+            sdf = sdf.append({'tf_idf_maxdf_mindf': picked_tfidf_param,
+                              'svd_comp': int(picked_svd_comp),
+                              'k_cluster': x,
+                              'silhouette_score': s_score,
+                              'inertia_score': e_score},
+                               ignore_index=True)
+        # ----------------- save -----------------------------------------------
+        f_name = self.initial_panel + '_FULL_' + picked_tfidf_param + '_' + str(expalined_ratio_cutoff) + '_SILHOUETTE_AND_INERTIA.xlsx'
+        q = self.nlp_stats_path / f_name
+        sdf.to_excel(q)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              tf_idf_matrices=self.tf_idf_matrices,
+                              optimal_svd_df=self.optimal_svd_df,
                               svd_matrices=self.svd_matrices,
                               optimal_k_cluster_dict=self.optimal_k_cluster_dict)
 
-    def kmeans_cluster(self, random_state):
-        dict_f_name = self.initial_panel + '_optimal_k_from_global_max_of_silhouette_score.pickle'
-        q = self.nlp_stats_path / dict_f_name
-        with open(q, 'rb') as f:
-            self.optimal_k_cluster_dict = pickle.load(f)
-        label_dict = copy.deepcopy(self.sub_sample_d)
+    def graph_refined_optimal_k_silhouette_and_inertia(self, picked_tfidf_param, expalined_ratio_cutoff,
+                                                       picked_optimal_k=None):
+        print('--------------------------- graph_refined_optimal_k_silhouette_and_inertia -------------------------')
+        f_name = self.initial_panel + '_FULL_' + picked_tfidf_param + '_' + str(
+            expalined_ratio_cutoff) + '_SILHOUETTE_AND_INERTIA.xlsx'
+        q = self.nlp_stats_path / f_name
+        df = pd.read_excel(q)
+        n_cluster_list = df['k_cluster'].tolist()
+        silhouette_scores = df['silhouette_score'].tolist()
+        inertia_scores = df['inertia_score'].tolist()
+        # --------------- graph ------------------------------------------------
+        fig, ax = plt.subplots(figsize=(12, 10))
+        sns.set_style("darkgrid")
+        ax.grid(True)
+        ax.plot(n_cluster_list, silhouette_scores, color='red')
+        ax.tick_params(axis='y', labelcolor='red')
+        ax.set_ylabel('silhouette score')
+        ax.set_xticks(ticks=n_cluster_list, minor=False)
+        ax.get_xaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        if picked_optimal_k is not None:
+            sil = df.loc[df.k_cluster == picked_optimal_k, 'silhouette_score'].squeeze()
+            max_sil = df.silhouette_score.max()
+            max_k = df.k_cluster.max()
+            ax.axhline(y=sil, xmin=0, xmax=picked_optimal_k / max_k, color='blue', linestyle='--')
+            ax.axvline(x=picked_optimal_k, ymin=0, ymax=sil/max_sil, color='blue', linestyle='--')
+        plt.xlabel('k')
+        plt.xticks(rotation=90)
+        # Generate a new Axes instance, on the twin-X axes (same position)
+        ax2 = ax.twinx()
+        # Plot exponential sequence, set scale to logarithmic and change tick color
+        ax2.plot(n_cluster_list, inertia_scores, color='green')
+        ax2.tick_params(axis='y', labelcolor='green')
+        ax2.get_yaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        if picked_optimal_k is not None:
+            ine = df.loc[df.k_cluster == picked_optimal_k, 'inertia_score'].squeeze()
+            max_ine = df.inertia_score.max()
+            max_k = df.k_cluster.max()
+            ax2.axhline(y=ine, xmin=picked_optimal_k / max_k, xmax=1, color='blue', linestyle='--')
+            ax2.axvline(x=picked_optimal_k, ymin=0, ymax=ine / max_ine, color='blue', linestyle='--')
+        ax2.set_ylabel('inertia score')
+        plt.tight_layout()
+        filename = self.initial_panel + '_FULL_' + picked_tfidf_param + '_' + str(expalined_ratio_cutoff) + '_SILHOUETTE_AND_INERTIA.png'
+        fig.savefig(self.nlp_graph_path / 'optimal_clusters' / filename, facecolor='white', dpi=300)
+        plt.show()
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              tf_idf_matrices=self.tf_idf_matrices,
+                              optimal_svd_df=self.optimal_svd_df,
+                              svd_matrices=self.svd_matrices,
+                              optimal_k_cluster_dict=self.optimal_k_cluster_dict)
+
+    def kmeans_cluster(self, random_state, cluster_num_for_robustness_check, picked_tfidf_param, expalined_ratio_cutoff):
         print('----------------------------- kmeans_cluster ----------------------------')
-        for k, s in self.svd_matrices.items():
-            for ss, matrix in s.items():
-                print('KMEANS CLUSTER')
-                print(self.initial_panel, ' -- ', k, ' -- ', ss)
-                print('input matrix shape')
-                print(matrix.shape)
-                print('optimal k clusters')
-                init_k = self.optimal_k_cluster_dict[k][ss]
-                print(init_k)
-                y_kmeans = KMeans(
-                        n_clusters=int(init_k),
-                        random_state=random_state
-                    ).fit_predict(
-                        matrix
-                    )  # it is equivalent as using fit then .label_.
-                matrix[k + '_' + ss + '_kmeans_labels'] = y_kmeans
-                label_single = matrix[[k + '_' + ss + '_kmeans_labels']]
-                label_dict[k][ss] = label_single
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_cutoff_' + str(
+            expalined_ratio_cutoff) + '_FULL_SVD_MATRIX.pickle'
+        q = self.nlp_stats_path / filename
+        self.svd_matrices = pickle.load(open(q, 'rb'))
+        self.output_labels = {}
+        matrix = self.svd_matrices.copy()
+        for i in cluster_num_for_robustness_check:
+            print('optimal k clusters---' + str(i))
+            print('input matrix shape')
+            print(matrix.shape)
+            y_kmeans = KMeans(
+                n_clusters=int(i),
+                random_state=random_state
+            ).fit_predict(
+                matrix
+            )  # it is equivalent as using fit then .label_.
+            self.svd_matrices['cluster_num_' + str(i) + '_kmeans_labels'] = y_kmeans
+            self.output_labels['cluster_num_' + str(i) + '_kmeans_labels'] = self.svd_matrices[['cluster_num_' + str(i) + '_kmeans_labels']]
         # --------------------------- save -------------------------------------------------
         # for this one, you do not need to run text cluster label every month when you scraped new data, because they would more or less stay the same
-        self.output_labels = label_dict
-        filename = self.initial_panel + '_predicted_labels_dict.pickle'
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_kmeans_predicted_labels_dict_with_various_cluster_nums.pickle'
         q = self.nlp_stats_path / filename
         pickle.dump(self.output_labels, open(q, 'wb'))
         return pre_processing(df=self.df,
@@ -1546,7 +1751,7 @@ class pre_processing():
                               tcn=self.tcn,
                               ss_text_cols=self.ss_text_cols,
                               tf_idf_matrices=self.tf_idf_matrices,
-                              optimal_svd_dict=self.optimal_svd_dict,
+                              optimal_svd_df=self.optimal_svd_df,
                               svd_matrices=self.svd_matrices,
                               optimal_k_cluster_dict=self.optimal_k_cluster_dict,
                               output_labels=self.output_labels)
@@ -1556,82 +1761,127 @@ class pre_processing():
     # ALL niche vairables (the continuous_niche and niche are created by the NLP label generated using self.tcn + 'Clean',
     # which is in turn based on 'imputed_'+self.tcn
     ##################################################################################################################
-    def _numApps_per_cluster(self):
+    def _numApps_per_cluster(self, k_name):
         print('----------------------------- _numApps_per_cluster ----------------------------')
-        d = copy.deepcopy(self.sub_sample_d)
-        for k, s in d.items():
-            for ss in s:
-                label_col_name = k + '_' + ss + '_kmeans_labels'
-                s2 = self.output_labels[k][ss].groupby(
-                    [label_col_name]).size(
-                    ).sort_values(
-                    ascending=False)
-                d[k][ss] = s2.rename('num_apps_in_cluster').to_frame()
-        return d
+        s2 = self.output_labels[k_name].groupby(
+            [k_name]).size().sort_values(ascending=False)
+        s3 = s2.rename('num_apps_in_cluster').to_frame()
+        return s3
 
-    def create_continuous_and_dummy_niche_variable(self):
-        """
-        Prof. Brooks
-        You are losing information by arbitrarity turn the niche scale measure into a niche dummy measure.
-        You can use 1 minus an interval measure (histogram: number of apps in a cluster,
-        1 the most broad cluster, and the second most populous cluster is the percentage of 1, 0.2, a
-        nd the third most populous is percentage of 1).
-        :return:
-        """
-        print('----------------------------- create_continuous_niche_variable ----------------------------')
-        f_name = self.initial_panel + '_predicted_labels_dict.pickle'
-        q = self.nlp_stats_path / f_name
-        with open(q, 'rb') as f:
-            self.output_labels = pickle.load(f)
-        res1 = copy.deepcopy(self.sub_sample_d)
-        res2 = copy.deepcopy(self.sub_sample_d)
-        d = self._numApps_per_cluster()
-        for k, s in d.items():
-            for ss, dfs in s.items():
-                print(k + '--' + ss + '--' + 'Number apps per cluster')
-                # print(dfs.shape)
-                # print(dfs.head())
-                print(k + '--' + ss + '--' + 'rename the cluster names, biggest cluster is 1')
-                dfs['cluster_labels'] = np.arange(dfs.shape[0])+1
-                dfs.reset_index(inplace=True)
-                dfs = dfs[[k + '_' + ss + '_kmeans_labels', 'cluster_labels', 'num_apps_in_cluster']]
-                # print(dfs.shape)
-                # print(dfs.head())
-                print(k + '--' + ss + '--' + 'create the number of apps are a percentage of the number of apps in the largest cluster (label 1)')
-                largest_num = dfs.at[0, 'num_apps_in_cluster']
-                dfs['percentage_as_of_the_largest_cluster'] = dfs['num_apps_in_cluster'] / largest_num
-                dfs = dfs.round(2)
-                dfs['continuous_niche'] = 1 - dfs['percentage_as_of_the_largest_cluster']
-                # print(dfs.shape)
-                # print(dfs.head())
-                # This niche dummy is based on the continuous variable, different from previously setting the threshold
-                print(
-                    k + '--' + ss + '--' + 'create dummy niche == 0 if percentage of the number of apps in the largest cluster is bigger than 0.5')
-                dfs['dummy_niche'] = dfs.apply(
-                    lambda row: 0 if row['percentage_as_of_the_largest_cluster'] > 0.5 else 1, axis=1)
-                print(dfs.shape)
-                print(dfs.head())
-                res1[k][ss] = dfs
-                print(k + '--' + ss + '--' + 'merge in with text labels to assign each niche dummy to app ids')
-                dfl = self.output_labels[k][ss].copy()
-                dfl.reset_index(inplace=True)
-                print(dfl.shape)
-                # print(dfl.head())
-                dff = dfl.merge(dfs, how='left', on = k + '_' + ss + '_kmeans_labels')
-                dff = dff.set_index('app_ids')
-                print(dff.shape)
-                print(dff.head())
-                res2[k][ss] = dff
-        # save continous niche variables with predicted text labels ------------------
-        filename = self.initial_panel + '_continuous_and_dummy_niche.pickle'
+    def create_continuous_niche(self, picked_tfidf_param):
+        print('----------------------------- create_continuous_niche ----------------------------')
+        filename = self.initial_panel + '_' + picked_tfidf_param + '_kmeans_predicted_labels_dict_with_various_cluster_nums.pickle'
         q = self.nlp_stats_path / filename
-        pickle.dump(res1, open(q, 'wb'))
-        # save the merged dataframe with the continuous niche variables with predicted text labels ------------------
-        filename = self.initial_panel + '_merged_niche_vars_with_appid.pickle'
-        q = self.nlp_stats_path / filename
-        pickle.dump(res2, open(q, 'wb'))
+        self.output_labels = pickle.load(open(q, 'rb'))
+        for k_name, labels in self.output_labels.items():
+            print(k_name + ' --- Number apps per cluster')
+            dfs = self._numApps_per_cluster(k_name=k_name)
+            dfs['cluster_labels'] = np.arange(dfs.shape[0]) + 1
+            dfs.reset_index(inplace=True)
+            dfs = dfs[[k_name, 'cluster_labels', 'num_apps_in_cluster']]
+            print(dfs.shape)
+            print(dfs.head())
+            largest_num = dfs.at[0, 'num_apps_in_cluster']
+            dfs['percentage_as_of_the_largest_cluster'] = dfs['num_apps_in_cluster'] / largest_num
+            dfs = dfs.round(2)
+            dfs['continuous_niche'] = 1 - dfs['percentage_as_of_the_largest_cluster']
+            # print(dfs.shape)
+            # print(dfs.head())
+            print(k_name + ' merge in with text labels to assign each niche dummy to app ids')
+            dfl = labels.copy()
+            dfl.reset_index(inplace=True)
+            print(dfl.shape)
+            print(dfl.head())
+            dff = dfl.merge(dfs, how='left', on=k_name)
+            dff = dff.set_index('app_ids')
+            print(dff.shape)
+            print(dff.head())
+            f_name = self.initial_panel + '_' + picked_tfidf_param + '_' + k_name + '_with_appids.pickle'
+            q = self.nlp_stats_path / f_name
+            pickle.dump(dff, open(q, 'wb'))
         return pre_processing(df=self.df,
                               initial_panel=self.initial_panel,
                               all_panels=self.all_panels,
                               tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              output_labels=self.output_labels)
+
+    def full_histogram_continuous_niche(self, picked_tfidf_param, cluster_num_for_robustness_check):
+        """
+        compare whether the continuous niche is similarly distributed according to different cluster number
+        """
+        print('------------------------ des_stats_continuous_niche ---------------------------')
+        # continuous niche is based on imputed text descriptions, so it is imputed.
+        final_table = pd.DataFrame(columns=['cluster_number', 'niche_cut', 'count'])
+        for i in cluster_num_for_robustness_check:
+            k_name = 'cluster_num_' + str(i) + '_kmeans_labels'
+            f_name = self.initial_panel + '_' + picked_tfidf_param + '_' + k_name + '_with_appids.pickle'
+            q = self.nlp_stats_path / f_name
+            df_niche = pickle.load(open(q, 'rb'))
+            df_niche['continuous_niche_cut'] = pd.cut(df_niche['continuous_niche'],
+                                                      bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                                                      right=False)
+            print(df_niche.continuous_niche_cut.unique())
+            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10),
+                                     sharey='row', sharex='col')
+            sns.set_style("darkgrid")
+            axes = sns.countplot(data=df_niche, x="continuous_niche_cut", color='royalblue')
+            axes.grid(True)
+            axes.set_xlabel('Niche Index')
+            axes.set_ylabel('Apps Count')
+            axes.get_yaxis().set_major_formatter(
+                matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+            axes.yaxis.set_minor_locator(MultipleLocator(200))
+            axes.set_xticklabels(axes.get_xticklabels(), rotation=90)
+            f_name = picked_tfidf_param + '_' + k_name + '_continuous_niche_histogram.png'
+            q = self.des_stats_graphs / 'unbalanced' / 'continuous_niche' / f_name
+            fig.savefig(q, facecolor='w', edgecolor='w', dpi=300, bbox_inches='tight')
+            table = df_niche.groupby(['continuous_niche_cut']).size().rename("count").reset_index()
+            table['cluster_number'] = i
+            print(table.head())
+            final_table = final_table.append(table)
+        # save combined table ---------------------------------------------
+        f_name = 'count_by_continuous_niche_cut_various_cluster_number.xlsx'
+        final_table.to_excel(self.des_stats_tables / 'unbalanced' / 'continuous_niche' / f_name)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
+                              output_labels=self.output_labels)
+
+    def eyeball_niche_text(self, picked_tfidf_param, cluster_num_for_robustness_check, fraction):
+        """
+        The function randomly take 10 apps each from each cluster.
+        :return:
+        """
+        filename = self.initial_panel + '_full_clean_app_descriptions.pickle'
+        q = self.nlp_stats_path / filename
+        self.ss_text_cols = pickle.load(open(q, 'rb'))
+        for i in cluster_num_for_robustness_check:
+            k_name = 'cluster_num_' + str(i) + '_kmeans_labels'
+            f_name = self.initial_panel + '_' + picked_tfidf_param + '_' + k_name + '_with_appids.pickle'
+            q = self.nlp_stats_path / f_name
+            df_niche = pickle.load(open(q, 'rb'))
+            print(df_niche.shape)
+            # print(df1.head())
+            df3 = df_niche.join(self.ss_text_cols, how='inner')
+            print(k_name + ' --- joined text col with niche variables ---')
+            print(df3.shape)
+            print(df3.head())
+            df3 = df3.sort_values(by='num_apps_in_cluster', ascending=False)
+            filename = self.initial_panel + '_' + picked_tfidf_param + '_' + k_name + '_with_app_descriptions.pickle'
+            q = self.niche_text_path / filename
+            df3.to_pickle(q)
+            df4 = df3.groupby('num_apps_in_cluster').apply(lambda x: x.sample(frac=fraction)).reset_index(drop=True)
+            df4 = df4.sort_values(by='cluster_labels', ascending=False).groupby('num_apps_in_cluster').apply(lambda x: x)
+            # lambda x is needed to convert DataFrameGroupBy object to DataFrame
+            filename = self.initial_panel + '_' + picked_tfidf_param + '_' + k_name + '_niche_text_five_percent_sample.xlsx'
+            q = self.niche_text_path / filename
+            df4.to_excel(q)
+        return pre_processing(df=self.df,
+                              initial_panel=self.initial_panel,
+                              all_panels=self.all_panels,
+                              tcn=self.tcn,
+                              ss_text_cols=self.ss_text_cols,
                               output_labels=self.output_labels)
