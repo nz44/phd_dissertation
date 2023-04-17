@@ -3,7 +3,7 @@ from pathlib import Path
 import pickle
 import copy
 import math
-
+import locale
 from statsmodels.compat import lzip
 pd.options.display.max_rows = 999
 pd.options.mode.chained_assignment = None
@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib import dates
 import matplotlib.patches as mpatches
 from sklearn import preprocessing
+from sklearn import metrics
 from scipy.stats import boxcox
 import statsmodels.formula.api as smf
 import statsmodels.stats.api as sms
@@ -21,6 +22,7 @@ import statsmodels.api as sm
 from linearmodels.panel import PooledOLS
 from linearmodels.panel import PanelOLS
 from datetime import datetime
+from itertools import combinations
 import functools
 today = datetime.today()
 yearmonth = today.strftime("%Y%m")
@@ -111,12 +113,259 @@ class stats_and_regs:
                                         'noisy_death', 'T_TO_TIER1_minInstalls', 'T_TO_top_firm', 'MA']}
     core_scaled_continuous_y_vars_d = {'original': ['nlog_price', 'nlog_minInstalls'],
                                        'imputed':  ['nlog_imputed_price', 'nlog_imputed_minInstalls']}
-    core_unscaled_vars = {'original': ['price', 'minInstalls', 'reviews'],
-                          'imputed':  ['imputed_price', 'imputed_minInstalls', 'imputed_reviews']}
-    core_scaled_control_vars = {'original': ['score', 'nlog_reviews', 'adultcontent', 'daysreleased', 'size'],
-                                'imputed': ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
-                                            'imputed_daysreleased', 'imputed_size']}
-    unstacked_ols_categorical_control_vars = {'FULL': ['FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_MEDICAL'], # lifestyle is the baseline
+    imputed_y_vars = {'FULL': ['nlog_imputed_price', 'nlog_imputed_minInstalls', 'imputed_offersIAPdummy', 'imputed_containsAdsdummy',
+'noisy_death', 'T_TO_TIER1_minInstalls', 'T_TO_top_firm', 'MA'],
+                      # by definition, for market follower, change to tier 1 and change to top do not exist
+                      'MF': ['nlog_imputed_price', 'nlog_imputed_minInstalls', 'imputed_offersIAPdummy', 'imputed_containsAdsdummy',
+'noisy_death', 'MA'],
+                      'ML': ['nlog_imputed_price', 'nlog_imputed_minInstalls', 'imputed_offersIAPdummy', 'imputed_containsAdsdummy',
+'noisy_death', 'T_TO_TIER1_minInstalls', 'T_TO_top_firm', 'MA']}
+    all_imputed_control_vars = ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent', 'imputed_daysreleased', 'imputed_size']
+    step_models_imputed_control_vars = {'FULL': {
+                                            'nlog_imputed_price': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'nlog_imputed_minInstalls': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'imputed_offersIAPdummy': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_adultcontent'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_adultcontent', 'imputed_score'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'imputed_containsAdsdummy': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'noisy_death': {
+                                                0: [],
+                                                1: ['imputed_daysreleased'],
+                                                2: ['imputed_daysreleased', 'imputed_score'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score', 'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'T_TO_TIER1_minInstalls': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'T_TO_top_firm': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_score'],
+                                                3: ['nlog_imputed_reviews', 'imputed_adultcontent', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_adultcontent', 'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'MA': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_adultcontent'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score', 'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            }
+                                        },
+                                        'MF': {
+                                            'nlog_imputed_price': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'nlog_imputed_minInstalls': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score', 'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'imputed_offersIAPdummy': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_adultcontent'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_adultcontent', 'imputed_score'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'imputed_containsAdsdummy': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score', 'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'noisy_death': {
+                                                0: [],
+                                                1: ['imputed_daysreleased'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score',
+                                                    'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'T_TO_top_firm': {
+                                                0: [],
+                                                1: ['imputed_daysreleased'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score',
+                                                    'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'MA': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_adultcontent'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score',
+                                                    'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            }
+                                        },
+                                        'ML': {
+                                            'nlog_imputed_price': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score', 'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'nlog_imputed_minInstalls': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_size'],
+                                                3: ['nlog_imputed_reviews', 'imputed_size', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'imputed_offersIAPdummy': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_adultcontent'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_adultcontent', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'imputed_containsAdsdummy': {
+                                                0: [],
+                                                1: ['nlog_imputed_reviews'],
+                                                2: ['nlog_imputed_reviews', 'imputed_size'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_size'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased',
+                                                    'imputed_score', 'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'noisy_death': {
+                                                0: [],
+                                                1: ['imputed_daysreleased'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_adultcontent'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_adultcontent',
+                                                    'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'T_TO_TIER1_minInstalls': {
+                                                0: [],
+                                                1: ['imputed_daysreleased'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score',
+                                                    'imputed_adultcontent'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'T_TO_top_firm': {
+                                                0: [],
+                                                1: ['imputed_size'],
+                                                2: ['imputed_size', 'imputed_daysreleased'],
+                                                3: ['imputed_size', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score',
+                                                    'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                            'MA': {
+                                                0: [],
+                                                1: ['imputed_daysreleased'],
+                                                2: ['nlog_imputed_reviews', 'imputed_daysreleased'],
+                                                3: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score'],
+                                                4: ['nlog_imputed_reviews', 'imputed_daysreleased', 'imputed_score',
+                                                    'imputed_size'],
+                                                5: ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent',
+                                                    'imputed_daysreleased', 'imputed_size']
+                                            },
+                                        }
+                                    }
+
+    chosen_step_for_reg = {
+        'FULL': 4,
+        'MF': 3,
+        'ML': 3
+    }
+    sub_sample_dummies = {'FULL': ['ML'],  # base group is MF
+                          'ML': ['ML_GAME', 'ML_SOCIAL', 'ML_BUSINESS', 'ML_MEDICAL'],  # base group is lifestyle
+                          'MF': ['MF_GAME', 'MF_SOCIAL', 'MF_BUSINESS', 'MF_MEDICAL']}
+    unstacked_ols_categorical_control_vars = {'FULL': ['FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_MEDICAL'],
                                               'ML': ['ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_MEDICAL'],
                                               'MF': ['MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_MEDICAL']}
     # since you are including interaction of niche and ML in the full sample regression, you need to include ML indicator in the regression as well
@@ -133,41 +382,6 @@ class stats_and_regs:
     time_interactions = ['period_0_continuous_niche', 'period_1_continuous_niche',
                            'period_2_continuous_niche', 'period_3_continuous_niche']
     # For the purpose of descriptive statistics, all variables are scaled and WITHOUT adding whitenoise (so that dummy stays dummy)
-    des_stats_all_vars = {
-        'original': {
-            'continuous': ['price', 'minInstalls', 'reviews',
-                           'nlog_price', 'nlog_minInstalls',
-                           'score', 'nlog_reviews', 'daysreleased', 'size',
-                           'continuous_niche', 'period_0_continuous_niche', 'period_1_continuous_niche',
-                           'period_2_continuous_niche', 'period_3_continuous_niche'],
-            'dummy': ['containsAdsdummy', 'offersIAPdummy',
-                      'noisy_death', 'T_TO_TIER1_minInstalls', 'T_TO_top_firm', 'MA',
-                      'adultcontent', 'period_0', 'period_1', 'period_2', 'period_3',
-                      'ML', 'Tier1', 'Tier2', 'top_firm', 'FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_MEDICAL',
-                      'ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_MEDICAL',
-                      'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_MEDICAL']
-        },
-        'imputed': {
-            'continuous': ['imputed_price', 'imputed_minInstalls', 'imputed_reviews',
-                           'nlog_imputed_price', 'nlog_imputed_minInstalls',
-                           'imputed_score', 'nlog_imputed_reviews',
-                           'imputed_daysreleased', 'imputed_size',
-                           'continuous_niche', 'period_0_continuous_niche', 'period_1_continuous_niche',
-                           'period_2_continuous_niche', 'period_3_continuous_niche'],
-            'dummy': ['imputed_containsAdsdummy', 'imputed_offersIAPdummy',
-                      'noisy_death', 'T_TO_TIER1_minInstalls', 'T_TO_top_firm', 'MA',
-                      'imputed_adultcontent', 'period_0', 'period_1', 'period_2', 'period_3',
-                      'ML', 'Tier1', 'Tier2', 'top_firm', 'FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_MEDICAL',
-                      'ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_MEDICAL',
-                      'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_MEDICAL']
-        }
-    }
-    vars_to_remove = ['period_0_continuous_niche', 'period_1_continuous_niche',
-                      'period_2_continuous_niche', 'period_3_continuous_niche',
-                      'period_0', 'period_1', 'period_2', 'period_3',
-                      'ML', 'Tier1', 'Tier2', 'top_firm', 'FULL_GAME', 'FULL_BUSINESS', 'FULL_SOCIAL', 'FULL_MEDICAL',
-                      'ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_MEDICAL',
-                      'MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_MEDICAL']
     scaled_vars = {'original': ['nlog_price', 'nlog_minInstalls', 'nlog_reviews'],
                    'imputed': ['nlog_imputed_price', 'nlog_imputed_minInstalls', 'nlog_imputed_reviews']}
     # no need to specify original and imputed in scale_var_dict because every var in here has imputed form
@@ -187,19 +401,6 @@ class stats_and_regs:
                                  'T_TO_TIER1_minInstalls': 'Dummy Variable Indicating Whether the Lower Bound of Cumulative Installs Crossed the Tier1 Threshhold',
                                  'T_TO_top_firm': 'Dummy Variable Indicating Whether an App Changed Ownership From a Non-top Firm to a Top Firm',
                                  'MA': 'Dummy Variable Indicating Whether an App Underwent a Merger or Acquisition'}}
-
-    short_y_label = {'original': {'nlog_price': 'Log Price',
-                                  'nlog_minInstalls': 'Log Installs',
-                                  'containsAdsdummy': 'Contain Ad',
-                                  'offersIAPdummy': 'Offer In-app Purchase'},
-                     'imputed': {'nlog_imputed_price': 'Log Price (Imputed)',
-                                 'nlog_imputed_minInstalls': 'Log Installs (Imputed)',
-                                 'imputed_containsAdsdummy': 'Contain Ad (Imputed)',
-                                 'imputed_offersIAPdummy': 'Offer In-app Purchase (Imputed)',
-                                 'noisy_death': 'App Death',
-                                 'T_TO_TIER1_minInstalls': 'Change to Tier1',
-                                 'T_TO_top_firm': 'Change to Top Firm',
-                                 'MA': 'Merger or Acquisition'}}
 
     short_x_label = {'original': {'score': 'Rating',
                                   'nlog_reviews': 'Log Number of Reviews',
@@ -397,48 +598,31 @@ class stats_and_regs:
                         df=self.df,
                         ss_data_dict=self.ss_data_dict)
 
-    def convert_to_long(self, picked_tfidf_param, picked_k):
-        print('--------------------------- convert_to_long --------------------------')
-        filename = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_merged_kmeans_data.pickle'
-        q = self.des_stats / filename
-        self.ss_data_dict = pickle.load(open(q, 'rb'))
-        ldf = {}
-        for im in ['original', 'imputed']:
-            ldf[im] = {}
-            for k in self.sub_sample_d:
-                df = self.ss_data_dict[im][k]
-                df.reset_index(inplace=True)
-                df.rename(columns={'index': 'app_id'}, inplace=True)
-                # print(list(df2.columns))
-                core_vars = self.des_stats_all_vars[im]['dummy'] + self.des_stats_all_vars[im]['continuous']
-                for i in self.vars_to_remove:
-                    core_vars.remove(i)
-                cols_m = [i + '_' + m for m in self.all_panels for i in core_vars]
-                df2 = df.loc[:, cols_m + ['app_id'] + self.reg_sample_dummies]
-                print('------------ ' + im + '---' + k + ' before converting to long --------------------')
-                print(df2.shape)
-                print(list(df2.columns))
-                df2 = pd.wide_to_long(df2, core_vars, sep='_', i='app_id', j='month')
-                # get month as a column for the purpose of creating time dummies
-                df2.reset_index(inplace=True)
-                # panel regression needs entity and time indices
-                df2.set_index(['app_id', 'month'], drop=False, inplace=True)
-                df2['month'] = df2['month'].astype(str)
-                print(df2['month'].value_counts(dropna=False))
-                # print(df2.head(1))
-                df2 = self._create_time_dummies_and_interactions(df=df2)
-                print('------------ ' + im + '---' + k + ' after converting to long --------------------')
-                print(df2.shape)
-                print(list(df2.columns))
-                ldf[im][k] = df2
-        filename = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_merged_kmeans_data_LONG.pickle'
-        q = self.des_stats / filename
-        pickle.dump(ldf, open(q, 'wb'))
-        return stats_and_regs(
-                        initial_panel=self.initial_panel,
-                        all_panels=self.all_panels,
-                        df=self.df,
-                        ss_data_dict=self.ss_data_dict)
+    def _convert_to_long(self, df, sample, chosen_step):
+        # input should be df = self.ss_data_dict[im][k]
+        print('--------------------------- _convert_to_long --------------------------')
+        df.reset_index(inplace=True)
+        df.rename(columns={'index': 'app_id'}, inplace=True)
+        # print(list(df2.columns))
+        core_vars = self.imputed_y_vars[sample] + ['continuous_niche'] + self.all_imputed_control_vars
+        cols_m = [i + '_' + m for m in self.all_panels for i in core_vars]
+        df2 = df.loc[:, cols_m + ['app_id'] + self.reg_sample_dummies]
+        print('------------ ' + sample + '---STEP---' + str(chosen_step) + ' before converting to long --------------------')
+        print(df2.shape)
+        print(list(df2.columns))
+        df2 = pd.wide_to_long(df2, core_vars, sep='_', i='app_id', j='month')
+        # get month as a column for the purpose of creating time dummies
+        df2.reset_index(inplace=True)
+        # panel regression needs entity and time indices
+        df2.set_index(['app_id', 'month'], drop=False, inplace=True)
+        df2['month'] = df2['month'].astype(str)
+        print(df2['month'].value_counts(dropna=False))
+        # print(df2.head(1))
+        df2 = self._create_time_dummies_and_interactions(df=df2)
+        print('------------' + sample + '---STEP---' + str(chosen_step) + ' after converting to long --------------------')
+        print(df2.shape)
+        print(list(df2.columns))
+        return df2
 
     def des_stats_as_in_dissertation_format(self, balanced, picked_tfidf_param, picked_k):
         """
@@ -452,109 +636,101 @@ class stats_and_regs:
         filename_long = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_merged_kmeans_data_LONG.pickle'
         q_long = self.des_stats / filename_long
         ldf = pickle.load(open(q_long, 'rb'))
-        df_list_store = {'POOLED': {'continuous':[], 'dummy':[]},
-                         'MONTH':  {'continuous':[], 'dummy':[]}}
-        for df_name in ['POOLED', 'MONTH']:
-            for k in self.sub_sample_d:
-                for im in ['original', 'imputed']:
-                    vscon = self.des_stats_all_vars[im]['continuous']
-                    vsdum = self.des_stats_all_vars[im]['dummy']
-                    df_long = ldf[im][k].copy()
-                # ------------------- statistics ----------------------------------------------------
-                    print('------------------- ', df_name, '---', k, ' statistics --------------------')
-                    if df_name == 'POOLED':
-                        dfv = df_long[vscon]
-                        tablec = dfv.describe().unstack(1).to_frame()
-                        print(vsdum)
-                        print(list(df_long.columns))
-                        dfv = df_long[vsdum]
-                        value_counts_dfs = []
-                        for v in vsdum:
-                            tabled = dfv[v].value_counts(dropna=False).to_frame()
-                            tabled = tabled.T
-                            tabled.reset_index(inplace=True)
-                            tabled.rename(columns={'index': 'variable'}, inplace=True)
-                            value_counts_dfs.append(tabled)
-                    else:
-                        dfv = df_long[vscon]
-                        dfv.reset_index(inplace=True)
-                        dfv.drop(['app_id'], axis=1, inplace=True)
-                        tablec = dfv.groupby('month').describe().unstack(1).to_frame()
-                        dfv = df_long[vsdum]
-                        dfv.reset_index(inplace=True)
-                        dfv.drop(['app_id'], axis=1, inplace=True)
-                        value_counts_dfs = []
-                        for v in vsdum:
-                            # for some weird reason pandas would not run this, so the equivalent would be
-                            # tabled = dfv[['month', v]].groupby('month').value_counts(dropna=False).unstack(1)
-                            tabled = dfv[['month', v]].groupby(['month', v]).size().unstack(1)
-                            tabled.reset_index(inplace=True)
-                            tabled['variable'] = v
-                            tabled.insert(0, 'variable', tabled.pop('variable'))
-                            value_counts_dfs.append(tabled)
-                    tabledum = pd.concat(value_counts_dfs, axis=0)
-                    table_dict = {'continuous': tablec, 'dummy': tabledum}
-                    for vtype, table in table_dict.items():
-                        table.reset_index(inplace=True)
-                        table['sample'] = k
-                        table['im'] = im
-                        table.insert(0, 'im', table.pop('im'))
-                        table.insert(1, 'sample', table.pop('sample'))
-                        print(table.head())
-                        df_list_store[df_name][vtype].append(table)
-            # save pooled continuous and dummy variables table ---------------------------------------------
-            f_name = df_name + '_' + picked_tfidf_param + '_' + str(picked_k) + '_VAR_STATS.xlsx'
-            q = self.des_stats_tables / balanced / 'table_in_dissertation' / f_name
-            with pd.ExcelWriter(q) as writer:
-                for n in ['continuous', 'dummy']:
-                    final_table = pd.concat(df_list_store[df_name][n], axis=0)
-                    final_table = final_table.round(2)
-                    final_table.to_excel(writer, sheet_name=n)
+        df_list_store = {'continuous':[], 'continuous_cat':[], 'dummy':[], 'dummy_cat':[]}
+        cat_vars = {'FULL': ['ML', 'MF'],
+                    'ML': ['ML_GAME', 'ML_BUSINESS', 'ML_SOCIAL', 'ML_MEDICAL', 'ML_LIFESTYLE'],
+                    'MF': ['MF_GAME', 'MF_BUSINESS', 'MF_SOCIAL', 'MF_MEDICAL', 'MF_LIFESTYLE']}
+        for k in self.sub_sample_d:
+            for im in ['original', 'imputed']:
+                vscon = self.shortlist_var_descriptive_stats[im]['continuous']
+                vsdum = self.shortlist_var_descriptive_stats[im]['dummy']
+                df_long = ldf[im][k].copy()
+                df_long['MF'] = np.where(df_long['ML'] == 0, 1, 0)
+                df_long['ML_LIFESTYLE'] = np.where((df_long['ML']==1) & (df_long['ML_GAME']==0) & (
+                        df_long['ML_BUSINESS']==0) & (df_long['ML_SOCIAL']==0) & (df_long['ML_MEDICAL']==0), 1, 0)
+                df_long['MF_LIFESTYLE'] = np.where(
+                    (df_long['ML'] == 0) & (df_long['MF_GAME'] == 0) & (df_long['MF_BUSINESS'] == 0) & (
+                                df_long['MF_SOCIAL'] == 0) & (df_long['MF_MEDICAL'] == 0), 1, 0)
+            # ------------------- statistics ----------------------------------------------------
+                print('-------------------', k, ' statistics --------------------')
+                print('ALL COLUMN before any subsetting')
+                print(list(df_long.columns))
+                dfv = df_long[vscon]
+                dfv.reset_index(inplace=True)
+                dfv.drop(['app_id'], axis=1, inplace=True)
+                tablec = dfv.groupby('month').describe().unstack(1).to_frame()
+                tablec.reset_index(inplace=True)
+                tablec.rename(columns={'index': 'variable'}, inplace=True)
+                # by categories
+                cate_continuous_dfs = []
+                for CAT in cat_vars[k]:
+                    dfv = df_long[vscon + [CAT]]
+                    dfv2 = dfv.loc[dfv[CAT] == 1]
+                    dfv2.drop([CAT], axis=1, inplace=True)
+                    tablec_cat = dfv2.groupby(['month']).describe().unstack(1).reset_index()
+                    tablec_cat.rename(columns={'index': 'variable'}, inplace=True)
+                    tablec_cat['CAT'] = CAT
+                    print(tablec_cat)
+                    cate_continuous_dfs.append(tablec_cat)
+                tablec_cat = pd.concat(cate_continuous_dfs, axis=0)
+                # -----------------------------------------------------------------------------------
+                dfv = df_long[vsdum]
+                dfv.reset_index(inplace=True)
+                dfv.drop(['app_id'], axis=1, inplace=True)
+                print(dfv.columns)
+                value_counts_dfs = []
+                value_counts_dfs_cat = []
+                for v in vsdum:
+                    # for some weird reason pandas would not run this, so the equivalent would be
+                    # tabled = dfv[['month', v]].groupby('month').value_counts(dropna=False).unstack(1)
+                    tabled = dfv[['month', v]].groupby(['month', v]).size().unstack(1)
+                    tabled.reset_index(inplace=True)
+                    tabled['variable'] = v
+                    tabled.insert(0, 'variable', tabled.pop('variable'))
+                    value_counts_dfs.append(tabled)
+                    # by categories
+                    cate_dummy_dfs = []
+                    for CAT in cat_vars[k]:
+                        dfv_cat = df_long[vsdum + [CAT]]
+                        dfv_cat.reset_index(inplace=True)
+                        dfv_cat.drop(['app_id'], axis=1, inplace=True)
+                        print(dfv_cat.columns)
+                        dfv2 = dfv_cat.loc[dfv_cat[CAT] == 1]
+                        dfv2.drop([CAT], axis=1, inplace=True)
+                        tabled_cat = dfv2[['month', v]].groupby(['month', v]).size().unstack(1)
+                        tabled_cat['variable'] = v
+                        tabled_cat.insert(0, 'variable', tabled_cat.pop('variable'))
+                        tabled_cat['CAT'] = CAT
+                        cate_dummy_dfs.append(tabled_cat)
+                    dum_v_cat_table = pd.concat(cate_dummy_dfs, axis=0)
+                    print(dum_v_cat_table)
+                    value_counts_dfs_cat.append(dum_v_cat_table)
+                tabledum = pd.concat(value_counts_dfs, axis=0)
+                tabledum_cat = pd.concat(value_counts_dfs_cat, axis=0)
+                table_dict = {'continuous': tablec, 'continuous_cat': tablec_cat, 'dummy': tabledum, 'dummy_cat': tabledum_cat}
+                for vtype, table in table_dict.items():
+                    # table.reset_index(inplace=True)
+                    table['sample'] = k
+                    table['im'] = im
+                    table.insert(0, 'im', table.pop('im'))
+                    table.insert(1, 'sample', table.pop('sample'))
+                    print(table.head())
+                    df_list_store[vtype].append(table)
+        # save pooled continuous and dummy variables table ---------------------------------------------
+        f_name = picked_tfidf_param + '_' + str(picked_k) + '_BY_MONTH_VAR_STATS.xlsx'
+        q = self.des_stats_tables / balanced / 'table_in_dissertation' / f_name
+        with pd.ExcelWriter(q) as writer:
+            for n in ['continuous', 'continuous_cat', 'dummy', 'dummy_cat']:
+                final_table = pd.concat(df_list_store[n], axis=0)
+                final_table = final_table.round(2)
+                final_table.to_excel(writer, sheet_name=n)
         return stats_and_regs(
                         initial_panel=self.initial_panel,
                         all_panels=self.all_panels,
                         df=self.df,
                         ss_data_dict=self.ss_data_dict)
 
-    def slice_relevant_parts_of_des_stats_table(self, balanced, cross_section, picked_tfidf_param, picked_k, month):
-        # must first run des_stats_as_in_dissertation_format, var_type could either be 'CON' continuous or 'DUM' dummy
-        df_con_list = []
-        df_dum_list = []
-        if cross_section is True:
-            f_name = 'MONTH_' + picked_tfidf_param + '_' + str(picked_k) + '_VAR_STATS.xlsx'
-            q = self.des_stats_tables / balanced / 'table_in_dissertation' / f_name
-            # slice the rows that will go into dissertation, is the cross_section is true, the default will be 201907
-            for im in ['imputed', 'original']:
-                for var_type in ['continuous', 'dummy']:
-                    df = pd.read_excel(open(q, 'rb'), sheet_name=var_type)
-                    for var in self.des_stats_all_vars[im][var_type]:
-                        for sample in ['FULL', 'ML', 'MF']:
-                            if var_type == 'continuous':
-                                df2=df.loc[(df['level_0']==var) & (df['im']==im) & (df['sample']==sample) & (df['month']==month) & (df['level_1'].isin(['min', 'mean', '50%', 'max', 'std']))]
-                                print(list(df2.columns))
-                                df2[0] = '&' + df2[0].astype(str)
-                                df_con_list.append(df2)
-                            else:
-                                df2 = df.loc[(df['variable'] == var) & (df['im'] == im) & (df['sample'] == sample) & (
-                                            df['month'] == month)]
-                                df2[0.0] = df2[0.0].fillna(0)
-                                df2[1.0] = df2[1.0].fillna(0)
-                                df2['total'] = df2[0.0] + df2[1.0]
-                                df2['percentage_true'] = (df2[1.0] / df2['total'] * 100).round(1).astype(str)
-                                df2['percentage_true'] = '&' + df2['percentage_true'] + '\%'
-                                df_dum_list.append(df2)
-        f_name = str(month) + '_' + picked_tfidf_param + '_' + str(picked_k) + '_filter_stats.xlsx'
-        q = self.des_stats_tables / balanced / 'table_in_dissertation' / f_name
-        with pd.ExcelWriter(q) as writer:
-            df3 = pd.concat(df_con_list, axis=0).round(2)
-            df3.to_excel(writer, sheet_name='continuous')
-            df4 = pd.concat(df_dum_list, axis=0).round(2)
-            df4.to_excel(writer, sheet_name='dummy')
-        return stats_and_regs(
-                        initial_panel=self.initial_panel,
-                        all_panels=self.all_panels,
-                        df=self.df,
-                        ss_data_dict=self.ss_data_dict)
+
 
     # 20220911: delete the table_cat_y_variables_against_niche_dummy function because my dissertation does not use niche dummy any longer
     def _y_countplot_against_binned_continuous_niche(self, balanced, im, m, k, y_var, y_var_m, df, CAT, picked_tfidf_param, picked_k):
@@ -730,82 +906,182 @@ class stats_and_regs:
         # I will visually plot the y variables against x variables to check linearity
         return multicolinearity_df
 
-    def cross_section_regression(self, balanced, picked_tfidf_param, picked_k, month, stacked):
-        """
-        https://www.statsmodels.org/stable/generated/statsmodels.regression.linear_model.RegressionResults.html#statsmodels.regression.linear_model.RegressionResults
-        #https://www.statsmodels.org/stable/rlm.html
-        https://stackoverflow.com/questions/30553838/getting-statsmodels-to-use-heteroskedasticity-corrected-standard-errors-in-coeff
-        source code for HC0, HC1, HC2, and HC3, white and Mackinnon
-        https://www.statsmodels.org/dev/_modules/statsmodels/regression/linear_model.html
-        https://timeseriesreasoning.com/contents/zero-inflated-poisson-regression-model/
-        do cross sectional regression with both imputed and original variables for robustness checks
-        # ---- ols regression assumptions check -----------------------
-        # https://www.statsmodels.org/dev/examples/notebooks/generated/regression_diagnostics.html
-        """
-        if stacked is True:
-            stack = '_STACKED_'
-        else:
-            stack = ''
-        print('----------------------------- cross_section_regression ---------------------------------')
-        # one set of regression use continuous niche (or interaction if stacked is True) as independent var, the other set uses dummy niche
-        f_name = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_merged_kmeans_data.pickle'
-        q = self.des_stats / f_name
-        self.ss_data_dict = pickle.load(open(q, 'rb'))
-        # --------------------------------------------------------------------------------
-        f_ols = month + '_' + picked_tfidf_param + '_' + str(picked_k) + stack + '_OLS_RESULTS.xlsx'
-        q_ols = self.ols_results / 'ols_raw_results' / balanced / f_ols
-        # --------------------------------------------------------------------------------
-        f_assumption = month + '_' + picked_tfidf_param + '_' + str(picked_k) + stack + '_CHECK_OLS_ASSUMPTIONS.xlsx'
-        q_assumption = self.ols_results / 'ols_assumptions_check' / balanced / f_assumption
-        # -------------- stacked sub-sample dummies (to interact with niche) -------------
-        sub_sample_dummies = {'FULL': ['ML'], # base group is MF
-                              'ML': ['ML_GAME', 'ML_SOCIAL', 'ML_BUSINESS', 'ML_MEDICAL'], # base group is lifestyle
-                              'MF': ['MF_GAME', 'MF_SOCIAL', 'MF_BUSINESS', 'MF_MEDICAL']}
-        with pd.ExcelWriter(q_ols) as writer_ols:
-            with pd.ExcelWriter(q_assumption) as writer_assumption:
-                multicolinearity_df = pd.DataFrame(columns=['original_' + k for k in self.sub_sample_d] + ['imputed_' + k for k in self.sub_sample_d])
-                for im in ['original', 'imputed']:
-                    ys = self.core_dummy_y_vars_d[im] + self.core_scaled_continuous_y_vars_d[im]
-                    ys_m = [i + '_' + month for i in ys]
-                    for k in self.sub_sample_d:
-                        df = self.ss_data_dict[im][k].copy()
-                        print(list(df.columns))
-                        if stacked is True:
-                            # create interaction of niche with sub-sample dummies
-                            for i in sub_sample_dummies[k]:
-                                df['continuous_niche_X_' + i + '_' + month] = df['continuous_niche_'+month] * df[i]
-                                print(df['continuous_niche_X_' + i + '_' + month].describe())
-                            xs = self.core_scaled_control_vars[im] + ['continuous_niche']
-                            xs_m = [i + '_' + month for i in xs] + ['continuous_niche_X_' + i + '_' + month for i in sub_sample_dummies[k]]\
-                            + self.stacked_ols_categorical_control_vars[k]
-                        else:
-                            xs = self.core_scaled_control_vars[im] + ['continuous_niche']
-                            xs_m = [i + '_' + month for i in xs] + self.unstacked_ols_categorical_control_vars[k]
-                        for y in ys_m:
-                            o_x_str = ' + '.join(xs_m)
-                            formula = y + ' ~ ' + o_x_str
-                            print(im + ' -- ' + k + '-- formula --')
-                            print(formula)
-                            model = smf.ols(formula, data=df).fit()
-                            table_as_html = model.summary().tables[1].as_html()
-                            table = pd.read_html(table_as_html, header = 0, index_col = 0)[0]
-                            # print(table)
-                            table.to_excel(writer_ols, sheet_name=im + '_' + k + '_' + y)
-                            multicolinearity_df = self._check_cross_sectional_ols_assumptions(balanced=balanced,
-                                                                        im=im,
-                                                                        niche_v='continuous_niche',
-                                                                        k=k, y=y,
-                                                                        sms_results=model,
-                                                                        writer=writer_assumption,
-                                                                        multicolinearity_df=multicolinearity_df)
-                multi_df_name = month + '_' + picked_tfidf_param + '_' + str(picked_k)  + stack + '_MULTICOLINEARITY.xlsx'
-                multicolinearity_df.to_excel(self.ols_results / 'ols_assumptions_check' / balanced / multi_df_name)
+    def _create_forward_step_variables(self):
+        controls =  {'original': ['score', 'nlog_reviews', 'adultcontent', 'daysreleased', 'size'],
+                     'imputed': ['imputed_score', 'nlog_imputed_reviews', 'imputed_adultcontent', 'imputed_daysreleased', 'imputed_size']}
+        stepwise_controls = {'original': {}, 'imputed': {}}
+        for name in ['original', 'imputed']:
+            for n in [0, 1, 2, 3, 4, 5]:
+                temp = list(combinations(controls[name], n))
+                stepwise_controls[name][n] = [list(ele) for ele in temp]
+        print('---------------------stepwise controls-------------------')
+        print(stepwise_controls)
+        return stepwise_controls
+
+    def select_model_according_to_aic_and_bic(self, month, picked_tfidf_param, picked_k):
+        # locale.setlocale(locale.LC_NUMERIC, 'English')
+        f_ols = month + '_' + picked_tfidf_param + '_' + str(picked_k) + '_AIC_BIC.xlsx'
+        q_ols = self.ols_results / 'model_selection' / f_ols
+        df = pd.read_excel(q_ols)
+        # filter the lowest AIC and BIC within each step for each y variable, and keep other columns
+        min_aicbic_df = df.sort_values(['AIC', 'BIC']).groupby(['im', 'k', 'y', 'step'], as_index=False).first()
+        f_ols = month + '_' + picked_tfidf_param + '_' + str(picked_k) + '_minAICBIC.xlsx'
+        q_ols = self.ols_results / 'model_selection' / f_ols
+        min_aicbic_df.to_excel(q_ols)
+        # create dissertation tables
+        for ss in ['FULL', 'MF', 'ML']:
+            f_ols = month + '_' + ss + '_' + '_best_models.xlsx'
+            q_ols = self.ols_results / 'model_selection' / f_ols
+            y_vars = self.imputed_y_vars[ss]
+            numeric_cols = [p + '_' + y + '_' + month for y in y_vars for p in ['AIC', 'BIC']]
+            model_col = ['CONTROLS_' + y + '_' + month for y in y_vars]
+            newdf = pd.DataFrame(columns=['MODEL-STEP'] + model_col + numeric_cols)
+            newdf['MODEL-STEP'] = [0, 1, 2, 3, 4, 5]
+            for y in [s + '_' + month for s in y_vars]:
+                df2 = min_aicbic_df.loc[(min_aicbic_df['y'] == y) & (min_aicbic_df['k'] == ss)].copy()
+                for step in [0, 1, 2, 3, 4, 5]:
+                    df3 = df2.loc[df2['step'] == step].copy()
+                    newdf.loc[newdf['MODEL-STEP'] == step, 'CONTROLS_' + y] = df3['control_vars'].values[0]
+                    newdf.loc[newdf['MODEL-STEP'] == step, 'AIC_' + y] = df3['AIC'].values[0]
+                    newdf.loc[newdf['MODEL-STEP'] == step, 'BIC_' + y] = df3['BIC'].values[0]
+            newdf[numeric_cols] = newdf[numeric_cols].apply(pd.to_numeric)
+            newdf[numeric_cols] = np.round(newdf[numeric_cols], 0)
+            # since the MF sub-sample does not contain any to_tier_1 data points by definition
+            # the estimated AIC and BIC will be -inf, so I will first replace them with NA
+            newdf.replace([np.inf, -np.inf], 0, inplace=True)
+            newdf[numeric_cols] = newdf[numeric_cols].fillna(0).astype(np.int64)
+            newdf[numeric_cols] = newdf[numeric_cols].apply(lambda series: series.apply(lambda value: '&' + f'{value:,}'))
+            newdf.to_excel(q_ols)
         return stats_and_regs(
                         initial_panel=self.initial_panel,
                         all_panels=self.all_panels,
                         df=self.df,
                         ss_data_dict=self.ss_data_dict,
                         reg_results = self.reg_results)
+
+    def _create_cat_interactions(self, df, cats, month):
+        for i in cats:
+            n = 'continuous_niche_X_' + i + '_' + month
+            df[n] = df['continuous_niche_' + month] * df[i]
+        return df
+
+    def _add_astericks_to_pvalue(self, pvalue, coef):
+        if abs(pvalue) <= 0.01:
+            return '&' + str(coef) + '***'
+        elif abs(pvalue) <= 0.05:
+            return '&' + str(coef) + '**'
+        elif abs(pvalue) <= 0.1:
+            return '&' + str(coef) + '*'
+        else:
+            return '&' + str(coef)
+
+    def _extract_niche_estimates(self, smmodel, panel, sample=None, cat=False, col=None, month=None):
+        table_as_html = smmodel.summary().tables[1].as_html()
+        resultobject = pd.read_html(table_as_html, header=0, index_col=0)[0]
+        print(resultobject)
+        if panel is True:
+            slice_col = col
+        else:
+            if cat is False:
+                slice_col = 'continuous_niche_' + month
+            else:
+                if col in self.sub_sample_dummies[sample]:
+                    slice_col = col
+                else:
+                    slice_col = col + '_' + month
+        niche_coef = np.round(resultobject.at[slice_col, 'coef'].squeeze(), 2)
+        niche_std_err = np.round(resultobject.at[slice_col, 'std err'].squeeze(), 2)
+        niche_std_err_str = '&(' + str(niche_std_err) + ')'
+        niche_p_value = np.round(resultobject.at[slice_col, 'P>|t|'].squeeze(), 2)
+        niche_coef_str = self._add_astericks_to_pvalue(pvalue=niche_p_value, coef=niche_coef)
+        return niche_coef_str, niche_std_err_str
+
+    def OLS_after_AIC_BIC_selection(self, picked_tfidf_param, picked_k, month):
+        print('----------------------------- OLS_after_AIC_BIC_selection ---------------------------------')
+        # one set of regression use continuous niche (or interaction if stacked is True) as independent var, the other set uses dummy niche
+        f_name = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_merged_kmeans_data.pickle'
+        q = self.des_stats / f_name
+        self.ss_data_dict = pickle.load(open(q, 'rb'))
+        for k in self.sub_sample_d:
+            ys = self.imputed_y_vars[k]
+            df = self.ss_data_dict['imputed'][k].copy()
+            ldf = self._convert_to_long(df=df, sample=k, chosen_step=self.chosen_step_for_reg[k])
+            print(list(df.columns))
+            index_names = []
+            for y in ys:
+                std_err = y + '_std_err'
+                index_names.append(y)
+                index_names.append(std_err)
+            panel_df_cols = ['continuous_niche'] + ['period_' + str(i) + '_continuous_niche' for i in [0,1,2,3]]
+            niche_and_cat_interactions = ['continuous_niche_X_' + i for i in self.sub_sample_dummies[k]]
+            cat_df_cols = ['continuous_niche'] + niche_and_cat_interactions + self.sub_sample_dummies[k]
+            step_ols_cols = [0, 1, 2, 3, 4, 5]
+            cdf = self._create_cat_interactions(df=df, cats=self.sub_sample_dummies[k], month=month)
+            olsres = pd.DataFrame(columns=step_ols_cols, index=index_names)
+            olscatres = pd.DataFrame(columns=cat_df_cols, index=index_names)
+            panelres = pd.DataFrame(columns=panel_df_cols, index=index_names)
+            for y in ys:
+                # ----------- OLS with categories (only need the chosen STEP with categorical dummy interactions)------
+                y_m = y + '_' + month
+                xs = self.step_models_imputed_control_vars[k][y][self.chosen_step_for_reg[k]] + [
+                    'continuous_niche'] + niche_and_cat_interactions
+                xs_m = [i + '_' + month for i in xs] + self.sub_sample_dummies[k] + self.unstacked_ols_categorical_control_vars[k]
+                xs_m = list(set(xs_m))
+                o_x_str = ' + '.join(xs_m)
+                formula = y_m + ' ~ ' + o_x_str
+                print(y + ' -- ' + k + '-- formula --')
+                print(formula)
+                olscatmod = smf.ols(formula, data=cdf).fit()  # this is OLS regression result object
+                for col in cat_df_cols:
+                    olscatres.at[y, col] = self._extract_niche_estimates(
+                        smmodel=olscatmod, panel=False, sample=k, cat=True, col=col, month='202107')[0]
+                    olscatres.at[y + '_std_err', col] = self._extract_niche_estimates(
+                        smmodel=olscatmod, panel=False, sample=k, cat=True, col=col, month='202107')[1]
+                # ----------- Pooled OLS PANEL reg (only need the chosen STEP with time dummy interactions) -----
+                ydf = ldf[[y]]
+                time_dummies_and_interactions = [i for i in list(ldf.columns) if 'period_' in i]
+                xs = ['continuous_niche'] + time_dummies_and_interactions + \
+                     self.step_models_imputed_control_vars[k][y][self.chosen_step_for_reg[k]] + \
+                     self.unstacked_ols_categorical_control_vars[k]
+                xsdf = sm.add_constant(ldf[xs])
+                print(k + '---- fit model with ' + y + ' ~ ' + ' + '.join(xs))
+                mod = sm.OLS(endog=ydf, exog=xsdf)
+                panelmod = mod.fit()
+                for col in panel_df_cols:
+                    panelres.at[y, col] = self._extract_niche_estimates(smmodel=panelmod, panel=True, sample=k, col=col)[0]
+                    panelres.at[y + '_std_err', col] = \
+                    self._extract_niche_estimates(smmodel=panelmod, panel=True, sample=k, col=col)[1]
+                # ----------- OLS reg (need to get estimates for all STEP models to compare) --------------------
+                for step in [0, 1, 2, 3, 4, 5]:
+                    xs = self.step_models_imputed_control_vars[k][y][step] + ['continuous_niche']
+                    xs_m = [i + '_' + month for i in xs] + self.unstacked_ols_categorical_control_vars[k]
+                    o_x_str = ' + '.join(xs_m)
+                    formula = y_m + ' ~ ' + o_x_str
+                    print(y + ' -- ' + k + '-- formula --')
+                    print(formula)
+                    olsmod = smf.ols(formula, data=df).fit() # this is OLS regression result object
+                    olsres.at[y, step] = self._extract_niche_estimates(smmodel=olsmod, panel=False, sample=k, month='202107')[0]
+                    olsres.at[y + '_std_err', step] = self._extract_niche_estimates(smmodel=olsmod, panel=False, sample=k, month='202107')[1]
+            f_ols = month + '_' + picked_tfidf_param + '_' + str(
+                picked_k) + '_IMPUTED_' + k + '_BEST_FIT_STEP_REGMODELS.xlsx'
+            q_ols = self.ols_results / 'ols_aic_bic_best_fit_step_regs' / f_ols
+            olsres.to_excel(q_ols)
+            f_ols = month + '_' + picked_tfidf_param + '_' + str(
+                picked_k) + '_IMPUTED_' + k + '_BEST_FIT_CAT_OLS.xlsx'
+            q_ols = self.ols_results / 'ols_aic_bic_best_fit_step_regs' / f_ols
+            olscatres.to_excel(q_ols)
+            f_ols = month + '_' + picked_tfidf_param + '_' + str(
+                picked_k) + '_IMPUTED_' + k + '_BEST_FIT_PANEL.xlsx'
+            q_ols = self.ols_results / 'ols_aic_bic_best_fit_step_regs' / f_ols
+            panelres.to_excel(q_ols)
+        return stats_and_regs(
+                        initial_panel=self.initial_panel,
+                        all_panels=self.all_panels,
+                        df=self.df,
+                        ss_data_dict=self.ss_data_dict,
+                        reg_results = self.reg_results)
+
+
     def _create_time_dummies_and_interactions(self, df):
         """
         https://www.littler.com/publication-press/publication/stay-top-stay-home-list-statewide
@@ -829,6 +1105,7 @@ class stats_and_regs:
         Since too many time dummies affect the interpretation, I am going to divide time dummies into 4-periods intervals, and the pre-covid periods are not represented by time dummies to prevent multi-collinearity
         """
         print('----------------------------- _create_time_dummies_and_interactions ---------------------------------')
+        # the baseline (pre-covid-stay at home) has already been left out
         period_0 = ['202003', '202004']
         period_1 = ['202009', '202010', '202011', '202012']
         period_2 = ['202101', '202102', '202103', '202104']
@@ -843,63 +1120,6 @@ class stats_and_regs:
             df[time_dummy_name + '_continuous_niche'] = df[time_dummy_name] * df['continuous_niche']
             # print(df[[time_dummy_name, interaction]].describe())
         return df
-
-    def panel_regression(self, balanced, type, picked_tfidf_param, picked_k):
-        f_name = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_merged_kmeans_data.pickle'
-        q = self.des_stats / f_name
-        self.ss_data_dict = pickle.load(open(q, 'rb'))
-        folder_name = type + '_raw_results'
-        print('------------------------ panel_regression ' + type + ' -----------------------------')
-        f_panel = self.initial_panel + '_' + picked_tfidf_param + '_' + str(picked_k) + '_PANEL_RESULTS.xlsx'
-        q_panel = self.panel_results / folder_name / balanced / f_panel
-        with pd.ExcelWriter(q_panel) as writer_ols:
-            for im in ['original', 'imputed']:
-                for k in self.sub_sample_d:
-                    df = self.ss_data_dict[im][k].copy()
-                    # convert into long form --------------------------------------------------------------------------------------
-                    df_long = self._convert_to_long_df(df=df, im=im)
-                    # create after covid-stay-at-home time dummies and interaction with niche variable ------------------------
-                    df_long = self._create_time_dummies_and_interactions(df=df_long)
-                    time_dummies_and_interactions = [i for i in list(df_long.columns) if 'period_' in i]
-                    time_dummies = [i for i in time_dummies_and_interactions if 'niche' not in i]
-                    niche_interactions = [i for i in time_dummies_and_interactions if 'continuous_niche' in i]
-                    # ------------ export descriptive stats of both x and y variables before regression -----------------------
-                    # The dummy ys are included in continuous y variables descriptive statistics because I have added white noise to it.
-                    all_continuous_vars = self.core_scaled_continuous_y_vars_d[im] + self.core_dummy_y_vars_d[im] + \
-                               self.core_scaled_control_vars[im] + ['continuous_niche'] + niche_interactions + self.unstacked_ols_categorical_control_vars[k]
-                    continuous_stats = df_long[all_continuous_vars].describe()
-                    f_name = k + '_CON_REG_VARS_STATS.xlsx'
-                    continuous_stats.to_excel(self.des_stats_tables / balanced / im / 'POOLED' / f_name)
-                    dummy_stats = df_long[time_dummies].value_counts()
-                    f_name = k + '_DUMMY_REG_VARS_STATS.xlsx'
-                    dummy_stats.to_excel(self.des_stats_tables / balanced / im / 'POOLED' / f_name)
-                    xs = ['continuous_niche'] + time_dummies_and_interactions + \
-                         self.core_scaled_control_vars[im] + self.unstacked_ols_categorical_control_vars[k]
-                    xsdf = sm.add_constant(df_long[xs])
-                    for y in self.core_dummy_y_vars_d[im] + self.core_scaled_continuous_y_vars_d[im]:
-                        # the MF sub-sample does not have any variation in T_TO_TIER1_minInstalls because by definition
-                        # T_TO_TIER1_minInstalls apps would no longer remain in MF sub-sample. Linear models would return division by zero error
-                        # so I will skip this
-                        if y == 'T_TO_TIER1_minInstalls' and k == 'MF':
-                            pass
-                        else:
-                            ydf = df_long[[y]]
-                            print(k + '---- fit model with ' + y + ' ~ ' + ' + '.join(xs))
-                            if type == 'pooled_ols':
-                                mod = PooledOLS(ydf, xsdf)
-                            if type == 'panel_fe':
-                                mod = PanelOLS(ydf, xsdf, entity_effects=True)
-                            res = mod.fit(cov_type='unadjusted')
-                            df1 = pd.DataFrame(res.params)
-                            df2 = pd.DataFrame(res.pvalues)
-                            res_df = df1.join(df2, how='inner')
-                            res_df.to_excel(writer_ols, sheet_name=im + '_' + k + '_' + y)
-        return stats_and_regs(
-                        initial_panel=self.initial_panel,
-                        all_panels=self.all_panels,
-                        df=self.df,
-                        ss_data_dict=self.ss_data_dict,
-                        reg_results = self.reg_results)
 
     def summarize_ols_results(self, balanced, stacked, picked_tfidf_param, picked_k, month):
         """
